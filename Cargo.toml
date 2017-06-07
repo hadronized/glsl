@@ -1,0 +1,7 @@
+[package]
+name = "glsl"
+version = "0.1.0"
+authors = ["Dimitri Sabadie <dsabadie@vente-privee.com>"]
+
+[dependencies]
+nom = "3.0"
