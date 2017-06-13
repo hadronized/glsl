@@ -6,7 +6,7 @@ use syntax;
 
 // Turn a &[u8] into a String.
 #[inline]
-fn bytes_to_string(bytes: &[u8]) -> String {
+fn bytes_toing(bytes: &[u8]) -> String {
   unsafe { from_utf8_unchecked(bytes).to_owned() }
 }
 
@@ -21,7 +21,7 @@ fn bytes_to_string(bytes: &[u8]) -> String {
 named!(identifier<&[u8], syntax::Identifier>,
   do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
-    (bytes_to_string(name))
+    (bytes_toing(name))
   )
 );
 
@@ -163,3 +163,96 @@ fn basic_type(i: &[u8]) -> IResult<&[u8], syntax::BasicTy> {
     _ => IResult::Error(ErrorKind::AlphaNumeric)
   }
 }
+
+/// Parse the void type.
+named!(void_ty<&[u8], ()>, value!((), tag!("void")));
+
+/// Parse a digit that precludes a leading 0.
+named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
+
+/// Parse the unsigned suffix.
+named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
+
+/// Parse a decimal literal string.
+named!(decimal_lit,
+  do_parse!(
+    n: nonzero_digit >>
+    opt!(unsigned_suffix) >>
+    (n)
+  )
+);
+
+#[inline]
+fn is_octal(c: u8) -> bool {
+  c >= b'0' && c <= b'7'
+}
+
+/// Parse an octal literal string.
+named!(octal_lit,
+  do_parse!(
+    char!('0') >>
+    n: take_while!(is_octal) >>
+    opt!(unsigned_suffix) >>
+    (n)
+  )
+);
+
+#[inline]
+fn is_hexa(c: u8) -> bool {
+  c >= b'0' && c <= b'9' || c >= b'a' && c <= b'f' || c >= b'A' && c <= b'F'
+}
+
+/// Parse an hexadecimal literal string.
+named!(hexadecimal_lit,
+  do_parse!(
+    alt!(tag!("0x") | tag!("0X")) >>
+    n: take_while!(is_hexa) >>
+    opt!(unsigned_suffix) >>
+    (n)
+  )
+);
+
+/// Parse a literal integral string.
+named!(integral_lit,
+  alt!(
+    decimal_lit |
+    octal_lit |
+    hexadecimal_lit
+  )
+);
+
+/// Parse a floating point suffix.
+named!(floating_suffix,
+  alt!(
+    tag!("f") |
+    tag!("F") |
+    tag!("lf") |
+    tag!("LF")
+  )
+);
+
+/// Parse the exponent part of a floating point literal.
+named!(floating_exponent<&[u8], ()>,
+  do_parse!(
+    alt!(char!('e') | char!('E')) >>
+    opt!(alt!(char!('+') | char!('-'))) >>
+    digit >>
+    (())
+  )
+);
+
+/// Parse the fractional constant part of a floating point literal.
+named!(floating_frac<&[u8], ()>,
+  alt!(
+    do_parse!(char!('.') >> digit >> (())) |
+    do_parse!(digit >> tag!(".") >> digit >> (())) |
+    do_parse!(digit >> tag!(".") >> (())) |
+    do_parse!(digit >> (()))
+  )
+);
+
+/// Parse a floating point literal.
+named!(floating_literal,
+  do_parse!(floating_frac >> opt!(floating_exponent) >> (()))
+);
+  
