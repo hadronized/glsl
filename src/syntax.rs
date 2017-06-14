@@ -136,23 +136,3 @@ pub struct StructField {
 
 pub type StructQual = String; // FIXME: enum
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum UnaryOp {
-  Plus,
-  Dash,
-  Bang,
-  Tilde
-}
-
-pub type Lit = String;
-
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Expr {
-  Identifier(Identifier),
-  IntLit(Lit),
-  UIntLit(Lit),
-  BoolLit(Lit),
-  FloatLit(Lit),
-  DoubleLit(Lit),
-  Parens(Box<Expr>)
-}
