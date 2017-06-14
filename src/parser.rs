@@ -18,7 +18,7 @@ fn bytes_toing(bytes: &[u8]) -> String {
 // }
 
 /// Parse an identifier.
-named!(identifier<&[u8], syntax::Identifier>,
+named!(pub identifier<&[u8], syntax::Identifier>,
   do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
     (bytes_toing(name))
@@ -165,16 +165,16 @@ fn basic_type(i: &[u8]) -> IResult<&[u8], syntax::BasicTy> {
 }
 
 /// Parse the void type.
-named!(void_ty<&[u8], ()>, value!((), tag!("void")));
+named!(pub void_ty<&[u8], ()>, value!((), tag!("void")));
 
 /// Parse a digit that precludes a leading 0.
-named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
+named!(pub nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
 
 /// Parse the unsigned suffix.
-named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
+named!(pub unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
 
 /// Parse a decimal literal string.
-named!(decimal_lit,
+named!(decimal_lit_,
   do_parse!(
     n: nonzero_digit >>
     opt!(unsigned_suffix) >>
@@ -182,38 +182,52 @@ named!(decimal_lit,
   )
 );
 
+/// Parse a decimal literal.
+named!(pub decimal_lit, recognize!(decimal_lit_));
+
 #[inline]
-fn is_octal(c: u8) -> bool {
-  c >= b'0' && c <= b'7'
+fn all_octal(s: &[u8]) -> bool {
+  s.iter().all(|&c| c >= b'0' && c <= b'7')
 }
 
 /// Parse an octal literal string.
-named!(octal_lit,
+named!(octal_lit_,
   do_parse!(
     char!('0') >>
-    n: take_while!(is_octal) >>
+    n: verify!(digit, all_octal) >>
     opt!(unsigned_suffix) >>
     (n)
   )
 );
 
+/// Parse an octal literal.
+named!(pub octal_lit, recognize!(octal_lit_));
+
 #[inline]
-fn is_hexa(c: u8) -> bool {
-  c >= b'0' && c <= b'9' || c >= b'a' && c <= b'f' || c >= b'A' && c <= b'F'
+fn all_hexa(s: &[u8]) -> bool {
+  s.iter().all(|&c| c >= b'0' && c <= b'9' || c >= b'a' && c <= b'f' || c >= b'A' && c <= b'F')
+}
+
+#[inline]
+fn alphanumeric_no_u(c: u8) -> bool {
+  char::from(c).is_alphanumeric() && c != b'u' && c != b'U'
 }
 
 /// Parse an hexadecimal literal string.
-named!(hexadecimal_lit,
+named!(hexadecimal_lit_,
   do_parse!(
     alt!(tag!("0x") | tag!("0X")) >>
-    n: take_while!(is_hexa) >>
+    n: verify!(take_while!(alphanumeric_no_u), all_hexa) >>
     opt!(unsigned_suffix) >>
     (n)
   )
 );
 
+/// Parse an hexadecimal literal.
+named!(pub hexadecimal_lit, recognize!(hexadecimal_lit_));
+
 /// Parse a literal integral string.
-named!(integral_lit,
+named!(pub integral_lit,
   alt!(
     decimal_lit |
     octal_lit |
@@ -251,8 +265,10 @@ named!(floating_frac<&[u8], ()>,
   )
 );
 
-/// Parse a floating point literal.
-named!(floating_literal,
-  do_parse!(floating_frac >> opt!(floating_exponent) >> (()))
+/// Parse a floating point literal string.
+named!(floating_lit_<&[u8], ()>,
+  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(floating_suffix) >> (()))
 );
   
+/// Parse a floating point literal.
+named!(pub floating_lit, recognize!(floating_lit_));
