@@ -273,7 +273,7 @@ named!(floating_lit_<&[u8], ()>,
 named!(pub floating_lit, recognize!(floating_lit_));
 
 /// Parse a struct field declaration.
-named!(pub struct_field<&[u8], syntax::StructField>,
+named!(pub struct_field_def<&[u8], syntax::StructFieldDef>,
   ws!(do_parse!(
     ty: basic_ty >>
     first_identifier: identifier >>
@@ -284,17 +284,18 @@ named!(pub struct_field<&[u8], syntax::StructField>,
       let mut identifiers = rest_identifiers.clone();
       identifiers.insert(0, first_identifier);
 
-      syntax::StructField { ty: ty, identifiers: identifiers}
+      syntax::StructFieldDef { ty: ty, identifiers: identifiers}
     })
   ))
 );
 
 /// Parse a struct.
-named!(pub struct_<&[u8], syntax::Struct>,
+named!(pub struct_def<&[u8], syntax::StructDef>,
   ws!(do_parse!(
     tag!("struct") >>
     name: opt!(identifier) >>
-    fields: delimited!(char!('{'), many1!(struct_field), char!('}')) >>
-    (syntax::Struct { name: name, fields: fields })
+    fields: delimited!(char!('{'), many1!(struct_field_def), char!('}')) >>
+    (syntax::StructDef { name: name, fields: fields })
   ))
 );
+

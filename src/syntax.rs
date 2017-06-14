@@ -121,13 +121,17 @@ pub enum BasicTy {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Struct {
+pub struct StructDef {
   pub name: Option<String>,
-  pub fields: Vec<StructField>,
+  pub fields: Vec<StructFieldDef>,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StructField {
+pub struct StructFieldDef {
   pub ty: BasicTy, // FIXME: not only BasicTy; can be a struct as well
   pub identifiers: Vec<Identifier> // several identifiers of the same basic type
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct SizedArray {
 }
