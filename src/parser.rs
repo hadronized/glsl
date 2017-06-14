@@ -6,7 +6,7 @@ use syntax;
 
 // Turn a &[u8] into a String.
 #[inline]
-fn bytes_toing(bytes: &[u8]) -> String {
+fn bytes_to_string(bytes: &[u8]) -> String {
   unsafe { from_utf8_unchecked(bytes).to_owned() }
 }
 
@@ -18,10 +18,10 @@ fn bytes_toing(bytes: &[u8]) -> String {
 // }
 
 /// Parse an identifier.
-named!(pub identifier<&[u8], syntax::Identifier>,
+named!(pub identifier,
   do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
-    (bytes_toing(name))
+    (name)
   )
 );
 
