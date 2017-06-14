@@ -18,10 +18,10 @@ fn bytes_to_string(bytes: &[u8]) -> String {
 // }
 
 /// Parse an identifier.
-named!(pub identifier,
+named!(pub identifier<&[u8], syntax::Identifier>,
   do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
-    (name)
+    (bytes_to_string(name))
   )
 );
 
@@ -38,7 +38,7 @@ fn verify_identifier(s: &[u8]) -> bool {
 
 
 /// Parse a basic type.
-fn basic_type(i: &[u8]) -> IResult<&[u8], syntax::BasicTy> {
+fn basic_ty(i: &[u8]) -> IResult<&[u8], syntax::BasicTy> {
   let (i1, t) = try_parse!(i, alphanumeric);
 
   match unsafe { from_utf8_unchecked(t) } {
@@ -272,3 +272,12 @@ named!(floating_lit_<&[u8], ()>,
   
 /// Parse a floating point literal.
 named!(pub floating_lit, recognize!(floating_lit_));
+
+/// Parse a struct field declaration.
+named!(pub struct_field<&[u8], syntax::StructField>,
+  ws!(do_parse!(
+    ty: basic_ty >>
+    identifiers: many1!(identifier) >>
+    (syntax::StructField { ty: ty, identifiers: identifiers })
+  ))
+);

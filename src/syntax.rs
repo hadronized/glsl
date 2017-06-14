@@ -119,3 +119,19 @@ pub enum BasicTy {
   USamplerCubeArray,
   UImageCubeArray
 }
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Struct {
+  pub qualifier: Option<StructQualifier>,
+  pub name: Option<String>,
+  pub fields: Vec<StructField>,
+  pub declarators: Vec<Identifier>
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct StructField {
+  pub ty: BasicTy,
+  pub identifiers: Vec<Identifier> // several identifiers of the same basic type
+}
+
+pub type StructQualifier = String; // FIXME: enum
