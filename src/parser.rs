@@ -1,6 +1,5 @@
-use nom::{ErrorKind, IResult, Needed, alphanumeric, digit};
-use std::fmt::Debug;
-use std::str::{FromStr, from_utf8_unchecked};
+use nom::{ErrorKind, IResult, alphanumeric, digit};
+use std::str::{from_utf8_unchecked};
 
 use syntax;
 
