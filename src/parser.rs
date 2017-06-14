@@ -278,12 +278,23 @@ named!(pub struct_field<&[u8], syntax::StructField>,
     ty: basic_ty >>
     first_identifier: identifier >>
     rest_identifiers: many0!(do_parse!(char!(',') >> i: ws!(identifier) >> (i))) >>
+    char!(';') >>
+
     ({
       let mut identifiers = rest_identifiers.clone();
       identifiers.insert(0, first_identifier);
 
       syntax::StructField { ty: ty, identifiers: identifiers}
     })
+  ))
+);
 
+/// Parse a struct.
+named!(pub struct_<&[u8], syntax::Struct>,
+  ws!(do_parse!(
+    tag!("struct") >>
+    name: opt!(identifier) >>
+    fields: delimited!(char!('{'), many1!(struct_field), char!('}')) >>
+    (syntax::Struct { name: name, fields: fields })
   ))
 );
