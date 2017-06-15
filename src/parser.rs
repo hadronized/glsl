@@ -273,7 +273,7 @@ named!(floating_lit_<&[u8], ()>,
 named!(pub floating_lit, recognize!(floating_lit_));
 
 /// Parse a struct field declaration.
-named!(pub struct_field_def<&[u8], syntax::StructFieldDef>,
+named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
     ty: basic_ty >>
     first_identifier: identifier >>
@@ -284,18 +284,38 @@ named!(pub struct_field_def<&[u8], syntax::StructFieldDef>,
       let mut identifiers = rest_identifiers.clone();
       identifiers.insert(0, first_identifier);
 
-      syntax::StructFieldDef { ty: ty, identifiers: identifiers}
+      syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers}
     })
   ))
 );
 
 /// Parse a struct.
-named!(pub struct_def<&[u8], syntax::StructDef>,
+named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
   ws!(do_parse!(
     tag!("struct") >>
     name: opt!(identifier) >>
-    fields: delimited!(char!('{'), many1!(struct_field_def), char!('}')) >>
-    (syntax::StructDef { name: name, fields: fields })
+    fields: delimited!(char!('{'), many1!(struct_field_specifier), char!('}')) >>
+    (syntax::StructSpecifier { name: name, fields: fields })
   ))
 );
 
+/// Parse an array specifier with no size information.
+named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
+  value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
+);
+
+///// Parse an array specifier with a size.
+//named!(array_specifier_sized<&[u8], syntax::ArraySpecifier>,
+//  ws!(do_parse!(
+//    char!('[') >>
+//    s: 
+//  ))
+//);
+
+///// Parse an array specifier.
+//named!(array_specifier,
+//  alt!(
+//    array_specifier_unsized |
+//    array_specifier_sized
+//  )
+//);

@@ -121,17 +121,125 @@ pub enum BasicTy {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StructDef {
-  pub name: Option<String>,
-  pub fields: Vec<StructFieldDef>,
+pub enum TySpecifier {
+  BasicTy(BasicTy),
+  Struct(StructSpecifier),
+  Array(Box<TySpecifier>, ArraySpecifier)
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StructFieldDef {
+pub enum ArraySpecifier {
+  Unsized,
+  ExplicitlySized(Expr)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct StructSpecifier {
+  pub name: Option<String>,
+  pub fields: Vec<StructFieldSpecifier>,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct StructFieldSpecifier {
   pub ty: BasicTy, // FIXME: not only BasicTy; can be a struct as well
   pub identifiers: Vec<Identifier> // several identifiers of the same basic type
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct SizedArray {
+pub struct IntegerExpr(Box<Expr>);
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Expr {
+  Assignment(AssignmentExpr),
+  Comma(Box<Expr>, AssignmentExpr)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum AssignmentExpr {
+  //Cond(CondExpr),
+  Assignment(UnaryExpr, AssignmentOp, Box<AssignmentExpr>)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum AssignmentOp {
+  Equal,
+  MulAssign,
+  DivAssign,
+  ModAssign,
+  AddAssign,
+  SubAssign,
+  LeftAssign,
+  RightAssign,
+  AndAssign,
+  XorAssign,
+  OrAssign
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum UnaryExpr {
+  Unary(PostfixExpr),
+  Inc(Box<UnaryExpr>),
+  Dec(Box<UnaryExpr>),
+  Op(UnaryOp, Box<UnaryExpr>)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum UnaryOp {
+  Plus,
+  Minus,
+  Not,
+  Complement
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum BinaryOp {
+  Mult,
+  Div,
+  Mod,
+  Plus,
+  Minus,
+  LShift,
+  RShift,
+  Less,
+  Greater,
+  LessOrEqual,
+  GreaterOrEqual,
+  Equal,
+  NotEqual,
+  BitAnd,
+  BitXor,
+  BitOr,
+  LogicalAnd,
+  LogicalXor,
+  LogicalOr
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Declaration {
+  //FunProto(FunProto), // TODO
+  //Init(InitDeclList), // TODO
+  //Precision(PrecisionQualifier, TySpecifier), // TODO
+  Struct(StructSpecifier, Option<(Identifier, Option<ArraySpecifier>)>),
+  //ForwardDecl(TySpecifier, Vec<Identifier>), // TODO
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum PostfixExpr {
+  Prim(PrimaryExpr),
+  Bracket(IntegerExpr),
+  //FunCall(FunCall), // TODO
+  //Dot(FieldSelection), // TODO
+  Inc(Box<PostfixExpr>),
+  Dec(Box<PostfixExpr>)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum PrimaryExpr {
+  Identifier(Identifier),
+  IntConstant(String),
+  UIntConstant(String),
+  BoolConstant(String),
+  FloatConstant(String),
+  DoubleConstant(String),
+  Parens(Box<Expr>)
 }
