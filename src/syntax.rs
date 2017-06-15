@@ -128,6 +128,12 @@ pub enum TySpecifier {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Ty {
+  BasicTy(BasicTy),
+  Struct(Identifier)
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ArraySpecifier {
   Unsized,
   ExplicitlySized(Expr)
@@ -141,7 +147,7 @@ pub struct StructSpecifier {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructFieldSpecifier {
-  pub ty: BasicTy, // FIXME: not only BasicTy; can be a struct as well
+  pub ty: Ty,
   pub identifiers: Vec<Identifier> // several identifiers of the same basic type
 }
 

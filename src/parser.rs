@@ -163,6 +163,14 @@ fn basic_ty(i: &[u8]) -> IResult<&[u8], syntax::BasicTy> {
   }
 }
 
+/// Parse a type.
+named!(pub ty_parser<&[u8], syntax::Ty>,
+  alt!(
+    map!(basic_ty, syntax::Ty::BasicTy) |
+    map!(identifier, syntax::Ty::Struct)
+  )
+);
+
 /// Parse the void type.
 named!(pub void_ty<&[u8], ()>, value!((), tag!("void")));
 
@@ -275,7 +283,7 @@ named!(pub floating_lit, recognize!(floating_lit_));
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
-    ty: basic_ty >>
+    ty: ty_parser >>
     first_identifier: identifier >>
     rest_identifiers: many0!(do_parse!(char!(',') >> i: ws!(identifier) >> (i))) >>
     char!(';') >>
