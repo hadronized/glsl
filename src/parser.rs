@@ -249,14 +249,21 @@ named!(pub unsigned_lit,
 );
 
 /// Parse a floating point suffix.
-named!(floating_suffix,
+named!(float_suffix,
   alt!(
     tag!("f") |
-    tag!("F") |
+    tag!("F")
+  )
+);
+
+/// Parse a double point suffix.
+named!(double_suffix,
+  alt!(
     tag!("lf") |
     tag!("LF")
   )
 );
+
 
 /// Parse the exponent part of a floating point literal.
 named!(floating_exponent<&[u8], ()>,
@@ -278,13 +285,21 @@ named!(floating_frac<&[u8], ()>,
   )
 );
 
-/// Parse a floating point literal string.
-named!(floating_lit_<&[u8], ()>,
-  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(floating_suffix) >> (()))
+/// Parse a float literal string.
+named!(float_lit_<&[u8], ()>,
+  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(float_suffix) >> (()))
 );
   
-/// Parse a floating point literal.
-named!(pub floating_lit, recognize!(floating_lit_));
+/// Parse a float litereal.
+named!(pub float_lit, recognize!(float_lit_));
+
+/// Parse a double literal string.
+named!(double_lit_<&[u8], ()>,
+  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(double_suffix) >> (()))
+);
+  
+/// Parse a double litereal.
+named!(pub double_lit, recognize!(double_lit_));
 
 /// Parse a constant boolean.
 named!(pub const_boolean<&[u8], bool>,
