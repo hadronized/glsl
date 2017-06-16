@@ -1,5 +1,10 @@
+/// A generic identifier.
 pub type Identifier = String;
 
+/// GLSL basic types.
+///
+/// Those includes only types that already exists. This is not an exhaustive type set as it will
+/// preclude any user-defined structs and arrays.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum BasicTy {
   // transparent types
@@ -120,52 +125,61 @@ pub enum BasicTy {
   UImageCubeArray
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum TySpecifier {
-  BasicTy(BasicTy),
-  Struct(StructSpecifier),
-  Array(Box<TySpecifier>, ArraySpecifier)
-}
-
+/// Set of all types.
+///
+/// This type includes user defined structs (it references them via identifiers) and arrays.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Ty {
   BasicTy(BasicTy),
-  Struct(Identifier)
+  Struct(Identifier),
+  Array(Box<Ty>, ArraySpecifier)
 }
 
+/// Dimensionality of an arary.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ArraySpecifier {
   Unsized,
-  ExplicitlySized(Expr)
+  ExplicitlySized(IntegerExpr)
 }
 
+/// Struct specifier. Used to create new, user-defined types.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructSpecifier {
   pub name: Option<String>,
   pub fields: Vec<StructFieldSpecifier>,
 }
 
+/// Struct field specifier. Used to add fields to struct specifiers.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructFieldSpecifier {
   pub ty: Ty,
   pub identifiers: Vec<Identifier> // several identifiers of the same basic type
 }
 
+/// An integer expression. Usually used to index an array or specify a binding index.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct IntegerExpr(Box<Expr>);
 
+/// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
+/// assignment is an expression. This is a bit silly but think of an assignment as a statement first
+/// then an expression which evaluates to what the statement “returns”.
+///
+/// An expression is either an assignment or a list (comma) of assignments.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Expr {
   Assignment(AssignmentExpr),
   Comma(Box<Expr>, AssignmentExpr)
 }
 
+/// Assignment expression. It’s either a conditional expression or an assignment that augments a
+/// unary expression with another assignment expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AssignmentExpr {
-  //Cond(CondExpr),
+  Cond(CondExpr),
   Assignment(UnaryExpr, AssignmentOp, Box<AssignmentExpr>)
 }
 
+/// All possible operators for assigning expressions.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AssignmentOp {
   Equal,
@@ -181,16 +195,112 @@ pub enum AssignmentOp {
   OrAssign
 }
 
+/// Logical expression. It’s either a ternary operator use (cond ? a : b) or a logical OR
+/// expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum CondExpr {
+  LogicalOrExpr(LogicalOrExpr),
+  Ternary(LogicalOrExpr, Box<Expr>, Box<AssignmentExpr>)
+}
+
+/// Logical OR expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LogicalOrExpr {
+  LogicalXorExpr(LogicalXorExpr),
+  Or(Box<LogicalOrExpr>, LogicalXorExpr)
+}
+
+/// Logical XOR expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LogicalXorExpr {
+  LogicalAndExpr(LogicalAndExpr),
+  Xor(Box<LogicalXorExpr>, LogicalAndExpr)
+}
+
+/// Logical AND expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LogicalAndExpr {
+  InclusiveOrExpr(InclusiveOrExpr),
+  And(Box<LogicalAndExpr>, InclusiveOrExpr)
+}
+
+/// Inclusive OR expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum InclusiveOrExpr {
+  ExclusiveOrExpr(ExclusiveOrExpr),
+  InclusiveOr(Box<InclusiveOrExpr>, ExclusiveOrExpr)
+}
+
+/// Exclusive OR expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum ExclusiveOrExpr {
+  AndExpr(AndExpr),
+  ExclusiveOr(Box<ExclusiveOrExpr>, AndExpr)
+}
+
+/// AND expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum AndExpr {
+  EqualityExpr(EqualityExpr),
+  And(Box<AndExpr>, EqualityExpr)
+}
+
+/// Equality expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum EqualityExpr {
+  RelExpr(RelExpr),
+  Equality(Box<EqualityExpr>, RelExpr),
+  NonEquality(Box<EqualityExpr>, RelExpr)
+}
+
+/// Relational expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum RelExpr {
+  ShiftExpr(ShiftExpr),
+  LessThan(Box<RelExpr>, ShiftExpr),
+  GreaterThan(Box<RelExpr>, ShiftExpr),
+  LessThanOrEqual(Box<RelExpr>, ShiftExpr),
+  GreaterThanOrEqual(Box<RelExpr>, ShiftExpr),
+}
+
+/// Shift expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum ShiftExpr {
+  AdditiveExpr(AdditiveExpr),
+  Left(Box<ShiftExpr>, AdditiveExpr),
+  Right(Box<ShiftExpr>, AdditiveExpr),
+}
+
+/// Additive expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum AdditiveExpr {
+  MultExpr(MultExpr),
+  Plus(Box<AdditiveExpr>, MultExpr),
+  Dash(Box<AdditiveExpr>, MultExpr),
+}
+
+/// Multiplicative expression.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum MultExpr {
+  UnaryExpr(UnaryExpr),
+  Star(Box<MultExpr>, UnaryExpr),
+  Slash(Box<MultExpr>, UnaryExpr),
+  Percent(Box<MultExpr>, UnaryExpr),
+}
+
+/// Unary expression. Unary expressions are formed from postfix expressions and augmented via
+/// prefixes.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum UnaryExpr {
   Unary(PostfixExpr),
-  Inc(Box<UnaryExpr>),
-  Dec(Box<UnaryExpr>),
   Op(UnaryOp, Box<UnaryExpr>)
 }
 
+/// All unary operators that exist in GLSL.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum UnaryOp {
+  Inc,
+  Dec,
   Plus,
   Dash,
   Bang,
@@ -229,6 +339,8 @@ pub enum Declaration {
   //ForwardDecl(TySpecifier, Vec<Identifier>), // TODO
 }
 
+/// Postfix expression. Postfix expressions are formed from primay expressions and extend them
+/// with suffix.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PostfixExpr {
   Prim(PrimaryExpr),
@@ -239,6 +351,10 @@ pub enum PostfixExpr {
   Dec(Box<PostfixExpr>)
 }
 
+/// Primary expression.
+///
+/// A primary expression is the base expression. It’s used as a building block to build more
+/// complex expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PrimaryExpr {
   Identifier(Identifier),
