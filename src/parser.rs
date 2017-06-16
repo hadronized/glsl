@@ -177,14 +177,10 @@ named!(pub void_ty<&[u8], ()>, value!((), tag!("void")));
 /// Parse a digit that precludes a leading 0.
 named!(pub nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
 
-/// Parse the unsigned suffix.
-named!(pub unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
-
 /// Parse a decimal literal string.
 named!(decimal_lit_,
   do_parse!(
     n: nonzero_digit >>
-    opt!(unsigned_suffix) >>
     (n)
   )
 );
@@ -202,7 +198,6 @@ named!(octal_lit_,
   do_parse!(
     char!('0') >>
     n: verify!(digit, all_octal) >>
-    opt!(unsigned_suffix) >>
     (n)
   )
 );
@@ -225,7 +220,6 @@ named!(hexadecimal_lit_,
   do_parse!(
     alt!(tag!("0x") | tag!("0X")) >>
     n: verify!(take_while!(alphanumeric_no_u), all_hexa) >>
-    opt!(unsigned_suffix) >>
     (n)
   )
 );
@@ -239,6 +233,18 @@ named!(pub integral_lit,
     decimal_lit |
     octal_lit |
     hexadecimal_lit
+  )
+);
+
+/// Parse the unsigned suffix.
+named!(pub unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
+
+/// Parse a lteral unsigned string.
+named!(pub unsigned_lit,
+  do_parse!(
+    n: integral_lit >>
+    unsigned_suffix >>
+    (n)
   )
 );
 
@@ -279,6 +285,14 @@ named!(floating_lit_<&[u8], ()>,
   
 /// Parse a floating point literal.
 named!(pub floating_lit, recognize!(floating_lit_));
+
+/// Parse a constant boolean.
+named!(pub const_boolean<&[u8], bool>,
+  alt!(
+    value!(true, tag!("true")) |
+    value!(false, tag!("false"))
+  )
+);
 
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,

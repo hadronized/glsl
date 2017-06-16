@@ -19,10 +19,8 @@ fn parse_nonzero_digit() {
 
 #[test]
 fn parse_decimal_lit() {
-  assert_eq!(parser::decimal_lit(&b"3"[..]), IResult::Incomplete(Needed::Size(2)));
+  assert_eq!(parser::decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
   assert_eq!(parser::decimal_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
-  assert_eq!(parser::decimal_lit(&b"3u"[..]), IResult::Done(&b""[..], &b"3u"[..]));
-  assert_eq!(parser::decimal_lit(&b"3U"[..]), IResult::Done(&b""[..], &b"3U"[..]));
   assert_eq!(parser::decimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Verify));
 }
 
@@ -30,8 +28,6 @@ fn parse_decimal_lit() {
 fn parse_octal_lit() {
   assert_eq!(parser::octal_lit(&b"3"[..]), IResult::Error(ErrorKind::Char));
   assert_eq!(parser::octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
-  assert_eq!(parser::octal_lit(&b"03u"[..]), IResult::Done(&b""[..], &b"03u"[..]));
-  assert_eq!(parser::octal_lit(&b"03U"[..]), IResult::Done(&b""[..], &b"03U"[..]));
   assert_eq!(parser::octal_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
   assert_eq!(parser::octal_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Verify));
 }
@@ -41,34 +37,24 @@ fn parse_hexadecimal_lit() {
   assert_eq!(parser::hexadecimal_lit(&b"3"[..]), IResult::Error(ErrorKind::Alt));
   assert_eq!(parser::hexadecimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Alt));
   assert_eq!(parser::hexadecimal_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x1234u"[..]), IResult::Done(&b""[..], &b"0x1234u"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x1234U"[..]), IResult::Done(&b""[..], &b"0x1234U"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789ABCDEFU"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEFU"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789ABCDEFu"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEFu"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789abcdefU"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdefU"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789abcdefu"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdefu"[..]));
-  assert_eq!(parser::hexadecimal_lit(&b"0x0123g456789abcdefu"[..]), IResult::Error(ErrorKind::Verify));
+  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+  assert_eq!(parser::hexadecimal_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+  assert_eq!(parser::hexadecimal_lit(&b"0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Verify));
 }
 
 #[test]
 fn parse_integral_lit() {
-  assert_eq!(parser::integral_lit(&b"3"[..]), IResult::Incomplete(Needed::Size(2)));
+  assert_eq!(parser::decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
   assert_eq!(parser::integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
-  assert_eq!(parser::integral_lit(&b"3u"[..]), IResult::Done(&b""[..], &b"3u"[..]));
-  assert_eq!(parser::integral_lit(&b"3U"[..]), IResult::Done(&b""[..], &b"3U"[..]));
   assert_eq!(parser::integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
-  assert_eq!(parser::integral_lit(&b"03u"[..]), IResult::Done(&b""[..], &b"03u"[..]));
-  assert_eq!(parser::integral_lit(&b"03U"[..]), IResult::Done(&b""[..], &b"03U"[..]));
   assert_eq!(parser::integral_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
   assert_eq!(parser::integral_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
   assert_eq!(parser::integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
-  assert_eq!(parser::integral_lit(&b"0x1234u"[..]), IResult::Done(&b""[..], &b"0x1234u"[..]));
-  assert_eq!(parser::integral_lit(&b"0x1234U"[..]), IResult::Done(&b""[..], &b"0x1234U"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123456789ABCDEFU"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEFU"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123456789ABCDEFu"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEFu"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123456789abcdefU"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdefU"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123456789abcdefu"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdefu"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123g456789abcdefu"[..]), IResult::Error(ErrorKind::Alt));
+  assert_eq!(parser::integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+  assert_eq!(parser::integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+  assert_eq!(parser::integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+  assert_eq!(parser::integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+  assert_eq!(parser::integral_lit(&b"0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Alt));
 }
 
 #[test]
