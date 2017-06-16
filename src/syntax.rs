@@ -1,12 +1,9 @@
 /// A generic identifier.
 pub type Identifier = String;
 
-/// GLSL basic types.
-///
-/// Those includes only types that already exists. This is not an exhaustive type set as it will
-/// preclude any user-defined structs and arrays.
+/// Type specifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum BasicTy {
+pub enum TypeSpecifier {
   // transparent types
   Bool,
   Int,
@@ -122,17 +119,8 @@ pub enum BasicTy {
   USampler2DMSArray,
   UImage2DMSArray,
   USamplerCubeArray,
-  UImageCubeArray
-}
-
-/// Set of all types.
-///
-/// This type includes user defined structs (it references them via identifiers) and arrays.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Ty {
-  BasicTy(BasicTy),
-  Struct(Identifier),
-  Array(Box<Ty>, ArraySpecifier)
+  UImageCubeArray,
+  Struct(StructSpecifier)
 }
 
 /// Dimensionality of an arary.
@@ -152,7 +140,7 @@ pub struct StructSpecifier {
 /// Struct field specifier. Used to add fields to struct specifiers.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructFieldSpecifier {
-  pub ty: Ty,
+  pub ty: TypeSpecifier,
   pub identifiers: Vec<Identifier> // several identifiers of the same basic type
 }
 
@@ -334,21 +322,35 @@ pub enum BinaryOp {
 pub enum Declaration {
   //FunProto(FunProto), // TODO
   //Init(InitDeclList), // TODO
-  //Precision(PrecisionQualifier, TySpecifier), // TODO
+  //Precision(PrecisionQualifier, TypeSpecifier), // TODO
   Struct(StructSpecifier, Option<(Identifier, Option<ArraySpecifier>)>),
-  //ForwardDecl(TySpecifier, Vec<Identifier>), // TODO
+  //ForwardDecl(TypeSpecifier, Vec<Identifier>), // TODO
 }
 
 /// Postfix expression. Postfix expressions are formed from primay expressions and extend them
 /// with suffix.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PostfixExpr {
-  Prim(PrimaryExpr),
+  Primary(PrimaryExpr),
   Bracket(IntegerExpr),
-  //FunCall(FunCall), // TODO
+  FunCall(FunCall),
   //Dot(FieldSelection), // TODO
   Inc(Box<PostfixExpr>),
   Dec(Box<PostfixExpr>)
+}
+
+/// Function call. A function call might contain parameters.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum FunCall {
+  FunCall(FunIdentifier, Vec<AssignmentExpr>)
+}
+
+/// Function identifier. Constructors are recognized via type specifiers and methods (.lenngth),
+/// subroutine array calls and identifiers are recognized via postfix expressions.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum FunIdentifier {
+  TypeSpecifier(TypeSpecifier),
+  PostfixExpr(Box<PostfixExpr>)
 }
 
 /// Primary expression.
