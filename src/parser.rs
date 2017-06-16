@@ -309,6 +309,16 @@ named!(pub const_boolean<&[u8], bool>,
   )
 );
 
+/// Parse a unary operator.
+named!(pub unary_op<&[u8], syntax::UnaryOp>,
+  alt!(
+    value!(syntax::UnaryOp::Plus, char!('+')) |
+    value!(syntax::UnaryOp::Dash, char!('-')) |
+    value!(syntax::UnaryOp::Bang, char!('!')) |
+    value!(syntax::UnaryOp::Tilde, char!('~'))
+  )
+);
+
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(

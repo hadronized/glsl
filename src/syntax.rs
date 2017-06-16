@@ -192,9 +192,9 @@ pub enum UnaryExpr {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum UnaryOp {
   Plus,
-  Minus,
-  Not,
-  Complement
+  Dash,
+  Bang,
+  Tilde
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
