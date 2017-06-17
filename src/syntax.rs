@@ -1,6 +1,9 @@
 /// A generic identifier.
 pub type Identifier = String;
 
+/// Any type name.
+pub type TypeName = String;
+
 /// Type specifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TypeSpecifier {
@@ -123,6 +126,13 @@ pub enum TypeSpecifier {
   Struct(StructSpecifier)
 }
 
+/// Fully specified type.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct FullySpecifiedType {
+  pub qualifier: Option<TypeQualifier>,
+  pub ty: TypeSpecifier
+}
+
 /// Dimensionality of an arary.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ArraySpecifier {
@@ -182,6 +192,9 @@ pub enum AssignmentOp {
   XorAssign,
   OrAssign
 }
+
+/// Constant expression.
+pub type ConstExpr = CondExpr;
 
 /// Logical expression. It’s either a ternary operator use (cond ? a : b) or a logical OR
 /// expression.
@@ -353,6 +366,34 @@ pub enum FunIdentifier {
   PostfixExpr(Box<PostfixExpr>)
 }
 
+/// Function prototype.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct FunProto {
+  ty: FullySpecifiedType,
+  name: Identifier,
+  parameters: Vec<FunParamDeclaration>
+}
+
+/// Function parameter declaration.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum FunParamDeclaration {
+  Named(Option<TypeQualifier>, FunParamDeclarator),
+  Unamed(Option<TypeQualifier>, TypeSpecifier)
+}
+
+/// Function parameter declarator.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct FunParamDeclarator {
+  ty: TypeSpecifier,
+  name: Identifier,
+  array_spec: Option<ArraySpecifier>
+}
+
+/// Field selection.
+pub enum FieldSelection {
+  Field(Identifier, Option<ArraySpecifier>, Option<Box<FieldSelection>>)
+}
+
 /// Primary expression.
 ///
 /// A primary expression is the base expression. It’s used as a building block to build more
@@ -366,4 +407,59 @@ pub enum PrimaryExpr {
   FloatConstant(String),
   DoubleConstant(String),
   Parens(Box<Expr>)
+}
+
+/// Type qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum TypeQualifier {
+  Storage(StorageQualifier),
+  Layout(LayoutQualifier),
+  Precision(PrecisionQualifier),
+  Interpolation(InterpolationQualifier),
+  Invariant,
+  Precise
+}
+
+/// Storage qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum StorageQualifier {
+  Const,
+  InOut,
+  In,
+  Out,
+  Centroid,
+  Patch,
+  Sample,
+  Uniform,
+  Buffer,
+  Shared,
+  Coherent,
+  Volatile,
+  Restrict,
+  ReadOnly,
+  WriteOnly,
+  Subroutine(Vec<TypeName>),
+}
+
+/// Layout qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LayoutQualifier {
+  Identifier(Identifier, Option<ConstExpr>),
+  Shared
+}
+
+/// Precision qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum PrecisionQualifier {
+  High,
+  Medium,
+  Low
+}
+
+/// Interpolation qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum InterpolationQualifier {
+  Smooth,
+  Flat,
+  NoPerspective
 }
