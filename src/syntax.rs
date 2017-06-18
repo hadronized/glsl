@@ -539,7 +539,7 @@ pub enum StatementList {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Statement {
   Compound(Box<CompoundStatement>),
-  Simple(SimpleStatement)
+  Simple(Box<SimpleStatement>)
 }
 
 /// Simple statement.
@@ -563,7 +563,7 @@ pub type ExpressionStatement = Vec<Expr>;
 /// Selection statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SelectionStatement {
-  If(Expr, SelectionRestStatement)
+  If(Expr, Box<SelectionRestStatement>)
 }
 
 /// Condition.
@@ -587,7 +587,7 @@ pub enum SwitchStatement {
 }
 
 /// Switch statement list.
-pub type SwitchStatementList = Option<StatementList>;
+pub type SwitchStatementList = Option<Box<StatementList>>;
 
 /// Case label statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -601,7 +601,7 @@ pub enum CaseLabel {
 pub enum IterationStatement {
   While(Expr, Box<StatementNoNewScope>),
   DoWhile(Box<Statement>, Expr),
-  For(ForInitStatement, ForRestStatement, StatementNoNewScope)
+  For(ForInitStatement, ForRestStatement, Box<StatementNoNewScope>)
 }
 
 /// For init statement
