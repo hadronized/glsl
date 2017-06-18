@@ -155,8 +155,7 @@ pub struct StructFieldSpecifier {
 }
 
 /// An integer expression. Usually used to index an array or specify a binding index.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct IntegerExpr(Box<Expr>);
+pub type IntegerExpr = Expr;
 
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
 /// assignment is an expression. This is a bit silly but think of an assignment as a statement first
@@ -333,11 +332,11 @@ pub enum BinaryOp {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Declaration {
-  //FunProto(FunProto), // TODO
-  //Init(InitDeclList), // TODO
-  //Precision(PrecisionQualifier, TypeSpecifier), // TODO
+  FunctionPrototype(FunctionPrototype),
+  InitDeclaratorList(InitDeclaratorList),
+  Precision(PrecisionQualifier, TypeSpecifier),
   Struct(StructSpecifier, Option<(Identifier, Option<ArraySpecifier>)>),
-  //ForwardDecl(TypeSpecifier, Vec<Identifier>), // TODO
+  ForwardDecl(TypeSpecifier, Vec<Identifier>),
 }
 
 /// Postfix expression. Postfix expressions are formed from primay expressions and extend them
@@ -345,7 +344,7 @@ pub enum Declaration {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PostfixExpr {
   Primary(PrimaryExpr),
-  Bracket(IntegerExpr),
+  Bracket(Box<PostfixExpr>, Box<IntegerExpr>),
   FunCall(FunCall),
   //Dot(FieldSelection), // TODO
   Inc(Box<PostfixExpr>),
@@ -368,25 +367,48 @@ pub enum FunIdentifier {
 
 /// Function prototype.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct FunProto {
+pub struct FunctionPrototype {
   ty: FullySpecifiedType,
   name: Identifier,
-  parameters: Vec<FunParamDeclaration>
+  parameters: Vec<FunctionParameterDeclaration>
 }
 
 /// Function parameter declaration.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum FunParamDeclaration {
-  Named(Option<TypeQualifier>, FunParamDeclarator),
+pub enum FunctionParameterDeclaration {
+  Named(Option<TypeQualifier>, FunctionParameterDeclarator),
   Unamed(Option<TypeQualifier>, TypeSpecifier)
 }
 
 /// Function parameter declarator.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct FunParamDeclarator {
+pub struct FunctionParameterDeclarator {
   ty: TypeSpecifier,
   name: Identifier,
   array_spec: Option<ArraySpecifier>
+}
+
+/// Init declarator list.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum InitDeclaratorList {
+  Single(SingleDeclaration),
+  Complex(Box<InitDeclaratorList>, Identifier, Option<ArraySpecifier>, Option<Initializer>)
+}
+
+/// Single declaration.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct SingleDeclaration {
+  pub ty: FullySpecifiedType,
+  pub name: Identifier,
+  pub array_specifier: Option<ArraySpecifier>,
+  pub initializer: Option<Initializer>
+}
+
+/// Initializer.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Initializer {
+  AssignmentExpr(AssignmentExpr),
+  Comma(Box<Initializer>, Box<Initializer>)
 }
 
 /// Field selection.
@@ -462,4 +484,145 @@ pub enum InterpolationQualifier {
   Smooth,
   Flat,
   NoPerspective
+}
+
+/// Starting rule.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum TranslationUnit {
+  ExternalDeclaration(ExternalDeclaration),
+  Next(Box<TranslationUnit>)
+}
+
+/// External declaration.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum ExternalDeclaration {
+  FunctionDefinition(FunctionDefinition),
+  Declaration(Declaration)
+}
+
+/// Function definition.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct FunctionDefinition {
+  prototype: FunctionPrototype,
+  statement: CompoundStatementNoNewScope,
+}
+
+/// Statement (with no new scope).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum StatementNoNewScope {
+  Compound(CompoundStatementNoNewScope),
+  SimpleStatement(SimpleStatement)
+}
+
+/// Compound statement (with no new scope).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum CompoundStatement {
+  Empty,
+  StatementList(StatementList)
+}
+
+/// Compound statement (with no new scope).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum CompoundStatementNoNewScope {
+  Empty,
+  StatementList(StatementList)
+}
+
+/// Statement list.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum StatementList {
+  Statement(Statement),
+  Cons(Statement, Box<StatementList>)
+}
+
+/// Statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Statement {
+  Compound(Box<CompoundStatement>),
+  Simple(SimpleStatement)
+}
+
+/// Simple statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum SimpleStatement {
+  Declaration(DeclarationStatement),
+  Expression(ExpressionStatement),
+  Selection(SelectionStatement),
+  Switch(SwitchStatement),
+  CaseLabel(CaseLabel),
+  Iteration(IterationStatement),
+  Jump(JumpStatement)
+}
+
+/// Declaration statement.
+pub type DeclarationStatement = Declaration;
+
+/// Expression statement.
+pub type ExpressionStatement = Vec<Expr>;
+
+/// Selection statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum SelectionStatement {
+  If(Expr, SelectionRestStatement)
+}
+
+/// Condition.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum Condition {
+  Expr(Expr),
+  Assignment(FullySpecifiedType, Identifier, Initializer)
+}
+
+/// Selection rest statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum SelectionRestStatement {
+  Statement(Box<Statement>),
+  Else(Box<Statement>, Box<Statement>)
+}
+
+/// Switch statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum SwitchStatement {
+  Switch(Expr, SwitchStatementList)
+}
+
+/// Switch statement list.
+pub type SwitchStatementList = Option<StatementList>;
+
+/// Case label statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum CaseLabel {
+  Case(Expr),
+  Def
+}
+
+/// Iteration statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum IterationStatement {
+  While(Expr, Box<StatementNoNewScope>),
+  DoWhile(Box<Statement>, Expr),
+  For(ForInitStatement, ForRestStatement, StatementNoNewScope)
+}
+
+/// For init statement
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum ForInitStatement {
+  Expression(Box<ExpressionStatement>),
+  Declaration(Box<DeclarationStatement>)
+}
+
+/// For init statement
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct ForRestStatement {
+  condition: Option<Condition>,
+  expr: Option<Expr>
+}
+
+/// Jump statement.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum JumpStatement {
+  Continue,
+  Break,
+  Return(Expr),
+  Discard
 }
