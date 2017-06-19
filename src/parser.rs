@@ -136,8 +136,8 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
     "iimage2DArray" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DArray),
     "isamplerBuffer" => IResult::Done(i1, syntax::TypeSpecifier::ISamplerBuffer),
     "iimageBuffer" => IResult::Done(i1, syntax::TypeSpecifier::IImageBuffer),
-    "isampler2MS" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DMS),
-    "iimage2DMS" => IResult::Done(i1, syntax::TypeSpecifier::IIMage2DMS),
+    "isampler2DMS" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DMS),
+    "iimage2DMS" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DMS),
     "isampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DMSArray),
     "iimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DMSArray),
     "isamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::ISamplerCubeArray),
@@ -153,7 +153,7 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
     "uimageCube" => IResult::Done(i1, syntax::TypeSpecifier::UImageCube),
     "usampler2DRect" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DRect),
     "uimage2DRect" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DRect),
-    "uisampler1DArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler1DArray),
+    "usampler1DArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler1DArray),
     "uimage1DArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage1DArray),
     "usampler2DArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DArray),
     "uimage2DArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DArray),
@@ -173,8 +173,8 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
 named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
   alt!(
     type_specifier_non_struct |
-    map!(identifier, syntax::TypeSpecifier::TypeName) |
-    map!(struct_specifier, syntax::TypeSpecifier::Struct)
+    map!(struct_specifier, syntax::TypeSpecifier::Struct) |
+    map!(identifier, syntax::TypeSpecifier::TypeName)
   )
 );
 
@@ -362,17 +362,16 @@ named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
   ))
 );
 
-/// Parse an array specifier with no size information.
-named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
-  value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
-);
-
 /// Parse a storage qualifier subroutine rule with a list of type names.
 named!(storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
-  map!(ws!(delimited!(char!('('),
-           nonempty_identifiers,
-           char!(')'))),
-       syntax::StorageQualifier::Subroutine));
+  ws!(do_parse!(
+    tag!("subroutine") >>
+    identifiers: delimited!(char!('('),
+                            nonempty_identifiers,
+                            char!(')')) >>
+    (syntax::StorageQualifier::Subroutine(identifiers))
+  ))
+);
 
 /// Parse a storage qualifier subroutine rule.
 named!(storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
@@ -383,14 +382,15 @@ named!(storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a storage qualifier.
-named!(storage_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub storage_qualifier<&[u8], syntax::TypeQualifier>,
   alt!(
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Const), tag!("const")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::InOut), tag!("inout")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::In), tag!("in")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Out), tag!("out")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Centroid), tag!("centroid")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Patch), tag!("sample")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Patch), tag!("patch")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Sample), tag!("sample")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Uniform), tag!("uniform")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Buffer), tag!("buffer")) |
     value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Shared), tag!("shared")) |
@@ -404,7 +404,7 @@ named!(storage_qualifier<&[u8], syntax::TypeQualifier>,
 );
 
 /// Parse a precision qualifier.
-named!(precision_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub precision_qualifier<&[u8], syntax::TypeQualifier>,
   alt!(
     value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::High), tag!("high")) |
     value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::Medium), tag!("medium")) |
@@ -413,7 +413,7 @@ named!(precision_qualifier<&[u8], syntax::TypeQualifier>,
 );
 
 /// Parse an interpolation qualifier.
-named!(interpolation_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub interpolation_qualifier<&[u8], syntax::TypeQualifier>,
   alt!(
     value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Smooth), tag!("smooth")) |
     value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Flat), tag!("flat")) |
@@ -422,12 +422,39 @@ named!(interpolation_qualifier<&[u8], syntax::TypeQualifier>,
 );
 
 /// Parse an invariant qualifier.
-named!(invariant_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub invariant_qualifier<&[u8], syntax::TypeQualifier>,
   value!(syntax::TypeQualifier::Invariant, tag!("invariant")));
 
 /// Parse a precise qualifier.
-named!(precise_qualifier<&[u8], syntax::TypeQualifier>,
-  value!(syntax::TypeQualifier::Invariant, tag!("invariant")));
+named!(pub precise_qualifier<&[u8], syntax::TypeQualifier>,
+  value!(syntax::TypeQualifier::Precise, tag!("precise")));
+
+/// Parse a type qualifier.
+named!(type_qualifier<&[u8], syntax::TypeQualifier>,
+  alt!(
+    storage_qualifier |
+    //layout_qualifier | // FIXME
+    precision_qualifier |
+    interpolation_qualifier |
+    invariant_qualifier |
+    precise_qualifier
+  )
+);
+
+/// Parse a fully specified type.
+named!(fully_specified_type<&[u8], syntax::FullySpecifiedType>,
+  ws!(do_parse!(
+    qualifier: opt!(type_qualifier) >>
+    ty: type_specifier >>
+
+    (syntax::FullySpecifiedType { qualifier: qualifier, ty: ty })
+  ))
+);
+
+/// Parse an array specifier with no size information.
+named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
+  value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
+);
 
 ///// Parse an array specifier with a size.
 //named!(array_specifier_sized<&[u8], syntax::ArraySpecifier>,

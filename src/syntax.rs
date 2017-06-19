@@ -96,7 +96,7 @@ pub enum TypeSpecifier {
   ISamplerBuffer,
   IImageBuffer,
   ISampler2DMS,
-  IIMage2DMS,
+  IImage2DMS,
   ISampler2DMSArray,
   IImage2DMSArray,
   ISamplerCubeArray,
