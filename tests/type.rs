@@ -127,3 +127,22 @@ fn parse_type_specifier() {
   assert_eq!(parser::type_specifier(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerCubeArray));
   assert_eq!(parser::type_specifier(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageCubeArray));
 }
+
+#[test]
+fn parse_fully_specified_type() {
+  let ty = syntax::TypeSpecifier::IImage2DMSArray;
+  let expected = syntax::FullySpecifiedType { qualifier: None, ty: ty };
+
+  assert_eq!(parser::fully_specified_type(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+}
+
+#[test]
+fn parse_fully_specified_type_with_qualifier() {
+  let qual = syntax::TypeQualifier::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".to_owned(), "S032_29k".to_owned()]));
+  let ty = syntax::TypeSpecifier::IImage2DMSArray;
+  let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty: ty };
+
+  assert_eq!(parser::fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray "[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray"[..]), IResult::Done(&b""[..], expected));
+}

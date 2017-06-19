@@ -445,7 +445,7 @@ named!(type_qualifier<&[u8], syntax::TypeQualifier>,
 );
 
 /// Parse a fully specified type.
-named!(fully_specified_type<&[u8], syntax::FullySpecifiedType>,
+named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
   ws!(do_parse!(
     qualifier: opt!(type_qualifier) >>
     ty: type_specifier >>
