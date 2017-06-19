@@ -307,29 +307,7 @@ pub enum UnaryOp {
   Tilde
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum BinaryOp {
-  Mult,
-  Div,
-  Mod,
-  Plus,
-  Minus,
-  LShift,
-  RShift,
-  Less,
-  Greater,
-  LessOrEqual,
-  GreaterOrEqual,
-  Equal,
-  NotEqual,
-  BitAnd,
-  BitXor,
-  BitOr,
-  LogicalAnd,
-  LogicalXor,
-  LogicalOr
-}
-
+/// A declaration.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Declaration {
   FunctionPrototype(FunctionPrototype),
