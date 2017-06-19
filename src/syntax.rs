@@ -459,11 +459,11 @@ pub enum FieldSelection {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PrimaryExpr {
   Identifier(Identifier),
-  IntConstant(String),
-  UIntConstant(String),
-  BoolConstant(String),
-  FloatConstant(String),
-  DoubleConstant(String),
+  IntConst(String),
+  UIntConst(String),
+  BoolConst(bool),
+  FloatConst(String),
+  DoubleConst(String),
   Parens(Box<Expr>)
 }
 

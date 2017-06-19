@@ -327,7 +327,7 @@ named!(double_lit_<&[u8], ()>,
 named!(pub double_lit, recognize!(double_lit_));
 
 /// Parse a constant boolean.
-named!(const_boolean<&[u8], bool>,
+named!(bool_lit<&[u8], bool>,
   alt!(
     value!(true, tag!("true")) |
     value!(false, tag!("false"))
@@ -457,6 +457,19 @@ named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
 /// Parse an array specifier with no size information.
 named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
   value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
+);
+
+/// Parse a primary expression.
+named!(primary_expr<&[u8], syntax::PrimaryExpr>,
+  alt!(
+    map!(float_lit, |s| syntax::PrimaryExpr::FloatConst(bytes_to_string(s))) |
+    map!(double_lit, |s| syntax::PrimaryExpr::DoubleConst(bytes_to_string(s))) |
+    map!(bool_lit, |s| syntax::PrimaryExpr::BoolConst(s)) |
+    map!(unsigned_lit, |s| syntax::PrimaryExpr::UIntConst(bytes_to_string(s))) |
+    map!(integral_lit, |s| syntax::PrimaryExpr::IntConst(bytes_to_string(s))) |
+    //map!(parens_expr, syntax::PrimaryExpr::Parse) | // TODO
+    map!(identifier, syntax::PrimaryExpr::Identifier)
+  )
 );
 
 ///// Parse an array specifier with a size.
