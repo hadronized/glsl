@@ -36,7 +36,7 @@ fn verify_identifier(s: &[u8]) -> bool {
 }
 
 
-/// Parse a type specifier that is not a struct.
+/// Parse a type specifier that is not a struct nor a typename.
 fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
   let (i1, t) = try_parse!(i, alphanumeric);
 
@@ -167,6 +167,7 @@ fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> 
 named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
   alt!(
     type_specifier_non_struct |
+    map!(identifier, syntax::TypeSpecifier::TypeName) |
     map!(struct_specifier, syntax::TypeSpecifier::Struct)
   )
 );
@@ -178,10 +179,11 @@ named!(pub void_ty<&[u8], ()>, value!((), tag!("void")));
 named!(pub nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
 
 /// Parse a decimal literal string.
-named!(decimal_lit_,
+named!(decimal_lit_<&[u8], ()>,
   do_parse!(
-    n: nonzero_digit >>
-    (n)
+    ws!(opt!(char!('-'))) >>
+    nonzero_digit >>
+    (())
   )
 );
 
@@ -194,11 +196,12 @@ fn all_octal(s: &[u8]) -> bool {
 }
 
 /// Parse an octal literal string.
-named!(octal_lit_,
+named!(octal_lit_<&[u8], ()>,
   do_parse!(
+    ws!(opt!(char!('-'))) >>
     char!('0') >>
     n: verify!(digit, all_octal) >>
-    (n)
+    (())
   )
 );
 
@@ -216,11 +219,12 @@ fn alphanumeric_no_u(c: u8) -> bool {
 }
 
 /// Parse an hexadecimal literal string.
-named!(hexadecimal_lit_,
+named!(hexadecimal_lit_<&[u8], ()>,
   do_parse!(
+    ws!(opt!(char!('-'))) >>
     alt!(tag!("0x") | tag!("0X")) >>
-    n: verify!(take_while!(alphanumeric_no_u), all_hexa) >>
-    (n)
+    verify!(take_while!(alphanumeric_no_u), all_hexa) >>
+    (())
   )
 );
 
@@ -239,7 +243,7 @@ named!(pub integral_lit,
 /// Parse the unsigned suffix.
 named!(pub unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
 
-/// Parse a lteral unsigned string.
+/// Parse a literal unsigned string.
 named!(pub unsigned_lit,
   do_parse!(
     n: integral_lit >>
@@ -287,7 +291,13 @@ named!(floating_frac<&[u8], ()>,
 
 /// Parse a float literal string.
 named!(float_lit_<&[u8], ()>,
-  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(float_suffix) >> (()))
+  do_parse!(
+    ws!(opt!(char!('-'))) >>
+    floating_frac >>
+    opt!(floating_exponent) >>
+    opt!(float_suffix) >>
+    (())
+  )
 );
   
 /// Parse a float litereal.
@@ -295,7 +305,13 @@ named!(pub float_lit, recognize!(float_lit_));
 
 /// Parse a double literal string.
 named!(double_lit_<&[u8], ()>,
-  do_parse!(floating_frac >> opt!(floating_exponent) >> opt!(double_suffix) >> (()))
+  do_parse!(
+    ws!(opt!(char!('-'))) >>
+    floating_frac >>
+    opt!(floating_exponent) >>
+    opt!(double_suffix) >>
+    (())
+  )
 );
   
 /// Parse a double litereal.
@@ -322,7 +338,7 @@ named!(pub unary_op<&[u8], syntax::UnaryOp>,
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
-    ty: type_specifier_non_struct >>
+    ty: type_specifier >>
     first_identifier: identifier >>
     rest_identifiers: many0!(do_parse!(char!(',') >> i: ws!(identifier) >> (i))) >>
     char!(';') >>

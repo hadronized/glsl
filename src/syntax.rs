@@ -1,3 +1,5 @@
+// FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
+// possible. See <https://github.com/rust-lang/rust/issues/42747>.
 /// A generic identifier.
 pub type Identifier = String;
 
@@ -123,7 +125,77 @@ pub enum TypeSpecifier {
   UImage2DMSArray,
   USamplerCubeArray,
   UImageCubeArray,
-  Struct(StructSpecifier)
+  Struct(StructSpecifier),
+  TypeName(TypeName)
+}
+
+/// Struct specifier. Used to create new, user-defined types.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct StructSpecifier {
+  pub name: Option<String>,
+  pub fields: Vec<StructFieldSpecifier>,
+}
+
+/// Struct field specifier. Used to add fields to struct specifiers.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct StructFieldSpecifier {
+  pub ty: TypeSpecifier,
+  pub identifiers: Vec<Identifier> // several identifiers of the same type
+}
+
+/// Type qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum TypeQualifier {
+  Storage(StorageQualifier),
+  Layout(LayoutQualifier),
+  Precision(PrecisionQualifier),
+  Interpolation(InterpolationQualifier),
+  Invariant,
+  Precise
+}
+
+/// Storage qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum StorageQualifier {
+  Const,
+  InOut,
+  In,
+  Out,
+  Centroid,
+  Patch,
+  Sample,
+  Uniform,
+  Buffer,
+  Shared,
+  Coherent,
+  Volatile,
+  Restrict,
+  ReadOnly,
+  WriteOnly,
+  Subroutine(Vec<TypeName>),
+}
+
+/// Layout qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LayoutQualifier {
+  Identifier(Identifier, Option<ConstExpr>),
+  Shared
+}
+
+/// Precision qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum PrecisionQualifier {
+  High,
+  Medium,
+  Low
+}
+
+/// Interpolation qualifier.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum InterpolationQualifier {
+  Smooth,
+  Flat,
+  NoPerspective
 }
 
 /// Fully specified type.
@@ -140,23 +212,6 @@ pub enum ArraySpecifier {
   ExplicitlySized(IntegerExpr)
 }
 
-/// Struct specifier. Used to create new, user-defined types.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StructSpecifier {
-  pub name: Option<String>,
-  pub fields: Vec<StructFieldSpecifier>,
-}
-
-/// Struct field specifier. Used to add fields to struct specifiers.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct StructFieldSpecifier {
-  pub ty: TypeSpecifier,
-  pub identifiers: Vec<Identifier> // several identifiers of the same basic type
-}
-
-/// An integer expression. Usually used to index an array or specify a binding index.
-pub type IntegerExpr = Expr;
-
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
 /// assignment is an expression. This is a bit silly but think of an assignment as a statement first
 /// then an expression which evaluates to what the statement “returns”.
@@ -164,16 +219,19 @@ pub type IntegerExpr = Expr;
 /// An expression is either an assignment or a list (comma) of assignments.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Expr {
-  Assignment(AssignmentExpr),
-  Comma(Box<Expr>, AssignmentExpr)
+  Assignment(Box<AssignmentExpr>),
+  Comma(Box<Expr>, Box<AssignmentExpr>)
 }
+
+/// An integer expression. Usually used to index an array or specify a binding index.
+pub type IntegerExpr = Expr;
 
 /// Assignment expression. It’s either a conditional expression or an assignment that augments a
 /// unary expression with another assignment expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AssignmentExpr {
-  Cond(CondExpr),
-  Assignment(UnaryExpr, AssignmentOp, Box<AssignmentExpr>)
+  Cond(Box<CondExpr>),
+  Assignment(Box<UnaryExpr>, AssignmentOp, Box<AssignmentExpr>)
 }
 
 /// All possible operators for assigning expressions.
@@ -199,100 +257,100 @@ pub type ConstExpr = CondExpr;
 /// expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CondExpr {
-  LogicalOrExpr(LogicalOrExpr),
-  Ternary(LogicalOrExpr, Box<Expr>, Box<AssignmentExpr>)
+  LogicalOrExpr(Box<LogicalOrExpr>),
+  Ternary(Box<LogicalOrExpr>, Box<Expr>, Box<AssignmentExpr>)
 }
 
 /// Logical OR expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LogicalOrExpr {
-  LogicalXorExpr(LogicalXorExpr),
-  Or(Box<LogicalOrExpr>, LogicalXorExpr)
+  LogicalXorExpr(Box<LogicalXorExpr>),
+  Or(Box<LogicalOrExpr>, Box<LogicalXorExpr>)
 }
 
 /// Logical XOR expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LogicalXorExpr {
-  LogicalAndExpr(LogicalAndExpr),
-  Xor(Box<LogicalXorExpr>, LogicalAndExpr)
+  LogicalAndExpr(Box<LogicalAndExpr>),
+  Xor(Box<LogicalXorExpr>, Box<LogicalAndExpr>)
 }
 
 /// Logical AND expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LogicalAndExpr {
-  InclusiveOrExpr(InclusiveOrExpr),
-  And(Box<LogicalAndExpr>, InclusiveOrExpr)
+  InclusiveOrExpr(Box<InclusiveOrExpr>),
+  And(Box<LogicalAndExpr>, Box<InclusiveOrExpr>)
 }
 
 /// Inclusive OR expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum InclusiveOrExpr {
-  ExclusiveOrExpr(ExclusiveOrExpr),
-  InclusiveOr(Box<InclusiveOrExpr>, ExclusiveOrExpr)
+  ExclusiveOrExpr(Box<ExclusiveOrExpr>),
+  InclusiveOr(Box<InclusiveOrExpr>, Box<ExclusiveOrExpr>)
 }
 
 /// Exclusive OR expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ExclusiveOrExpr {
-  AndExpr(AndExpr),
-  ExclusiveOr(Box<ExclusiveOrExpr>, AndExpr)
+  AndExpr(Box<AndExpr>),
+  ExclusiveOr(Box<ExclusiveOrExpr>, Box<AndExpr>)
 }
 
 /// AND expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AndExpr {
-  EqualityExpr(EqualityExpr),
-  And(Box<AndExpr>, EqualityExpr)
+  EqualityExpr(Box<EqualityExpr>),
+  And(Box<AndExpr>, Box<EqualityExpr>)
 }
 
 /// Equality expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum EqualityExpr {
-  RelExpr(RelExpr),
-  Equality(Box<EqualityExpr>, RelExpr),
-  NonEquality(Box<EqualityExpr>, RelExpr)
+  RelExpr(Box<RelExpr>),
+  Equality(Box<EqualityExpr>, Box<RelExpr>),
+  NonEquality(Box<EqualityExpr>, Box<RelExpr>)
 }
 
 /// Relational expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RelExpr {
-  ShiftExpr(ShiftExpr),
-  LessThan(Box<RelExpr>, ShiftExpr),
-  GreaterThan(Box<RelExpr>, ShiftExpr),
-  LessThanOrEqual(Box<RelExpr>, ShiftExpr),
-  GreaterThanOrEqual(Box<RelExpr>, ShiftExpr),
+  ShiftExpr(Box<ShiftExpr>),
+  LessThan(Box<RelExpr>, Box<ShiftExpr>),
+  GreaterThan(Box<RelExpr>, Box<ShiftExpr>),
+  LessThanOrEqual(Box<RelExpr>, Box<ShiftExpr>),
+  GreaterThanOrEqual(Box<RelExpr>, Box<ShiftExpr>),
 }
 
 /// Shift expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ShiftExpr {
-  AdditiveExpr(AdditiveExpr),
-  Left(Box<ShiftExpr>, AdditiveExpr),
-  Right(Box<ShiftExpr>, AdditiveExpr),
+  AdditiveExpr(Box<AdditiveExpr>),
+  Left(Box<ShiftExpr>, Box<AdditiveExpr>),
+  Right(Box<ShiftExpr>, Box<AdditiveExpr>),
 }
 
 /// Additive expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AdditiveExpr {
-  MultExpr(MultExpr),
-  Plus(Box<AdditiveExpr>, MultExpr),
-  Dash(Box<AdditiveExpr>, MultExpr),
+  MultExpr(Box<MultExpr>),
+  Plus(Box<AdditiveExpr>, Box<MultExpr>),
+  Dash(Box<AdditiveExpr>, Box<MultExpr>),
 }
 
 /// Multiplicative expression.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum MultExpr {
-  UnaryExpr(UnaryExpr),
-  Star(Box<MultExpr>, UnaryExpr),
-  Slash(Box<MultExpr>, UnaryExpr),
-  Percent(Box<MultExpr>, UnaryExpr),
+  UnaryExpr(Box<UnaryExpr>),
+  Star(Box<MultExpr>, Box<UnaryExpr>),
+  Slash(Box<MultExpr>, Box<UnaryExpr>),
+  Percent(Box<MultExpr>, Box<UnaryExpr>),
 }
 
 /// Unary expression. Unary expressions are formed from postfix expressions and augmented via
 /// prefixes.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum UnaryExpr {
-  Unary(PostfixExpr),
+  Unary(Box<PostfixExpr>),
   Op(UnaryOp, Box<UnaryExpr>)
 }
 
@@ -321,7 +379,7 @@ pub enum Declaration {
 /// with suffix.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum PostfixExpr {
-  Primary(PrimaryExpr),
+  Primary(Box<PrimaryExpr>),
   Bracket(Box<PostfixExpr>, Box<IntegerExpr>),
   FunCall(FunCall),
   //Dot(FieldSelection), // TODO
@@ -407,61 +465,6 @@ pub enum PrimaryExpr {
   FloatConstant(String),
   DoubleConstant(String),
   Parens(Box<Expr>)
-}
-
-/// Type qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum TypeQualifier {
-  Storage(StorageQualifier),
-  Layout(LayoutQualifier),
-  Precision(PrecisionQualifier),
-  Interpolation(InterpolationQualifier),
-  Invariant,
-  Precise
-}
-
-/// Storage qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum StorageQualifier {
-  Const,
-  InOut,
-  In,
-  Out,
-  Centroid,
-  Patch,
-  Sample,
-  Uniform,
-  Buffer,
-  Shared,
-  Coherent,
-  Volatile,
-  Restrict,
-  ReadOnly,
-  WriteOnly,
-  Subroutine(Vec<TypeName>),
-}
-
-/// Layout qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LayoutQualifier {
-  Identifier(Identifier, Option<ConstExpr>),
-  Shared
-}
-
-/// Precision qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum PrecisionQualifier {
-  High,
-  Medium,
-  Low
-}
-
-/// Interpolation qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum InterpolationQualifier {
-  Smooth,
-  Flat,
-  NoPerspective
 }
 
 /// Starting rule.
