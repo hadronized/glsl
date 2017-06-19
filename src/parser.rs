@@ -9,13 +9,16 @@ fn bytes_to_string(bytes: &[u8]) -> String {
   unsafe { from_utf8_unchecked(bytes).to_owned() }
 }
 
-/// Parse an identifier.
-named!(pub identifier<&[u8], syntax::Identifier>,
+/// Parse an identifier (raw version).
+named!(pub identifier_str,
   do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
-    (bytes_to_string(name))
+    (name)
   )
 );
+
+/// Parse an identifier.
+named!(pub identifier<&[u8], syntax::Identifier>, map!(identifier_str, bytes_to_string));
 
 #[inline]
 fn identifier_pred(c: u8) -> bool {
@@ -44,7 +47,7 @@ named!(pub nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
 
 /// Parse a type specifier that is not a struct nor a typename.
 pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
-  let (i1, t) = try_parse!(i, alphanumeric);
+  let (i1, t) = try_parse!(i, identifier_str);
 
   match unsafe { from_utf8_unchecked(t) } {
     "bool" => IResult::Done(i1, syntax::TypeSpecifier::Bool),

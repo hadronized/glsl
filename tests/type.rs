@@ -7,6 +7,11 @@ use glsl::parser;
 use glsl::syntax;
 
 #[test]
+fn parse_atomic_uint() {
+  assert_eq!(parser::type_specifier_non_struct(&b"atomic_uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::AtomicUInt));
+}
+
+#[test]
 fn parse_type_specifier() {
   assert_eq!(parser::type_specifier(&b"bool"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Bool));
   assert_eq!(parser::type_specifier(&b"int"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Int));
