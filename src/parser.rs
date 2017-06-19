@@ -9,13 +9,6 @@ fn bytes_to_string(bytes: &[u8]) -> String {
   unsafe { from_utf8_unchecked(bytes).to_owned() }
 }
 
-// /// Parse a natural number.
-// #[inline]
-// fn natural<T>(s: &[u8]) -> IResult<&[u8], T> where T: FromStr, <T as FromStr>::Err: Debug {
-//   let (s1, utf8_s) = unsafe { try_parse!(s, map!(digit, from_utf8_unchecked)) };
-//   IResult::Done(s1, utf8_s.parse().unwrap())
-// }
-
 /// Parse an identifier.
 named!(pub identifier<&[u8], syntax::Identifier>,
   do_parse!(
@@ -35,9 +28,22 @@ fn verify_identifier(s: &[u8]) -> bool {
   !char::from(s[0]).is_digit(10)
 }
 
+/// Parse a non-empty list of identifiers, delimited by comma (,).
+named!(pub nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
+  ws!(do_parse!(
+    first: identifier >>
+    rest: many0!(do_parse!(char!(',') >> i: ws!(identifier) >> (i))) >>
+
+    ({
+      let mut identifiers = rest.clone();
+      identifiers.insert(0, first);
+      identifiers
+    })
+  ))
+);
 
 /// Parse a type specifier that is not a struct nor a typename.
-fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
+pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
   let (i1, t) = try_parse!(i, alphanumeric);
 
   match unsafe { from_utf8_unchecked(t) } {
@@ -173,7 +179,7 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 );
 
 /// Parse the void type.
-named!(pub void_ty<&[u8], ()>, value!((), tag!("void")));
+named!(void_ty<&[u8], ()>, value!((), tag!("void")));
 
 /// Parse a digit that precludes a leading 0.
 named!(pub nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
@@ -253,7 +259,7 @@ named!(pub unsigned_lit,
 );
 
 /// Parse a floating point suffix.
-named!(float_suffix,
+named!(pub float_suffix,
   alt!(
     tag!("f") |
     tag!("F")
@@ -261,7 +267,7 @@ named!(float_suffix,
 );
 
 /// Parse a double point suffix.
-named!(double_suffix,
+named!(pub double_suffix,
   alt!(
     tag!("lf") |
     tag!("LF")
@@ -270,7 +276,7 @@ named!(double_suffix,
 
 
 /// Parse the exponent part of a floating point literal.
-named!(floating_exponent<&[u8], ()>,
+named!(pub floating_exponent<&[u8], ()>,
   do_parse!(
     alt!(char!('e') | char!('E')) >>
     opt!(alt!(char!('+') | char!('-'))) >>
@@ -280,7 +286,7 @@ named!(floating_exponent<&[u8], ()>,
 );
 
 /// Parse the fractional constant part of a floating point literal.
-named!(floating_frac<&[u8], ()>,
+named!(pub floating_frac<&[u8], ()>,
   alt!(
     do_parse!(char!('.') >> digit >> (())) |
     do_parse!(digit >> tag!(".") >> digit >> (())) |
@@ -299,7 +305,7 @@ named!(float_lit_<&[u8], ()>,
     (())
   )
 );
-  
+
 /// Parse a float litereal.
 named!(pub float_lit, recognize!(float_lit_));
 
@@ -313,12 +319,12 @@ named!(double_lit_<&[u8], ()>,
     (())
   )
 );
-  
+
 /// Parse a double litereal.
 named!(pub double_lit, recognize!(double_lit_));
 
 /// Parse a constant boolean.
-named!(pub const_boolean<&[u8], bool>,
+named!(const_boolean<&[u8], bool>,
   alt!(
     value!(true, tag!("true")) |
     value!(false, tag!("false"))
@@ -326,7 +332,7 @@ named!(pub const_boolean<&[u8], bool>,
 );
 
 /// Parse a unary operator.
-named!(pub unary_op<&[u8], syntax::UnaryOp>,
+named!(unary_op<&[u8], syntax::UnaryOp>,
   alt!(
     value!(syntax::UnaryOp::Plus, char!('+')) |
     value!(syntax::UnaryOp::Dash, char!('-')) |
@@ -339,16 +345,10 @@ named!(pub unary_op<&[u8], syntax::UnaryOp>,
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
     ty: type_specifier >>
-    first_identifier: identifier >>
-    rest_identifiers: many0!(do_parse!(char!(',') >> i: ws!(identifier) >> (i))) >>
+    identifiers: nonempty_identifiers >>
     char!(';') >>
 
-    ({
-      let mut identifiers = rest_identifiers.clone();
-      identifiers.insert(0, first_identifier);
-
-      syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers}
-    })
+    (syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers})
   ))
 );
 
@@ -367,11 +367,73 @@ named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
   value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
 );
 
+/// Parse a storage qualifier subroutine rule with a list of type names.
+named!(storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
+  map!(ws!(delimited!(char!('('),
+           nonempty_identifiers,
+           char!(')'))),
+       syntax::StorageQualifier::Subroutine));
+
+/// Parse a storage qualifier subroutine rule.
+named!(storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
+  alt!(
+    storage_qualifier_subroutine_list |
+    value!(syntax::StorageQualifier::Subroutine(Vec::new()), tag!("subroutine"))
+  )
+);
+
+/// Parse a storage qualifier.
+named!(storage_qualifier<&[u8], syntax::TypeQualifier>,
+  alt!(
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Const), tag!("const")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::InOut), tag!("inout")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::In), tag!("in")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Out), tag!("out")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Centroid), tag!("centroid")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Patch), tag!("sample")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Uniform), tag!("uniform")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Buffer), tag!("buffer")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Shared), tag!("shared")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Coherent), tag!("coherent")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Volatile), tag!("volatile")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Restrict), tag!("restrict")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::ReadOnly), tag!("readonly")) |
+    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::WriteOnly), tag!("writeonly")) |
+    map!(storage_qualifier_subroutine, syntax::TypeQualifier::Storage)
+  )
+);
+
+/// Parse a precision qualifier.
+named!(precision_qualifier<&[u8], syntax::TypeQualifier>,
+  alt!(
+    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::High), tag!("high")) |
+    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::Medium), tag!("medium")) |
+    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::Low), tag!("low"))
+  )
+);
+
+/// Parse an interpolation qualifier.
+named!(interpolation_qualifier<&[u8], syntax::TypeQualifier>,
+  alt!(
+    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Smooth), tag!("smooth")) |
+    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Flat), tag!("flat")) |
+    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::NoPerspective), tag!("noperspective"))
+  )
+);
+
+/// Parse an invariant qualifier.
+named!(invariant_qualifier<&[u8], syntax::TypeQualifier>,
+  value!(syntax::TypeQualifier::Invariant, tag!("invariant")));
+
+/// Parse a precise qualifier.
+named!(precise_qualifier<&[u8], syntax::TypeQualifier>,
+  value!(syntax::TypeQualifier::Invariant, tag!("invariant")));
+
 ///// Parse an array specifier with a size.
 //named!(array_specifier_sized<&[u8], syntax::ArraySpecifier>,
 //  ws!(do_parse!(
 //    char!('[') >>
-//    s: 
+//    s:
 //  ))
 //);
 
