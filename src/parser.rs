@@ -351,7 +351,7 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
     identifiers: nonempty_identifiers >>
     char!(';') >>
 
-    (syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers})
+    (syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers })
   ))
 );
 
