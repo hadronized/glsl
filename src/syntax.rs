@@ -124,9 +124,7 @@ pub enum TypeSpecifier {
   USampler2DMSArray,
   UImage2DMSArray,
   USamplerCubeArray,
-  UImageCubeArray,
-  Struct(StructSpecifier),
-  TypeName(TypeName)
+  UImageCubeArray
 }
 
 /// Struct specifier. Used to create new, user-defined types.
@@ -139,7 +137,7 @@ pub struct StructSpecifier {
 /// Struct field specifier. Used to add fields to struct specifiers.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructFieldSpecifier {
-  pub ty: TypeSpecifier,
+  pub ty: TypeName,
   pub identifiers: Vec<Identifier> // several identifiers of the same type
 }
 
@@ -178,7 +176,7 @@ pub enum StorageQualifier {
 /// Layout qualifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LayoutQualifier {
-  Identifier(Identifier, Option<ConstExpr>),
+  Identifier(Identifier, Option<Box<Expr>>),
   Shared
 }
 
@@ -209,160 +207,7 @@ pub struct FullySpecifiedType {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ArraySpecifier {
   Unsized,
-  ExplicitlySized(IntegerExpr)
-}
-
-/// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
-/// assignment is an expression. This is a bit silly but think of an assignment as a statement first
-/// then an expression which evaluates to what the statement “returns”.
-///
-/// An expression is either an assignment or a list (comma) of assignments.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum Expr {
-  Assignment(Box<AssignmentExpr>),
-  Comma(Box<Expr>, Box<AssignmentExpr>)
-}
-
-/// An integer expression. Usually used to index an array or specify a binding index.
-pub type IntegerExpr = Expr;
-
-/// Assignment expression. It’s either a conditional expression or an assignment that augments a
-/// unary expression with another assignment expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum AssignmentExpr {
-  Cond(Box<CondExpr>),
-  Assignment(Box<UnaryExpr>, AssignmentOp, Box<AssignmentExpr>)
-}
-
-/// All possible operators for assigning expressions.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum AssignmentOp {
-  Equal,
-  MulAssign,
-  DivAssign,
-  ModAssign,
-  AddAssign,
-  SubAssign,
-  LeftAssign,
-  RightAssign,
-  AndAssign,
-  XorAssign,
-  OrAssign
-}
-
-/// Constant expression.
-pub type ConstExpr = CondExpr;
-
-/// Logical expression. It’s either a ternary operator use (cond ? a : b) or a logical OR
-/// expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum CondExpr {
-  LogicalOrExpr(Box<LogicalOrExpr>),
-  Ternary(Box<LogicalOrExpr>, Box<Expr>, Box<AssignmentExpr>)
-}
-
-/// Logical OR expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LogicalOrExpr {
-  LogicalXorExpr(Box<LogicalXorExpr>),
-  Or(Box<LogicalOrExpr>, Box<LogicalXorExpr>)
-}
-
-/// Logical XOR expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LogicalXorExpr {
-  LogicalAndExpr(Box<LogicalAndExpr>),
-  Xor(Box<LogicalXorExpr>, Box<LogicalAndExpr>)
-}
-
-/// Logical AND expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LogicalAndExpr {
-  InclusiveOrExpr(Box<InclusiveOrExpr>),
-  And(Box<LogicalAndExpr>, Box<InclusiveOrExpr>)
-}
-
-/// Inclusive OR expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum InclusiveOrExpr {
-  ExclusiveOrExpr(Box<ExclusiveOrExpr>),
-  InclusiveOr(Box<InclusiveOrExpr>, Box<ExclusiveOrExpr>)
-}
-
-/// Exclusive OR expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum ExclusiveOrExpr {
-  AndExpr(Box<AndExpr>),
-  ExclusiveOr(Box<ExclusiveOrExpr>, Box<AndExpr>)
-}
-
-/// AND expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum AndExpr {
-  EqualityExpr(Box<EqualityExpr>),
-  And(Box<AndExpr>, Box<EqualityExpr>)
-}
-
-/// Equality expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum EqualityExpr {
-  RelExpr(Box<RelExpr>),
-  Equality(Box<EqualityExpr>, Box<RelExpr>),
-  NonEquality(Box<EqualityExpr>, Box<RelExpr>)
-}
-
-/// Relational expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum RelExpr {
-  ShiftExpr(Box<ShiftExpr>),
-  LessThan(Box<RelExpr>, Box<ShiftExpr>),
-  GreaterThan(Box<RelExpr>, Box<ShiftExpr>),
-  LessThanOrEqual(Box<RelExpr>, Box<ShiftExpr>),
-  GreaterThanOrEqual(Box<RelExpr>, Box<ShiftExpr>),
-}
-
-/// Shift expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum ShiftExpr {
-  AdditiveExpr(Box<AdditiveExpr>),
-  Left(Box<ShiftExpr>, Box<AdditiveExpr>),
-  Right(Box<ShiftExpr>, Box<AdditiveExpr>),
-}
-
-/// Additive expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum AdditiveExpr {
-  MultExpr(Box<MultExpr>),
-  Plus(Box<AdditiveExpr>, Box<MultExpr>),
-  Dash(Box<AdditiveExpr>, Box<MultExpr>),
-}
-
-/// Multiplicative expression.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum MultExpr {
-  UnaryExpr(Box<UnaryExpr>),
-  Star(Box<MultExpr>, Box<UnaryExpr>),
-  Slash(Box<MultExpr>, Box<UnaryExpr>),
-  Percent(Box<MultExpr>, Box<UnaryExpr>),
-}
-
-/// Unary expression. Unary expressions are formed from postfix expressions and augmented via
-/// prefixes.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum UnaryExpr {
-  Unary(Box<PostfixExpr>),
-  Op(UnaryOp, Box<UnaryExpr>)
-}
-
-/// All unary operators that exist in GLSL.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum UnaryOp {
-  Inc,
-  Dec,
-  Plus,
-  Dash,
-  Bang,
-  Tilde
+  ExplicitlySized(Box<Expr>)
 }
 
 /// A declaration.
@@ -375,30 +220,12 @@ pub enum Declaration {
   ForwardDecl(TypeSpecifier, Vec<Identifier>),
 }
 
-/// Postfix expression. Postfix expressions are formed from primay expressions and extend them
-/// with suffix.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum PostfixExpr {
-  Primary(Box<PrimaryExpr>),
-  Bracket(Box<PostfixExpr>, Box<IntegerExpr>),
-  FunCall(FunCall),
-  //Dot(FieldSelection), // TODO
-  Inc(Box<PostfixExpr>),
-  Dec(Box<PostfixExpr>)
-}
-
-/// Function call. A function call might contain parameters.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum FunCall {
-  FunCall(FunIdentifier, Vec<AssignmentExpr>)
-}
-
-/// Function identifier. Constructors are recognized via type specifiers and methods (.lenngth),
+/// Function identifier. Constructors are recognized via type specifiers and methods (.length),
 /// subroutine array calls and identifiers are recognized via postfix expressions.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum FunIdentifier {
   TypeSpecifier(TypeSpecifier),
-  PostfixExpr(Box<PostfixExpr>)
+  Expr(Box<Expr>)
 }
 
 /// Function prototype.
@@ -419,7 +246,7 @@ pub enum FunctionParameterDeclaration {
 /// Function parameter declarator.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FunctionParameterDeclarator {
-  ty: TypeSpecifier,
+  ty: TypeName,
   name: Identifier,
   array_spec: Option<ArraySpecifier>
 }
@@ -443,28 +270,105 @@ pub struct SingleDeclaration {
 /// Initializer.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Initializer {
-  AssignmentExpr(AssignmentExpr),
+  AssignmentExpr(Box<Expr>),
   Comma(Box<Initializer>, Box<Initializer>)
 }
 
 /// Field selection.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum FieldSelection {
   Field(Identifier, Option<ArraySpecifier>, Option<Box<FieldSelection>>)
 }
 
-/// Primary expression.
+/// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
+/// assignment is an expression. This is a bit silly but think of an assignment as a statement first
+/// then an expression which evaluates to what the statement “returns”.
 ///
-/// A primary expression is the base expression. It’s used as a building block to build more
-/// complex expression.
+/// An expression is either an assignment or a list (comma) of assignments.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum PrimaryExpr {
-  Identifier(Identifier),
+pub enum Expr {
+  /// A variable expression, using an identifier.
+  Variable(Identifier),
+  /// Integral constant expression.
   IntConst(String),
+  /// Unsigned integral constant expression.
   UIntConst(String),
+  /// Boolean constant expression.
   BoolConst(bool),
+  /// Single precision floating expression.
   FloatConst(String),
+  /// Double precision floating expression.
   DoubleConst(String),
-  Parens(Box<Expr>)
+  /// A unary expression, gathering a single expression and a unary operator.
+  Unary(UnaryOp, Box<Expr>),
+  /// A binary expression, gathering two expressions and a binary operator.
+  Binary(BinaryOp, Box<Expr>, Box<Expr>),
+  /// A ternary conditional expression, gathering three expressions.
+  Ternary(Box<Expr>, Box<Expr>, Box<Expr>),
+  /// An assignment is also an expression. Gathers an expression that defines what to assign to, an
+  /// assignment operator and the value to associate with.
+  Assignment(Box<Expr>, AssignmentOp, Box<Expr>),
+  /// Add an array specifier to an expression.
+  Bracket(Box<Expr>, ArraySpecifier),
+  /// A functional call. It has a function identifier and a list of expressions (arguments).
+  FunCall(FunIdentifier, Vec<Expr>),
+  /// An expression associated with a field selection (struct).
+  Dot(Box<Expr>, FieldSelection),
+  /// Post-incrementation of an expression.
+  Post(Box<Expr>),
+  /// Post-decrementation of an expression.
+  PostDec(Box<Expr>)
+}
+
+/// All unary operators that exist in GLSL.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum UnaryOp {
+  Inc,
+  Dec,
+  Plus,
+  Dash,
+  Bang,
+  Tilde
+}
+
+/// All binary operators that exist in GLSL.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum BinaryOp {
+  Or,
+  Xor,
+  And,
+  BitOr,
+  BitXor,
+  BitAnd,
+  Equal,
+  NonEqual,
+  LT,
+  GT,
+  LTE,
+  GTE,
+  LShift,
+  RShift,
+  Add,
+  Minus,
+  Mult,
+  Div,
+  Mod,
+}
+
+/// All possible operators for assigning expressions.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum AssignmentOp {
+  Equal,
+  MulAssign,
+  DivAssign,
+  ModAssign,
+  AddAssign,
+  SubAssign,
+  LeftAssign,
+  RightAssign,
+  AndAssign,
+  XorAssign,
+  OrAssign
 }
 
 /// Starting rule.
@@ -550,7 +454,7 @@ pub enum SelectionStatement {
 /// Condition.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Condition {
-  Expr(Expr),
+  Expr(Box<Expr>),
   Assignment(FullySpecifiedType, Identifier, Initializer)
 }
 
@@ -564,31 +468,28 @@ pub enum SelectionRestStatement {
 /// Switch statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SwitchStatement {
-  Switch(Expr, SwitchStatementList)
+  Switch(Box<Expr>, Option<Box<StatementList>>)
 }
-
-/// Switch statement list.
-pub type SwitchStatementList = Option<Box<StatementList>>;
 
 /// Case label statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum CaseLabel {
-  Case(Expr),
+  Case(Box<Expr>),
   Def
 }
 
 /// Iteration statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum IterationStatement {
-  While(Expr, Box<StatementNoNewScope>),
-  DoWhile(Box<Statement>, Expr),
+  While(Box<Expr>, Box<StatementNoNewScope>),
+  DoWhile(Box<Statement>, Box<Expr>),
   For(ForInitStatement, ForRestStatement, Box<StatementNoNewScope>)
 }
 
 /// For init statement
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ForInitStatement {
-  Expression(Box<ExpressionStatement>),
+  Expression(Vec<Expr>),
   Declaration(Box<DeclarationStatement>)
 }
 
@@ -596,7 +497,7 @@ pub enum ForInitStatement {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ForRestStatement {
   condition: Option<Condition>,
-  expr: Option<Expr>
+  expr: Option<Box<Expr>>
 }
 
 /// Jump statement.
@@ -604,6 +505,6 @@ pub struct ForRestStatement {
 pub enum JumpStatement {
   Continue,
   Break,
-  Return(Expr),
+  Return(Box<Expr>),
   Discard
 }

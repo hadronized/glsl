@@ -45,8 +45,8 @@ named!(pub nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
   ))
 );
 
-/// Parse a type specifier that is not a struct nor a typename.
-pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
+/// Parse a type specifier.
+pub fn type_specifier(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
   let (i1, t) = try_parse!(i, identifier_str);
 
   match unsafe { from_utf8_unchecked(t) } {
@@ -171,15 +171,6 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
     _ => IResult::Error(ErrorKind::AlphaNumeric)
   }
 }
-
-/// Parse a type specifier.
-named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
-  alt!(
-    type_specifier_non_struct |
-    map!(struct_specifier, syntax::TypeSpecifier::Struct) |
-    map!(identifier, syntax::TypeSpecifier::TypeName)
-  )
-);
 
 /// Parse the void type.
 named!(void_ty<&[u8], ()>, value!((), tag!("void")));
@@ -347,7 +338,7 @@ named!(unary_op<&[u8], syntax::UnaryOp>,
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
-    ty: type_specifier >>
+    ty: identifier >>
     identifiers: nonempty_identifiers >>
     char!(';') >>
 
@@ -459,18 +450,18 @@ named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
   value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
 );
 
-/// Parse a primary expression.
-named!(primary_expr<&[u8], syntax::PrimaryExpr>,
-  alt!(
-    map!(float_lit, |s| syntax::PrimaryExpr::FloatConst(bytes_to_string(s))) |
-    map!(double_lit, |s| syntax::PrimaryExpr::DoubleConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::PrimaryExpr::BoolConst(s)) |
-    map!(unsigned_lit, |s| syntax::PrimaryExpr::UIntConst(bytes_to_string(s))) |
-    map!(integral_lit, |s| syntax::PrimaryExpr::IntConst(bytes_to_string(s))) |
-    //map!(parens_expr, syntax::PrimaryExpr::Parse) | // TODO
-    map!(identifier, syntax::PrimaryExpr::Identifier)
-  )
-);
+// /// Parse a primary expression.
+// named!(primary_expr<&[u8], syntax::PrimaryExpr>,
+//   alt!(
+//     map!(float_lit, |s| syntax::PrimaryExpr::FloatConst(bytes_to_string(s))) |
+//     map!(double_lit, |s| syntax::PrimaryExpr::DoubleConst(bytes_to_string(s))) |
+//     map!(bool_lit, |s| syntax::PrimaryExpr::BoolConst(s)) |
+//     map!(unsigned_lit, |s| syntax::PrimaryExpr::UIntConst(bytes_to_string(s))) |
+//     map!(integral_lit, |s| syntax::PrimaryExpr::IntConst(bytes_to_string(s))) |
+//     //map!(parens_expr, syntax::PrimaryExpr::Parse) | // TODO
+//     map!(identifier, syntax::PrimaryExpr::Identifier)
+//   )
+// );
 
 ///// Parse an array specifier with a size.
 //named!(array_specifier_sized<&[u8], syntax::ArraySpecifier>,
