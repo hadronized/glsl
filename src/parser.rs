@@ -45,8 +45,8 @@ named!(pub nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
   ))
 );
 
-/// Parse a type specifier.
-pub fn type_specifier(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
+/// Parse a type specifier non struct.
+pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
   let (i1, t) = try_parse!(i, identifier_str);
 
   match unsafe { from_utf8_unchecked(t) } {
@@ -171,6 +171,15 @@ pub fn type_specifier(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
     _ => IResult::Error(ErrorKind::AlphaNumeric)
   }
 }
+
+/// Parse a type specifier.
+named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
+  alt!(
+    type_specifier_non_struct |
+    map!(struct_specifier, syntax::TypeSpecifier::Struct) |
+    map!(identifier, syntax::TypeSpecifier::TypeName)
+  )
+);
 
 /// Parse the void type.
 named!(void_ty<&[u8], ()>, value!((), tag!("void")));
@@ -338,7 +347,7 @@ named!(unary_op<&[u8], syntax::UnaryOp>,
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
-    ty: identifier >>
+    ty: type_specifier >>
     identifiers: nonempty_identifiers >>
     char!(';') >>
 

@@ -124,7 +124,9 @@ pub enum TypeSpecifier {
   USampler2DMSArray,
   UImage2DMSArray,
   USamplerCubeArray,
-  UImageCubeArray
+  UImageCubeArray,
+  Struct(StructSpecifier),
+  TypeName(TypeName)
 }
 
 /// Struct specifier. Used to create new, user-defined types.
@@ -137,7 +139,7 @@ pub struct StructSpecifier {
 /// Struct field specifier. Used to add fields to struct specifiers.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StructFieldSpecifier {
-  pub ty: TypeName,
+  pub ty: TypeSpecifier,
   pub identifiers: Vec<Identifier> // several identifiers of the same type
 }
 
