@@ -1,4 +1,4 @@
-// FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
+// FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
 // possible. See <https://github.com/rust-lang/rust/issues/42747>.
 /// A generic identifier.
 pub type Identifier = String;
@@ -278,8 +278,10 @@ pub enum Initializer {
 
 /// Field selection.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum FieldSelection {
-  Field(Identifier, Option<ArraySpecifier>, Option<Box<FieldSelection>>)
+pub struct FieldSelection {
+  pub field: Identifier,
+  pub array_specifier: Option<ArraySpecifier>,
+  pub next: Option<Box<FieldSelection>>
 }
 
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
@@ -317,9 +319,11 @@ pub enum Expr {
   /// An expression associated with a field selection (struct).
   Dot(Box<Expr>, FieldSelection),
   /// Post-incrementation of an expression.
-  Post(Box<Expr>),
+  PostInc(Box<Expr>),
   /// Post-decrementation of an expression.
-  PostDec(Box<Expr>)
+  PostDec(Box<Expr>),
+  /// An expression that contains several, separated with comma.
+  Comma(Box<Expr>, Box<Expr>)
 }
 
 /// All unary operators that exist in GLSL.
@@ -351,7 +355,7 @@ pub enum BinaryOp {
   LShift,
   RShift,
   Add,
-  Minus,
+  Sub,
   Mult,
   Div,
   Mod,
@@ -361,16 +365,16 @@ pub enum BinaryOp {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum AssignmentOp {
   Equal,
-  MulAssign,
-  DivAssign,
-  ModAssign,
-  AddAssign,
-  SubAssign,
-  LeftAssign,
-  RightAssign,
-  AndAssign,
-  XorAssign,
-  OrAssign
+  Mult,
+  Div,
+  Mod,
+  Add,
+  Sub,
+  LShift,
+  RShift,
+  And,
+  Xor,
+  Or
 }
 
 /// Starting rule.

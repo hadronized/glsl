@@ -182,7 +182,7 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 );
 
 /// Parse the void type.
-named!(void_ty<&[u8], ()>, value!((), tag!("void")));
+named!(void, tag!("void"));
 
 /// Parse a digit that precludes a leading 0.
 named!(pub nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
@@ -455,35 +455,377 @@ named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
 );
 
 /// Parse an array specifier with no size information.
-named!(array_specifier_unsized<&[u8], syntax::ArraySpecifier>,
-  value!(syntax::ArraySpecifier::Unsized, ws!(do_parse!(char!('[') >> char!(']') >> (()))))
+named!(array_specifier<&[u8], syntax::ArraySpecifier>,
+  alt!(
+    ws!(do_parse!(char!('[') >> char!(']') >> (syntax::ArraySpecifier::Unsized))) |
+    ws!(do_parse!(char!('[') >> e: cond_expr >> char!(']') >> (syntax::ArraySpecifier::ExplicitlySized(Box::new(e)))))
+  )
 );
 
-// /// Parse a primary expression.
-// named!(primary_expr<&[u8], syntax::PrimaryExpr>,
-//   alt!(
-//     map!(float_lit, |s| syntax::PrimaryExpr::FloatConst(bytes_to_string(s))) |
-//     map!(double_lit, |s| syntax::PrimaryExpr::DoubleConst(bytes_to_string(s))) |
-//     map!(bool_lit, |s| syntax::PrimaryExpr::BoolConst(s)) |
-//     map!(unsigned_lit, |s| syntax::PrimaryExpr::UIntConst(bytes_to_string(s))) |
-//     map!(integral_lit, |s| syntax::PrimaryExpr::IntConst(bytes_to_string(s))) |
-//     //map!(parens_expr, syntax::PrimaryExpr::Parse) | // TODO
-//     map!(identifier, syntax::PrimaryExpr::Identifier)
-//   )
-// );
+/// Parse a primary expression.
+named!(primary_expr<&[u8], syntax::Expr>,
+  alt!(
+    // primary expression
+    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
+    map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
+    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
+    map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
+    parens_expr
+  )
+);
 
-///// Parse an array specifier with a size.
-//named!(array_specifier_sized<&[u8], syntax::ArraySpecifier>,
-//  ws!(do_parse!(
-//    char!('[') >>
-//    s:
-//  ))
-//);
+/// Parse a postfix expression.
+named!(postfix_expr<&[u8], syntax::Expr>,
+  alt!(
+    primary_expr |
+    postfix_expr_bracket |
+    function_call |
+    //dot_field_selection | // FIXME
+    postfix_inc |
+    postfix_dec
+  )
+);
 
-///// Parse an array specifier.
-//named!(array_specifier,
-//  alt!(
-//    array_specifier_unsized |
-//    array_specifier_sized
-//  )
-//);
+/// Parse a unary expression.
+named!(unary_expr<&[u8], syntax::Expr>,
+  alt!(
+    postfix_expr |
+    do_parse!(
+      o: unary_op >>
+      e: unary_expr >>
+      (syntax::Expr::Unary(o, Box::new(e)))
+    )
+  )
+);
+
+/// Parse an expression between parens.
+named!(parens_expr<&[u8], syntax::Expr>, delimited!(char!('('), postfix_expr, char!(')')));
+
+/// Parse a postfix expression with brackets (array annotation).
+named!(postfix_expr_bracket<&[u8], syntax::Expr>,
+  do_parse!(
+    e: postfix_expr >>
+    char!('[') >>
+    a: ws!(expr) >>
+    char!(']') >>
+
+    (syntax::Expr::Bracket(Box::new(e), syntax::ArraySpecifier::ExplicitlySized(Box::new(a))))
+  )
+);
+
+/// Parse a postfix incrementation expression.
+named!(postfix_inc<&[u8], syntax::Expr>,
+  do_parse!(
+    e: postfix_expr >>
+    tag!("++") >>
+
+    (syntax::Expr::PostInc(Box::new(e)))
+  )
+);
+
+/// Parse a postfix decrementation expression.
+named!(postfix_dec<&[u8], syntax::Expr>,
+  do_parse!(
+    e: postfix_expr >>
+    tag!("--") >>
+
+    (syntax::Expr::PostDec(Box::new(e)))
+  )
+);
+
+/// Parse a dot field selection.
+named!(dot_field_selection<&[u8], syntax::FieldSelection>,
+  do_parse!(
+    field: identifier >>
+    a: opt!(array_specifier) >>
+    next: map!(opt!(dot_field_selection), |x| x.map(Box::new)) >>
+
+    (syntax::FieldSelection {
+      field: field,
+      array_specifier: a,
+      next: next
+    })
+  )
+);
+
+/// Parse a function call.
+named!(function_call<&[u8], syntax::Expr>,
+  ws!(do_parse!(
+    fc: alt!(function_call_header_with_parameters | function_call_header_no_parameters) >>
+    char!(')') >>
+    (fc)
+  ))
+);
+
+named!(function_call_header_no_parameters<&[u8], syntax::Expr>,
+  do_parse!(
+    fi: function_call_header >>
+    opt!(void) >>
+
+    (syntax::Expr::FunCall(fi, Vec::new()))
+  )
+);
+
+named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
+  ws!(do_parse!(
+    fi: function_call_header >>
+    first_arg: assignment_expr >>
+    rest_args: many0!(ws!(do_parse!(char!(',') >> arg: assignment_expr >> (arg)))) >>
+
+    ({
+      let mut args = rest_args.clone();
+      args.insert(0, first_arg);
+      syntax::Expr::FunCall(fi, args)
+    })
+  ))
+);
+
+named!(function_call_header<&[u8], syntax::FunIdentifier>,
+  ws!(do_parse!(
+    fi: function_identifier >>
+    char!('(') >>
+    (fi)
+  ))
+);
+
+/// Parse a function identifier.
+named!(function_identifier<&[u8], syntax::FunIdentifier>,
+  alt!(
+    map!(type_specifier, syntax::FunIdentifier::TypeSpecifier) |
+    map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e)))
+  )
+);
+
+/// Parse the most general expression.
+named!(expr<&[u8], syntax::Expr>,
+  alt!(
+    assignment_expr |
+    ws!(do_parse!(
+      a: expr >>
+      char!(',') >>
+      b: assignment_expr >>
+
+      (syntax::Expr::Comma(Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse an assignment expression.
+named!(assignment_expr<&[u8], syntax::Expr>,
+  alt!(
+    cond_expr |
+    ws!(do_parse!(
+      e: unary_expr >>
+      o: assignment_op >>
+      v: assignment_expr >>
+
+      (syntax::Expr::Assignment(Box::new(e), o, Box::new(v)))
+    ))
+  )
+);
+
+/// Parse an assignment operator.
+named!(assignment_op<&[u8], syntax::AssignmentOp>,
+  alt!(
+    value!(syntax::AssignmentOp::Equal, char!('=')) |
+    value!(syntax::AssignmentOp::Mult, tag!("*=")) |
+    value!(syntax::AssignmentOp::Div, tag!("/=")) |
+    value!(syntax::AssignmentOp::Mod, tag!("%=")) |
+    value!(syntax::AssignmentOp::Add, tag!("+=")) |
+    value!(syntax::AssignmentOp::Sub, tag!("-=")) |
+    value!(syntax::AssignmentOp::LShift, tag!("<<=")) |
+    value!(syntax::AssignmentOp::RShift, tag!(">>=")) |
+    value!(syntax::AssignmentOp::And, tag!("&=")) |
+    value!(syntax::AssignmentOp::Xor, tag!("^=")) |
+    value!(syntax::AssignmentOp::Or, tag!("|="))
+  )
+);
+
+/// Parse a conditional expression.
+named!(cond_expr<&[u8], syntax::Expr>,
+  alt!(
+    logical_or_expr |
+    ws!(do_parse!(
+      a: logical_or_expr >>
+      char!('?') >>
+      b: expr >>
+      char!(':') >>
+      c: assignment_expr >>
+
+      (syntax::Expr::Ternary(Box::new(a), Box::new(b), Box::new(c)))
+    ))
+  )
+);
+
+/// Parse a logical OR expression.
+named!(logical_or_expr<&[u8], syntax::Expr>,
+  alt!(
+    logical_xor_expr |
+    ws!(do_parse!(
+      a: logical_or_expr >>
+      tag!("||") >>
+      b: logical_xor_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a logical XOR expression.
+named!(logical_xor_expr<&[u8], syntax::Expr>,
+  alt!(
+    logical_and_expr |
+    ws!(do_parse!(
+      a: logical_xor_expr >>
+      tag!("^^") >>
+      b: logical_and_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a logical AND expression.
+named!(logical_and_expr<&[u8], syntax::Expr>,
+  alt!(
+    inclusive_or_expr |
+    ws!(do_parse!(
+      a: logical_and_expr >>
+      tag!("&&") >>
+      b: inclusive_or_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a bitwise OR expression.
+named!(inclusive_or_expr<&[u8], syntax::Expr>,
+  alt!(
+    exclusive_or_expr |
+    ws!(do_parse!(
+      a: inclusive_or_expr >>
+      char!('|') >>
+      b: exclusive_or_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a bitwise XOR expression.
+named!(exclusive_or_expr<&[u8], syntax::Expr>,
+  alt!(
+    and_expr |
+    ws!(do_parse!(
+      a: exclusive_or_expr >>
+      char!('|') >>
+      b: and_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a bitwise AND expression.
+named!(and_expr<&[u8], syntax::Expr>,
+  alt!(
+    equality_expr |
+    ws!(do_parse!(
+      a: and_expr >>
+      char!('|') >>
+      b: equality_expr >>
+
+      (syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse an equality expression.
+named!(equality_expr<&[u8], syntax::Expr>,
+  alt!(
+    rel_expr |
+    ws!(do_parse!(
+      a: equality_expr >>
+      op: alt!(
+            value!(syntax::BinaryOp::Equal, tag!("==")) |
+            value!(syntax::BinaryOp::NonEqual, tag!("!="))
+          ) >>
+      b: rel_expr >>
+
+      (syntax::Expr::Binary(op, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a relational expression.
+named!(rel_expr<&[u8], syntax::Expr>,
+  alt!(
+    shift_expr |
+    ws!(do_parse!(
+      a: rel_expr >>
+      op: alt!(
+            value!(syntax::BinaryOp::LT, char!('<')) |
+            value!(syntax::BinaryOp::GT, char!('>')) |
+            value!(syntax::BinaryOp::LTE, tag!("<=")) |
+            value!(syntax::BinaryOp::GTE, tag!(">="))
+          ) >>
+      b: shift_expr >>
+
+      (syntax::Expr::Binary(op, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a shift expression.
+named!(shift_expr<&[u8], syntax::Expr>,
+  alt!(
+    additive_expr |
+    ws!(do_parse!(
+      a: shift_expr >>
+      op: alt!(
+            value!(syntax::BinaryOp::LShift, tag!("<<")) |
+            value!(syntax::BinaryOp::RShift, tag!(">>"))
+          ) >>
+      b: additive_expr >>
+
+      (syntax::Expr::Binary(op, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse an additive expression.
+named!(additive_expr<&[u8], syntax::Expr>,
+  alt!(
+    multiplicative_expr |
+    ws!(do_parse!(
+      a: additive_expr >>
+      op: alt!(
+            value!(syntax::BinaryOp::Add, char!('+')) |
+            value!(syntax::BinaryOp::Sub, char!('-'))
+          ) >>
+      b: multiplicative_expr >>
+
+      (syntax::Expr::Binary(op, Box::new(a), Box::new(b)))
+    ))
+  )
+);
+
+/// Parse a multiplicative expression.
+named!(multiplicative_expr<&[u8], syntax::Expr>,
+  alt!(
+    unary_expr |
+    ws!(do_parse!(
+      a: multiplicative_expr >>
+      op: alt!(
+            value!(syntax::BinaryOp::Mult, char!('*')) |
+            value!(syntax::BinaryOp::Div, char!('/')) |
+            value!(syntax::BinaryOp::Mod, char!('%'))
+          ) >>
+      b: unary_expr >>
+
+      (syntax::Expr::Binary(op, Box::new(a), Box::new(b)))
+    ))
+  )
+);
