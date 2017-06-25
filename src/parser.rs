@@ -549,6 +549,82 @@ named!(dot_field_selection<&[u8], syntax::FieldSelection>,
   )
 );
 
+/// Parse a function prototype.
+named!(function_prototype<&[u8], syntax::FunctionPrototype>,
+  ws!(do_parse!(
+    fp: function_declarator >>
+    char!(')') >>
+    (fp)
+  ))
+);
+
+
+named!(function_declarator<&[u8], syntax::FunctionPrototype>,
+  alt!(
+    map!(function_header, |(ret_ty, fun_name)| syntax::FunctionPrototype { ty: ret_ty, name: fun_name, parameters: Vec::new() }) |
+    function_header_with_parameters
+  )
+);
+
+named!(function_header<&[u8], (syntax::FullySpecifiedType, syntax::Identifier)>,
+  ws!(do_parse!(
+    ret_ty: fully_specified_type >>
+    fun_name: identifier >>
+    char!('(') >>
+    (ret_ty, fun_name)
+  ))
+);
+
+named!(function_header_with_parameters<&[u8], syntax::FunctionPrototype>,
+  ws!(do_parse!(
+    header: function_header >>
+    first_param: function_parameter_declaration >>
+    rest_params: many0!(ws!(do_parse!(char!(',') >> param: function_parameter_declaration >> (param)))) >>
+
+    ({
+      let mut params = rest_params.clone();
+      params.insert(0, first_param);
+      syntax::FunctionPrototype {
+        ty: header.0,
+        name: header.1,
+        parameters: params
+      }
+    })
+  ))
+);
+
+named!(function_parameter_declaration<&[u8], syntax::FunctionParameterDeclaration>,
+  alt!(function_parameter_declaration_named | function_parameter_declaration_unnamed));
+
+named!(function_parameter_declaration_named<&[u8], syntax::FunctionParameterDeclaration>,
+  ws!(do_parse!(
+    ty_qual: opt!(type_qualifier) >>
+    fpd: function_parameter_declarator >>
+    (syntax::FunctionParameterDeclaration::Named(ty_qual, fpd))
+  ))
+);
+
+named!(function_parameter_declaration_unnamed<&[u8], syntax::FunctionParameterDeclaration>,
+  ws!(do_parse!(
+    ty_qual: opt!(type_qualifier) >>
+    ty_spec: type_specifier >>
+    (syntax::FunctionParameterDeclaration::Unnamed(ty_qual, ty_spec))
+  ))
+);
+
+named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>,
+  ws!(do_parse!(
+    ty: type_specifier >>
+    name: identifier >>
+    a: opt!(array_specifier) >>
+    (syntax::FunctionParameterDeclarator {
+      ty: ty,
+      name: name,
+      array_spec: a
+    })
+  ))
+);
+
 /// Parse a function call.
 named!(function_call<&[u8], syntax::Expr>,
   ws!(do_parse!(

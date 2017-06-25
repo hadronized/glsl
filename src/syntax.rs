@@ -233,24 +233,24 @@ pub enum FunIdentifier {
 /// Function prototype.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FunctionPrototype {
-  ty: FullySpecifiedType,
-  name: Identifier,
-  parameters: Vec<FunctionParameterDeclaration>
+  pub ty: FullySpecifiedType,
+  pub name: Identifier,
+  pub parameters: Vec<FunctionParameterDeclaration>
 }
 
 /// Function parameter declaration.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum FunctionParameterDeclaration {
   Named(Option<TypeQualifier>, FunctionParameterDeclarator),
-  Unamed(Option<TypeQualifier>, TypeSpecifier)
+  Unnamed(Option<TypeQualifier>, TypeSpecifier)
 }
 
 /// Function parameter declarator.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FunctionParameterDeclarator {
-  ty: TypeName,
-  name: Identifier,
-  array_spec: Option<ArraySpecifier>
+  pub ty: TypeSpecifier,
+  pub name: Identifier,
+  pub array_spec: Option<ArraySpecifier>
 }
 
 /// Init declarator list.
