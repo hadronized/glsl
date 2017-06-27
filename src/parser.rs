@@ -558,6 +558,94 @@ named!(function_prototype<&[u8], syntax::FunctionPrototype>,
   ))
 );
 
+/// Parse an init declarator list.
+named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
+  alt!(
+    map!(single_declaration, syntax::InitDeclaratorList::Single)
+  )
+);
+
+// TODO: refactor the alt branches into something smarter
+/// Parse a single declaration.
+named!(single_declaration<&[u8], syntax::SingleDeclaration>,
+  alt!(
+    ws!(do_parse!(
+      ty: fully_specified_type >>
+      (syntax::SingleDeclaration {
+        ty: ty,
+        name: None,
+        array_specifier: None,
+        initializer: None
+      })
+    )) |
+
+    ws!(do_parse!(
+      ty: fully_specified_type >>
+      name: identifier >>
+      (syntax::SingleDeclaration {
+        ty: ty,
+        name: Some(name),
+        array_specifier: None,
+        initializer: None
+      })
+    )) |
+
+    ws!(do_parse!(
+      ty: fully_specified_type >>
+      name: identifier >>
+      a: array_specifier >>
+      (syntax::SingleDeclaration {
+        ty: ty,
+        name: Some(name),
+        array_specifier: Some(a),
+        initializer: None
+      })
+    )) |
+
+    ws!(do_parse!(
+      ty: fully_specified_type >>
+      name: identifier >>
+      a: opt!(array_specifier) >>
+      char!('=') >>
+      ini: initializer >>
+      (syntax::SingleDeclaration {
+        ty: ty,
+        name: Some(name),
+        array_specifier: a,
+        initializer: Some(ini)
+      })
+    ))
+  )
+);
+
+/// Parse an initializer.
+named!(initializer<&[u8], syntax::Initializer>,
+  alt!(
+    map!(assignment_expr, |e| syntax::Initializer::AssignmentExpr(Box::new(e))) |
+    ws!(do_parse!(
+      char!('{') >>
+      il: initializer_list >>
+      opt!(char!(',')) >>
+      char!('}') >>
+
+      (syntax::Initializer::List(il))
+    ))
+  )
+);
+
+/// Parse an initializer list.
+named!(initializer_list<&[u8], Vec<syntax::Initializer>>,
+  ws!(do_parse!(
+    first: initializer >>
+    rest: many0!(ws!(do_parse!(char!(',') >> ini: initializer >> (ini)))) >>
+
+    ({
+      let mut inis = rest.clone();
+      inis.insert(0, first);
+      (inis)
+    })
+  ))
+);
 
 named!(function_declarator<&[u8], syntax::FunctionPrototype>,
   alt!(

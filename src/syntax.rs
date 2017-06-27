@@ -264,7 +264,7 @@ pub enum InitDeclaratorList {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SingleDeclaration {
   pub ty: FullySpecifiedType,
-  pub name: Identifier,
+  pub name: Option<Identifier>,
   pub array_specifier: Option<ArraySpecifier>,
   pub initializer: Option<Initializer>
 }
@@ -273,7 +273,7 @@ pub struct SingleDeclaration {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Initializer {
   AssignmentExpr(Box<Expr>),
-  Comma(Box<Initializer>, Box<Initializer>)
+  List(Vec<Initializer>)
 }
 
 /// Field selection.
