@@ -385,62 +385,62 @@ named!(storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a storage qualifier.
-named!(pub storage_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
   alt!(
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Const), tag!("const")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::InOut), tag!("inout")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::In), tag!("in")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Out), tag!("out")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Centroid), tag!("centroid")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Patch), tag!("patch")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Sample), tag!("sample")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Uniform), tag!("uniform")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Buffer), tag!("buffer")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Shared), tag!("shared")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Coherent), tag!("coherent")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Volatile), tag!("volatile")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::Restrict), tag!("restrict")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::ReadOnly), tag!("readonly")) |
-    value!(syntax::TypeQualifier::Storage(syntax::StorageQualifier::WriteOnly), tag!("writeonly")) |
-    map!(storage_qualifier_subroutine, syntax::TypeQualifier::Storage)
+    value!(syntax::StorageQualifier::Const, tag!("const")) |
+    value!(syntax::StorageQualifier::InOut, tag!("inout")) |
+    value!(syntax::StorageQualifier::In, tag!("in")) |
+    value!(syntax::StorageQualifier::Out, tag!("out")) |
+    value!(syntax::StorageQualifier::Centroid, tag!("centroid")) |
+    value!(syntax::StorageQualifier::Patch, tag!("patch")) |
+    value!(syntax::StorageQualifier::Sample, tag!("sample")) |
+    value!(syntax::StorageQualifier::Uniform, tag!("uniform")) |
+    value!(syntax::StorageQualifier::Buffer, tag!("buffer")) |
+    value!(syntax::StorageQualifier::Shared, tag!("shared")) |
+    value!(syntax::StorageQualifier::Coherent, tag!("coherent")) |
+    value!(syntax::StorageQualifier::Volatile, tag!("volatile")) |
+    value!(syntax::StorageQualifier::Restrict, tag!("restrict")) |
+    value!(syntax::StorageQualifier::ReadOnly, tag!("readonly")) |
+    value!(syntax::StorageQualifier::WriteOnly, tag!("writeonly")) |
+    storage_qualifier_subroutine
   )
 );
 
 /// Parse a precision qualifier.
-named!(pub precision_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
   alt!(
-    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::High), tag!("high")) |
-    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::Medium), tag!("medium")) |
-    value!(syntax::TypeQualifier::Precision(syntax::PrecisionQualifier::Low), tag!("low"))
+    value!(syntax::PrecisionQualifier::High, tag!("high")) |
+    value!(syntax::PrecisionQualifier::Medium, tag!("medium")) |
+    value!(syntax::PrecisionQualifier::Low, tag!("low"))
   )
 );
 
 /// Parse an interpolation qualifier.
-named!(pub interpolation_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub interpolation_qualifier<&[u8], syntax::InterpolationQualifier>,
   alt!(
-    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Smooth), tag!("smooth")) |
-    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::Flat), tag!("flat")) |
-    value!(syntax::TypeQualifier::Interpolation(syntax::InterpolationQualifier::NoPerspective), tag!("noperspective"))
+    value!(syntax::InterpolationQualifier::Smooth, tag!("smooth")) |
+    value!(syntax::InterpolationQualifier::Flat, tag!("flat")) |
+    value!(syntax::InterpolationQualifier::NoPerspective, tag!("noperspective"))
   )
 );
 
 /// Parse an invariant qualifier.
-named!(pub invariant_qualifier<&[u8], syntax::TypeQualifier>,
-  value!(syntax::TypeQualifier::Invariant, tag!("invariant")));
+named!(pub invariant_qualifier<&[u8], ()>,
+  value!((), tag!("invariant")));
 
 /// Parse a precise qualifier.
-named!(pub precise_qualifier<&[u8], syntax::TypeQualifier>,
-  value!(syntax::TypeQualifier::Precise, tag!("precise")));
+named!(pub precise_qualifier<&[u8], ()>,
+  value!((), tag!("precise")));
 
 /// Parse a type qualifier.
 named!(type_qualifier<&[u8], syntax::TypeQualifier>,
   alt!(
-    storage_qualifier |
+    map!(storage_qualifier, syntax::TypeQualifier::Storage) |
     //layout_qualifier | // FIXME
-    precision_qualifier |
-    interpolation_qualifier |
-    invariant_qualifier |
-    precise_qualifier
+    map!(precision_qualifier, syntax::TypeQualifier::Precision) |
+    map!(interpolation_qualifier, syntax::TypeQualifier::Interpolation) |
+    value!(syntax::TypeQualifier::Invariant, invariant_qualifier) |
+    value!(syntax::TypeQualifier::Precise, precise_qualifier)
   )
 );
 
@@ -547,6 +547,68 @@ named!(dot_field_selection<&[u8], syntax::FieldSelection>,
       next: next
     })
   )
+);
+
+/// Parse a declaration.
+named!(declaration<&[u8], syntax::Declaration>,
+  alt!(
+    map!(function_prototype, syntax::Declaration::FunctionPrototype) |
+    map!(init_declarator_list, syntax::Declaration::InitDeclaratorList) |
+    precision_declaration |
+    block_declaration |
+    global_declaration
+  )
+);
+
+/// Parse a precision declaration.
+named!(precision_declaration<&[u8], syntax::Declaration>,
+  ws!(do_parse!(
+    tag!("precision") >>
+    qual: precision_qualifier >>
+    ty: type_specifier >>
+    char!(';') >>
+
+    (syntax::Declaration::Precision(qual, ty))
+  ))
+);
+
+/// Parse a block declaration.
+named!(block_declaration<&[u8], syntax::Declaration>,
+  ws!(do_parse!(
+    qual: type_qualifier >>
+    name: identifier >>
+    char!('{') >>
+    fields: many1!(struct_field_specifier) >>
+    char!('}') >>
+    a: alt!(
+         value!(None, char!(';')) |
+         ws!(do_parse!(
+           a: alt!(
+                map!(identifier, |i| Some((i, None))) |
+                ws!(do_parse!(
+                  i: identifier >>
+                  arr_spec: array_specifier >>
+
+                  (Some((i, Some(arr_spec))))
+                ))
+              ) >>
+           char!(';') >>
+
+           (a)
+         ))
+       ) >>
+
+    (syntax::Declaration::Block(qual, name, fields, a))
+  ))
+);
+
+/// Parse a global declaration.
+named!(global_declaration<&[u8], syntax::Declaration>,
+  ws!(do_parse!(
+    qual: type_qualifier >>
+    identifiers: many0!(ws!(do_parse!(char!(',') >> i: identifier >> (i)))) >>
+    (syntax::Declaration::Global(qual, identifiers))
+  ))
 );
 
 /// Parse a function prototype.
