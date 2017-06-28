@@ -449,7 +449,7 @@ pub enum SimpleStatement {
 pub type DeclarationStatement = Declaration;
 
 /// Expression statement.
-pub type ExpressionStatement = Vec<Expr>;
+pub type ExpressionStatement = Option<Expr>;
 
 /// Selection statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]

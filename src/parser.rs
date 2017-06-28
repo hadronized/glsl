@@ -1055,3 +1055,12 @@ named!(multiplicative_expr<&[u8], syntax::Expr>,
     ))
   )
 );
+
+/// Parse an expression statement.
+named!(expression_statement<&[u8], syntax::ExpressionStatement>,
+  ws!(do_parse!(
+    e: opt!(expr) >>
+    char!(';') >>
+    (e)
+  ))
+);
