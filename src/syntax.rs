@@ -454,7 +454,7 @@ pub type ExpressionStatement = Option<Expr>;
 /// Selection statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SelectionStatement {
-  If(Expr, Box<SelectionRestStatement>)
+  If(Box<Expr>, SelectionRestStatement)
 }
 
 /// Condition.
@@ -466,15 +466,16 @@ pub enum Condition {
 
 /// Selection rest statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum SelectionRestStatement {
+pub struct SelectionRestStatement {
   Statement(Box<Statement>),
   Else(Box<Statement>, Box<Statement>)
 }
 
 /// Switch statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum SwitchStatement {
-  Switch(Box<Expr>, Option<Box<StatementList>>)
+pub struct SwitchStatement {
+  pub head: Box<Expr>,
+  pub body: Option<Box<StatementList>>
 }
 
 /// Case label statement.

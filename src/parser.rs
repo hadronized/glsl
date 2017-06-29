@@ -1064,3 +1064,104 @@ named!(expression_statement<&[u8], syntax::ExpressionStatement>,
     (e)
   ))
 );
+
+/// Parse a selection statement.
+named!(selection_statement<&[u8], syntax::SelectionStatement>,
+  ws!(do_parse!(
+    tag!("if") >>
+    char!('(') >>
+    cond_expr: expr >>
+    char!(')') >>
+    srs: selection_rest_statement >>
+    (syntax::SelectionStatement::If(Box::new(cond_expr), srs))
+  ))
+);
+
+named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
+  alt!(
+    map!(statement, |st| syntax::SelectionRestStatement::Statement(Box::new(st))) |
+    ws!(do_parse!(
+      cond: statement >>
+      tag!("else") >>
+      rest: statement >>
+      (syntax::SelectionRestStatement::Else(Box::new(cond), Box::new(rest)))
+    ))
+  );
+);
+
+/// Parse a switch statement.
+named!(switch_statement<&[u8], syntax::SwitchStatement>,
+  ws!(do_parse!(
+    tag!("switch") >>
+    char!('('') >>
+    head: expr >>
+    char!(')') >>
+    char!('{') >>
+    body: opt!(map!(statement_list, Box::new)) >>
+    char!('}') >>
+
+    (syntax::SwitchStatement { head: Box::new(head), body: body })
+  ))
+);
+
+/// Parse a case label.
+named!(case_label<&[u8], syntax::CaseLabel>,
+  alt!(
+    ws!(do_parse!(
+      tag!("case") >>
+      e: expr >>
+      char!(';') >>
+      (syntax::CaseLabel::Case(Box::new(e)))
+    )) |
+    ws!(do_parse!(
+      tag!("default") >>
+      char!(';') >>
+      (syntax::CaseLabel::Def)
+    ))
+  )
+);
+
+/// Parse an iteration statement.
+named!(iteration_statement<&[u8], syntax::IterationStatement>,
+  alt!(
+    iteration_statement_while |
+    iteration_statement_do_while |
+    iteration_statement_for
+  )
+);
+
+named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
+  ws!(do_parse!(
+    tag!("while") >>
+    char!('(') >>
+    cond: condition >>
+    char!(')') >>
+    st: statement_no_new_scope >>
+    (syntax::IterationStatement::While(Box::new(cond), Box::new(st)))
+  ))
+);
+
+named!(iteration_statement_do_while<&[u8], syntax::IterationStatement>,
+  ws!(do_parse!(
+    tag!("do") >>
+    st: statement >>
+    tag!("while") >>
+    char!('(') >>
+    e: expr >>
+    char!(')') >>
+    char!(';') >>
+    (syntax::IterationStatement::DoWhile(Box::new(st), Box::new(e)))
+  ))
+);
+
+named!(iteration_statement_for<&[u8], syntax::IterationStatement>,
+  ws!(do_parse!(
+    tag!("for") >>
+    char!('(') >>
+    head: iteration_statement_for_init_statement >>
+    rest: iteration_statement_for_rest_statement >>
+    char!(')') >>
+    body: statement_no_new_scope >>
+    (syntax::IterationStatement::For(head, rest, Box::new(body)))
+  ))
+);
