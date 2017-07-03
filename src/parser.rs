@@ -204,12 +204,14 @@ fn all_octal(s: &[u8]) -> bool {
   s.iter().all(|&c| c >= b'0' && c <= b'7')
 }
 
+// FIXME: this parser has a regression, it can parse 09 (parsed 0 and
+// remains 9 to parse -> stupid)
 /// Parse an octal literal string.
 named!(octal_lit_<&[u8], ()>,
   do_parse!(
     ws!(opt!(char!('-'))) >>
     char!('0') >>
-    n: verify!(digit, all_octal) >>
+    opt!(verify!(digit, all_octal)) >>
     (())
   )
 );
@@ -232,7 +234,7 @@ named!(hexadecimal_lit_<&[u8], ()>,
   do_parse!(
     ws!(opt!(char!('-'))) >>
     alt!(tag!("0x") | tag!("0X")) >>
-    verify!(take_while!(alphanumeric_no_u), all_hexa) >>
+    verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
     (())
   )
 );
@@ -501,7 +503,7 @@ named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
 );
 
 /// Parse an array specifier with no size information.
-named!(array_specifier<&[u8], syntax::ArraySpecifier>,
+named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
   alt!(
     ws!(do_parse!(char!('[') >> char!(']') >> (syntax::ArraySpecifier::Unsized))) |
     ws!(do_parse!(char!('[') >> e: cond_expr >> char!(']') >> (syntax::ArraySpecifier::ExplicitlySized(Box::new(e)))))
