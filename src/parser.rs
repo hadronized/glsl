@@ -411,21 +411,24 @@ named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
   ws!(do_parse!(
     tag!("layout") >>
     char!('(') >>
-    x: layout_qualifier_ >>
+    x: layout_qualifier_inner >>
     char!(')') >>
     (x)
   ))
 );
 
-named!(layout_qualifier_<&[u8], syntax::LayoutQualifier>,
-  alt!(
-    map!(layout_qualifier_id, syntax::LayoutQualifier::ID) |
-    ws!(do_parse!(
-      lq: layout_qualifier_ >>
-      id: layout_qualifier_id >>
-      (syntax::LayoutQualifier::Comma(Box::new(lq), id))
-    ))
-  )
+named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
+  ws!(do_parse!(
+    first: layout_qualifier_id >>
+    rest: many0!(do_parse!(char!(',') >> x: ws!(layout_qualifier_id) >> (x))) >>
+
+    ({
+      let mut ids = rest.clone();
+      ids.insert(0, first);
+
+      syntax::LayoutQualifier { ids: ids }
+    })
+  ))
 );
 
 named!(layout_qualifier_id<&[u8], syntax::LayoutQualifierID>,
@@ -501,11 +504,11 @@ named!(array_specifier<&[u8], syntax::ArraySpecifier>,
 named!(primary_expr<&[u8], syntax::Expr>,
   alt!(
     // primary expression
-    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
-    map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
-    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
+    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
+    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
+    map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
     parens_expr
   )
 );

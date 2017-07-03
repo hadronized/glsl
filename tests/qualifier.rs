@@ -57,17 +57,21 @@ fn parse_storage_qualifier() {
 
 #[test]
 fn parse_layout_qualifier_std430() {
-  assert_eq!(parser::layout_qualifier(&b"layout (std430)"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Identifier("std430".to_owned(), None))));
-  assert_eq!(parser::layout_qualifier(&b" layout  (std430   )"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Identifier("std430".to_owned(), None))));
-  assert_eq!(parser::layout_qualifier(&b" layout \n\t (  std430  )"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Identifier("std430".to_owned(), None))));
-  assert_eq!(parser::layout_qualifier(&b" layout(std430)"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Identifier("std430".to_owned(), None))));
+  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierID::Identifier("std430".to_owned(), None)] };
+
+  assert_eq!(parser::layout_qualifier(&b"layout (std430)"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b" layout  (std430   )"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b" layout \n\t (  std430  )"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b" layout(std430)"[..]), IResult::Done(&b""[..], expected));
 }
 
 #[test]
 fn parse_layout_qualifier_shared() {
-  assert_eq!(parser::layout_qualifier(&b"layout (shared)"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Shared)));
-  assert_eq!(parser::layout_qualifier(&b"   layout ( shared )"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Shared)));
-  assert_eq!(parser::layout_qualifier(&b"   layout(shared)"[..]), IResult::Done(&b""[..], syntax::LayoutQualifier::ID(syntax::LayoutQualifierID::Shared)));
+  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierID::Shared] };
+
+  assert_eq!(parser::layout_qualifier(&b"layout (shared)"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b"   layout ( shared )"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b"   layout(shared)"[..]), IResult::Done(&b""[..], expected));
 }
 
 #[test]
@@ -75,12 +79,7 @@ fn parse_layout_qualifier_list() {
   let id_0 = syntax::LayoutQualifierID::Shared;
   let id_1 = syntax::LayoutQualifierID::Identifier("std140".to_owned(), None);
   let id_2 = syntax::LayoutQualifierID::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
-  let expected =
-    syntax::LayoutQualifier::Comma(
-      Box::new(syntax::LayoutQualifier::Comma(
-        Box::new(syntax::LayoutQualifier::ID(id_0)),
-        id_1)),
-      id_2);
+  let expected = syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] };
 
   assert_eq!(parser::layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
 }

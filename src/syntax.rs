@@ -1,5 +1,8 @@
 // FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
 // possible. See <https://github.com/rust-lang/rust/issues/42747>.
+
+pub type NonEmpty<T> = Vec<T>;
+
 /// A generic identifier.
 pub type Identifier = String;
 
@@ -177,9 +180,8 @@ pub enum StorageQualifier {
 
 /// Layout qualifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LayoutQualifier {
-  ID(LayoutQualifierID),
-  Comma(Box<LayoutQualifier>, LayoutQualifierID)
+pub struct LayoutQualifier {
+  pub ids: NonEmpty<LayoutQualifierID>
 }
 
 /// Layout qualifier ID.
