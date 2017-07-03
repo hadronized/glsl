@@ -1,7 +1,14 @@
 [package]
 name = "glsl"
 version = "0.1.0"
+license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dsabadie@vente-privee.com>"]
+description = "A GLSL450 parser"
+keywords = ["GLSL", "OpenGL", "SPIR-V", "parser"]
+
+homepage = "https://github.com/phaazon/glsl"
+repository = "https://github.com/phaazon/glsl"
+documentation = "https://docs.rs/glsl"
 
 [dependencies]
 nom = "3.0"
