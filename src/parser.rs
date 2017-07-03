@@ -407,7 +407,7 @@ named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a layout qualifier.
-named!(layout_qualifier<&[u8], syntax::LayoutQualifier>,
+named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
   ws!(do_parse!(
     tag!("layout") >>
     char!('(') >>
@@ -430,14 +430,14 @@ named!(layout_qualifier_<&[u8], syntax::LayoutQualifier>,
 
 named!(layout_qualifier_id<&[u8], syntax::LayoutQualifierID>,
   alt!(
-    map!(identifier, |i| syntax::LayoutQualifierID::Identifier(i, None)) |
+    value!(syntax::LayoutQualifierID::Shared, tag!("shared")) |
     ws!(do_parse!(
       i: identifier >>
       char!('=') >>
       e: expr >>
       (syntax::LayoutQualifierID::Identifier(i, Some(Box::new(e))))
     )) |
-    value!(syntax::LayoutQualifierID::Shared, tag!("shared"))
+    map!(identifier, |i| syntax::LayoutQualifierID::Identifier(i, None))
   )
 );
 
