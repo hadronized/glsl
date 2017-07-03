@@ -1270,3 +1270,23 @@ named!(function_definition<&[u8], syntax::FunctionDefinition>,
     (syntax::FunctionDefinition { prototype: prototype, statement: st })
   ))
 );
+
+/// Parse an external declaration.
+named!(external_declaration<&[u8], syntax::ExternalDeclaration>,
+  alt!(
+    map!(function_definition, syntax::ExternalDeclaration::FunctionDefinition) |
+    map!(declaration, syntax::ExternalDeclaration::Declaration)
+  )
+);
+
+/// Parse a translation unit (entry point).
+named!(translation_unit<&[u8], syntax::TranslationUnit>,
+  alt!(
+    map!(external_declaration, syntax::TranslationUnit::ExternalDeclaration) |
+    ws!(do_parse!(
+      tl: translation_unit >>
+      ed: external_declaration >>
+      (syntax::TranslationUnit::Comma(Box::new(tl), ed))
+    ))
+  )
+);

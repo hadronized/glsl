@@ -381,7 +381,7 @@ pub enum AssignmentOp {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum TranslationUnit {
   ExternalDeclaration(ExternalDeclaration),
-  Next(Box<TranslationUnit>)
+  Comma(Box<TranslationUnit>, ExternalDeclaration)
 }
 
 /// External declaration.
