@@ -1056,8 +1056,21 @@ named!(multiplicative_expr<&[u8], syntax::Expr>,
   )
 );
 
+/// Parse a simple statement.
+named!(simple_statement<&[u8], syntax::SimpleStatement>,
+  alt!(
+    map!(declaration, syntax::SimpleStatement::Declaration) |
+    map!(expr_statement, syntax::SimpleStatement::Expression) |
+    map!(selection_statement, syntax::SimpleStatement::Selection) |
+    map!(switch_statement, syntax::SimpleStatement::Switch) |
+    map!(case_label, syntax::SimpleStatement::CaseLabel) |
+    map!(iteration_statement, syntax::SimpleStatement::Iteration) |
+    map!(jump_statement, syntax::SimpleStatement::Jump)
+  )
+);
+
 /// Parse an expression statement.
-named!(expression_statement<&[u8], syntax::ExpressionStatement>,
+named!(expr_statement<&[u8], syntax::ExprStatement>,
   ws!(do_parse!(
     e: opt!(expr) >>
     char!(';') >>
@@ -1086,18 +1099,18 @@ named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
       rest: statement >>
       (syntax::SelectionRestStatement::Else(Box::new(cond), Box::new(rest)))
     ))
-  );
+  )
 );
 
 /// Parse a switch statement.
 named!(switch_statement<&[u8], syntax::SwitchStatement>,
   ws!(do_parse!(
     tag!("switch") >>
-    char!('('') >>
+    char!('(') >>
     head: expr >>
     char!(')') >>
     char!('{') >>
-    body: opt!(map!(statement_list, Box::new)) >>
+    body: many0!(statement) >>
     char!('}') >>
 
     (syntax::SwitchStatement { head: Box::new(head), body: body })
@@ -1134,10 +1147,10 @@ named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
     tag!("while") >>
     char!('(') >>
-    cond: condition >>
+    cond: condition >>
     char!(')') >>
-    st: statement_no_new_scope >>
-    (syntax::IterationStatement::While(Box::new(cond), Box::new(st)))
+    st: statement >>
+    (syntax::IterationStatement::While(cond, Box::new(st)))
   ))
 );
 
@@ -1158,10 +1171,102 @@ named!(iteration_statement_for<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
     tag!("for") >>
     char!('(') >>
-    head: iteration_statement_for_init_statement >>
-    rest: iteration_statement_for_rest_statement >>
+    head: iteration_statement_for_init_statement >>
+    rest: iteration_statement_for_rest_statement >>
     char!(')') >>
-    body: statement_no_new_scope >>
+    body: statement >>
     (syntax::IterationStatement::For(head, rest, Box::new(body)))
+  ))
+);
+
+named!(iteration_statement_for_init_statement<&[u8], syntax::ForInitStatement>,
+  alt!(
+    map!(expr_statement, syntax::ForInitStatement::Expression) |
+    map!(declaration, |d| syntax::ForInitStatement::Declaration(Box::new(d)))
+  )
+);
+
+named!(iteration_statement_for_rest_statement<&[u8], syntax::ForRestStatement>,
+  ws!(do_parse!(
+    cond: opt!(condition) >>
+    char!(';') >>
+    e: opt!(expr) >>
+    (syntax::ForRestStatement { condition: cond, post_expr: e.map(Box::new) })
+  ))
+);
+
+/// Parse a jump statement.
+named!(jump_statement<&[u8], syntax::JumpStatement>,
+  alt!(
+    jump_statement_continue |
+    jump_statement_break |
+    jump_statement_return |
+    jump_statement_discard
+  )
+);
+
+named!(jump_statement_continue<&[u8], syntax::JumpStatement>,
+  ws!(do_parse!(tag!("continue") >> char!(';') >> (syntax::JumpStatement::Continue)))
+);
+
+named!(jump_statement_break<&[u8], syntax::JumpStatement>,
+  ws!(do_parse!(tag!("break") >> char!(';') >> (syntax::JumpStatement::Break)))
+);
+
+named!(jump_statement_discard<&[u8], syntax::JumpStatement>,
+  ws!(do_parse!(tag!("discard") >> char!(';') >> (syntax::JumpStatement::Discard)))
+);
+
+named!(jump_statement_return<&[u8], syntax::JumpStatement>,
+  ws!(do_parse!(
+    tag!("return") >>
+    e: expr >>
+    char!(';') >> 
+    (syntax::JumpStatement::Return(Box::new(e)))
+  ))
+);
+
+/// Parse a condition.
+named!(condition<&[u8], syntax::Condition>,
+  alt!(
+    map!(expr, |e| syntax::Condition::Expr(Box::new(e))) |
+    condition_assignment
+  )
+);
+
+named!(condition_assignment<&[u8], syntax::Condition>,
+  ws!(do_parse!(
+    ty: fully_specified_type >>
+    id: identifier >>
+    char!('=') >>
+    ini: initializer >>
+    (syntax::Condition::Assignment(ty, id, ini))
+  ))
+);
+
+/// Parse a statement.
+named!(statement<&[u8], syntax::Statement>,
+  alt!(
+    map!(compound_statement, |c| syntax::Statement::Compound(Box::new(c))) |
+    map!(simple_statement, |s| syntax::Statement::Simple(Box::new(s)))
+  )
+);
+
+/// Parse a compound statement.
+named!(compound_statement<&[u8], syntax::CompoundStatement>,
+  ws!(do_parse!(
+    char!('{') >>
+    stl: many0!(statement) >>
+    char!('}') >>
+    (syntax::CompoundStatement { statement_list: stl })
+  ))
+);
+
+/// Parse a function definition.
+named!(function_definition<&[u8], syntax::FunctionDefinition>,
+  ws!(do_parse!(
+    prototype: function_prototype >>
+    st: compound_statement >>
+    (syntax::FunctionDefinition { prototype: prototype, statement: st })
   ))
 );

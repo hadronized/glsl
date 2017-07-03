@@ -394,36 +394,14 @@ pub enum ExternalDeclaration {
 /// Function definition.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct FunctionDefinition {
-  prototype: FunctionPrototype,
-  statement: CompoundStatementNoNewScope,
-}
-
-/// Statement (with no new scope).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum StatementNoNewScope {
-  Compound(CompoundStatementNoNewScope),
-  SimpleStatement(SimpleStatement)
+  pub prototype: FunctionPrototype,
+  pub statement: CompoundStatement,
 }
 
 /// Compound statement (with no new scope).
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum CompoundStatement {
-  Empty,
-  StatementList(StatementList)
-}
-
-/// Compound statement (with no new scope).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum CompoundStatementNoNewScope {
-  Empty,
-  StatementList(StatementList)
-}
-
-/// Statement list.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum StatementList {
-  Statement(Statement),
-  Cons(Statement, Box<StatementList>)
+pub struct CompoundStatement {
+  pub statement_list: Vec<Statement>
 }
 
 /// Statement.
@@ -436,8 +414,8 @@ pub enum Statement {
 /// Simple statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum SimpleStatement {
-  Declaration(DeclarationStatement),
-  Expression(ExpressionStatement),
+  Declaration(Declaration),
+  Expression(ExprStatement),
   Selection(SelectionStatement),
   Switch(SwitchStatement),
   CaseLabel(CaseLabel),
@@ -445,11 +423,8 @@ pub enum SimpleStatement {
   Jump(JumpStatement)
 }
 
-/// Declaration statement.
-pub type DeclarationStatement = Declaration;
-
 /// Expression statement.
-pub type ExpressionStatement = Option<Expr>;
+pub type ExprStatement = Option<Expr>;
 
 /// Selection statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -466,7 +441,7 @@ pub enum Condition {
 
 /// Selection rest statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct SelectionRestStatement {
+pub enum SelectionRestStatement {
   Statement(Box<Statement>),
   Else(Box<Statement>, Box<Statement>)
 }
@@ -475,7 +450,7 @@ pub struct SelectionRestStatement {
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SwitchStatement {
   pub head: Box<Expr>,
-  pub body: Option<Box<StatementList>>
+  pub body: Vec<Statement>
 }
 
 /// Case label statement.
@@ -488,23 +463,23 @@ pub enum CaseLabel {
 /// Iteration statement.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum IterationStatement {
-  While(Box<Expr>, Box<StatementNoNewScope>),
+  While(Condition, Box<Statement>),
   DoWhile(Box<Statement>, Box<Expr>),
-  For(ForInitStatement, ForRestStatement, Box<StatementNoNewScope>)
+  For(ForInitStatement, ForRestStatement, Box<Statement>)
 }
 
 /// For init statement
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum ForInitStatement {
-  Expression(Vec<Expr>),
-  Declaration(Box<DeclarationStatement>)
+  Expression(Option<Expr>),
+  Declaration(Box<Declaration>)
 }
 
 /// For init statement
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ForRestStatement {
-  condition: Option<Condition>,
-  expr: Option<Box<Expr>>
+  pub condition: Option<Condition>,
+  pub post_expr: Option<Box<Expr>>
 }
 
 /// Jump statement.
