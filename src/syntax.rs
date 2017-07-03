@@ -178,6 +178,13 @@ pub enum StorageQualifier {
 /// Layout qualifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum LayoutQualifier {
+  ID(LayoutQualifierID),
+  Comma(Box<LayoutQualifier>, LayoutQualifierID)
+}
+
+/// Layout qualifier ID.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum LayoutQualifierID {
   Identifier(Identifier, Option<Box<Expr>>),
   Shared
 }

@@ -406,6 +406,41 @@ named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
   )
 );
 
+/// Parse a layout qualifier.
+named!(layout_qualifier<&[u8], syntax::LayoutQualifier>,
+  ws!(do_parse!(
+    tag!("layout") >>
+    char!('(') >>
+    x: layout_qualifier_ >>
+    char!(')') >>
+    (x)
+  ))
+);
+
+named!(layout_qualifier_<&[u8], syntax::LayoutQualifier>,
+  alt!(
+    map!(layout_qualifier_id, syntax::LayoutQualifier::ID) |
+    ws!(do_parse!(
+      lq: layout_qualifier_ >>
+      id: layout_qualifier_id >>
+      (syntax::LayoutQualifier::Comma(Box::new(lq), id))
+    ))
+  )
+);
+
+named!(layout_qualifier_id<&[u8], syntax::LayoutQualifierID>,
+  alt!(
+    map!(identifier, |i| syntax::LayoutQualifierID::Identifier(i, None)) |
+    ws!(do_parse!(
+      i: identifier >>
+      char!('=') >>
+      e: expr >>
+      (syntax::LayoutQualifierID::Identifier(i, Some(Box::new(e))))
+    )) |
+    value!(syntax::LayoutQualifierID::Shared, tag!("shared"))
+  )
+);
+
 /// Parse a precision qualifier.
 named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
   alt!(
@@ -436,7 +471,7 @@ named!(pub precise_qualifier<&[u8], ()>,
 named!(type_qualifier<&[u8], syntax::TypeQualifier>,
   alt!(
     map!(storage_qualifier, syntax::TypeQualifier::Storage) |
-    //layout_qualifier | // FIXME
+    map!(layout_qualifier, syntax::TypeQualifier::Layout) |
     map!(precision_qualifier, syntax::TypeQualifier::Precision) |
     map!(interpolation_qualifier, syntax::TypeQualifier::Interpolation) |
     value!(syntax::TypeQualifier::Invariant, invariant_qualifier) |
