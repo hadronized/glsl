@@ -419,8 +419,8 @@ named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
 
 named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
   ws!(do_parse!(
-    first: layout_qualifier_id >>
-    rest: many0!(do_parse!(char!(',') >> x: ws!(layout_qualifier_id) >> (x))) >>
+    first: layout_qualifier_spec >>
+    rest: many0!(do_parse!(char!(',') >> x: ws!(layout_qualifier_spec) >> (x))) >>
 
     ({
       let mut ids = rest.clone();
@@ -431,16 +431,16 @@ named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
   ))
 );
 
-named!(layout_qualifier_id<&[u8], syntax::LayoutQualifierID>,
+named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
   alt!(
-    value!(syntax::LayoutQualifierID::Shared, tag!("shared")) |
+    value!(syntax::LayoutQualifierSpec::Shared, tag!("shared")) |
     ws!(do_parse!(
       i: identifier >>
       char!('=') >>
       e: expr >>
-      (syntax::LayoutQualifierID::Identifier(i, Some(Box::new(e))))
+      (syntax::LayoutQualifierSpec::Identifier(i, Some(Box::new(e))))
     )) |
-    map!(identifier, |i| syntax::LayoutQualifierID::Identifier(i, None))
+    map!(identifier, |i| syntax::LayoutQualifierSpec::Identifier(i, None))
   )
 );
 
@@ -471,14 +471,22 @@ named!(pub precise_qualifier<&[u8], ()>,
   value!((), tag!("precise")));
 
 /// Parse a type qualifier.
-named!(type_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub type_qualifier<&[u8], syntax::TypeQualifier>,
+  do_parse!(
+    qualifiers: many1!(ws!(type_qualifier_spec)) >>
+    (syntax::TypeQualifier { qualifiers: qualifiers })
+  )
+);
+
+/// Parse a type qualifier spec.
+named!(pub type_qualifier_spec<&[u8], syntax::TypeQualifierSpec>,
   alt!(
-    map!(storage_qualifier, syntax::TypeQualifier::Storage) |
-    map!(layout_qualifier, syntax::TypeQualifier::Layout) |
-    map!(precision_qualifier, syntax::TypeQualifier::Precision) |
-    map!(interpolation_qualifier, syntax::TypeQualifier::Interpolation) |
-    value!(syntax::TypeQualifier::Invariant, invariant_qualifier) |
-    value!(syntax::TypeQualifier::Precise, precise_qualifier)
+    map!(storage_qualifier, syntax::TypeQualifierSpec::Storage) |
+    map!(layout_qualifier, syntax::TypeQualifierSpec::Layout) |
+    map!(precision_qualifier, syntax::TypeQualifierSpec::Precision) |
+    map!(interpolation_qualifier, syntax::TypeQualifierSpec::Interpolation) |
+    value!(syntax::TypeQualifierSpec::Invariant, invariant_qualifier) |
+    value!(syntax::TypeQualifierSpec::Precise, precise_qualifier)
   )
 );
 

@@ -148,7 +148,13 @@ pub struct StructFieldSpecifier {
 
 /// Type qualifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum TypeQualifier {
+pub struct TypeQualifier {
+  pub qualifiers: NonEmpty<TypeQualifierSpec>
+}
+
+/// Type qualifier spec.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum TypeQualifierSpec {
   Storage(StorageQualifier),
   Layout(LayoutQualifier),
   Precision(PrecisionQualifier),
@@ -181,12 +187,12 @@ pub enum StorageQualifier {
 /// Layout qualifier.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct LayoutQualifier {
-  pub ids: NonEmpty<LayoutQualifierID>
+  pub ids: NonEmpty<LayoutQualifierSpec>
 }
 
-/// Layout qualifier ID.
+/// Layout qualifier spec.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub enum LayoutQualifierID {
+pub enum LayoutQualifierSpec {
   Identifier(Identifier, Option<Box<Expr>>),
   Shared
 }

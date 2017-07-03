@@ -57,7 +57,7 @@ fn parse_storage_qualifier() {
 
 #[test]
 fn parse_layout_qualifier_std430() {
-  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierID::Identifier("std430".to_owned(), None)] };
+  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Identifier("std430".to_owned(), None)] };
 
   assert_eq!(parser::layout_qualifier(&b"layout (std430)"[..]), IResult::Done(&b""[..], expected.clone()));
   assert_eq!(parser::layout_qualifier(&b" layout  (std430   )"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -67,7 +67,7 @@ fn parse_layout_qualifier_std430() {
 
 #[test]
 fn parse_layout_qualifier_shared() {
-  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierID::Shared] };
+  let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Shared] };
 
   assert_eq!(parser::layout_qualifier(&b"layout (shared)"[..]), IResult::Done(&b""[..], expected.clone()));
   assert_eq!(parser::layout_qualifier(&b"   layout ( shared )"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -76,10 +76,25 @@ fn parse_layout_qualifier_shared() {
 
 #[test]
 fn parse_layout_qualifier_list() {
-  let id_0 = syntax::LayoutQualifierID::Shared;
-  let id_1 = syntax::LayoutQualifierID::Identifier("std140".to_owned(), None);
-  let id_2 = syntax::LayoutQualifierID::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+  let id_0 = syntax::LayoutQualifierSpec::Shared;
+  let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
+  let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
   let expected = syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] };
 
   assert_eq!(parser::layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b"layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::layout_qualifier(&b"   layout\n\n\t (    shared , std140, max_vertices= 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+}
+
+#[test]
+fn parse_type_qualifier() {
+  let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
+  let id_0 = syntax::LayoutQualifierSpec::Shared;
+  let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
+  let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+  let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] });
+  let expected = syntax::TypeQualifier { qualifiers: vec![storage_qual, layout_qual] };
+
+  assert_eq!(parser::type_qualifier(&b"const layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+  assert_eq!(parser::type_qualifier(&b"    const layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected));
 }
