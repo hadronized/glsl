@@ -511,7 +511,7 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 );
 
 /// Parse a primary expression.
-named!(primary_expr<&[u8], syntax::Expr>,
+named!(pub primary_expr<&[u8], syntax::Expr>,
   alt!(
     // primary expression
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
