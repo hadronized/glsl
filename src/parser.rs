@@ -1269,7 +1269,7 @@ named!(jump_statement_return<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(
     tag!("return") >>
     e: expr >>
-    char!(';') >> 
+    char!(';') >>
     (syntax::JumpStatement::Return(Box::new(e)))
   ))
 );
