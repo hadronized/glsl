@@ -32,6 +32,12 @@ fn parse_primary_expr_doubleconst() {
 
 #[test]
 fn parse_primary_expr_boolconst() {
-  assert_eq!(parser::primary_expr(&b"false "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("false".to_owned())));
-  assert_eq!(parser::primary_expr(&b"true "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("true".to_owned())));
+  assert_eq!(parser::primary_expr(&b"false "[..]), IResult::Done(&b" "[..], syntax::Expr::BoolConst(false.to_owned())));
+  assert_eq!(parser::primary_expr(&b"true "[..]), IResult::Done(&b" "[..], syntax::Expr::BoolConst(true.to_owned())));
+}
+
+#[test]
+fn parse_primary_expr_parens() {
+  assert_eq!(parser::primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+  assert_eq!(parser::primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
 }

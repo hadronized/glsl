@@ -311,7 +311,7 @@ named!(float_lit_<&[u8], ()>,
   )
 );
 
-/// Parse a float litereal.
+/// Parse a float literal.
 named!(pub float_lit, recognize!(float_lit_));
 
 /// Parse a double literal string.
@@ -325,7 +325,7 @@ named!(double_lit_<&[u8], ()>,
   )
 );
 
-/// Parse a double litereal.
+/// Parse a double literal.
 named!(pub double_lit, recognize!(double_lit_));
 
 /// Parse a constant boolean.
@@ -548,7 +548,7 @@ named!(unary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an expression between parens.
-named!(parens_expr<&[u8], syntax::Expr>, delimited!(char!('('), postfix_expr, char!(')')));
+named!(parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(postfix_expr), char!(')'))));
 
 /// Parse a postfix expression with brackets (array annotation).
 named!(postfix_expr_bracket<&[u8], syntax::Expr>,
