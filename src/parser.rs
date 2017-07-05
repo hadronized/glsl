@@ -523,12 +523,12 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a postfix expression.
-named!(postfix_expr<&[u8], syntax::Expr>,
+named!(pub postfix_expr<&[u8], syntax::Expr>,
   alt!(
     primary_expr |
     postfix_expr_bracket |
     function_call |
-    //dot_field_selection | // FIXME
+    dot_expr |
     postfix_inc |
     postfix_dec
   )
@@ -594,6 +594,15 @@ named!(dot_field_selection<&[u8], syntax::FieldSelection>,
       next: next
     })
   )
+);
+
+/// Parse a dot expression.
+named!(dot_expr<&[u8], syntax::Expr>,
+  ws!(do_parse!(
+    e: postfix_expr >>
+    fs: dot_field_selection >>
+    (syntax::Expr::Dot(Box::new(e), fs))
+  ))
 );
 
 /// Parse a declaration.

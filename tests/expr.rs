@@ -44,3 +44,12 @@ fn parse_primary_expr_parens() {
   assert_eq!(parser::primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
   assert_eq!(parser::primary_expr(&b"(true)"[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
 }
+
+#[test]
+fn parse_postfix_expr_bracket() {
+  let id = syntax::Expr::Variable("foo".to_owned());
+  let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst("7354".to_owned())));
+  let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
+
+  assert_eq!(parser::postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected));
+}
