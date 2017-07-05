@@ -295,8 +295,7 @@ named!(pub floating_frac<&[u8], ()>,
   alt!(
     do_parse!(char!('.') >> digit >> (())) |
     do_parse!(digit >> tag!(".") >> digit >> (())) |
-    do_parse!(digit >> tag!(".") >> (())) |
-    do_parse!(digit >> (()))
+    do_parse!(digit >> tag!(".") >> (()))
   )
 );
 
@@ -514,11 +513,11 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 named!(pub primary_expr<&[u8], syntax::Expr>,
   alt!(
     // primary expression
-    map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
-    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
     map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
+    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
+    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
+    map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
     parens_expr
   )
 );
