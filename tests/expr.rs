@@ -40,4 +40,7 @@ fn parse_primary_expr_boolconst() {
 fn parse_primary_expr_parens() {
   assert_eq!(parser::primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
   assert_eq!(parser::primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+  assert_eq!(parser::primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+  assert_eq!(parser::primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
+  assert_eq!(parser::primary_expr(&b"(true)"[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
 }
