@@ -200,8 +200,8 @@ named!(decimal_lit_<&[u8], ()>,
 named!(pub decimal_lit, recognize!(decimal_lit_));
 
 #[inline]
-fn all_octal(s: &[u8]) -> bool {
-  s.iter().all(|&c| c >= b'0' && c <= b'7')
+fn is_octal(s: &[u8]) -> bool {
+  s[0] == b'0' && s.iter().all(|&c| c >= b'0' && c <= b'7')
 }
 
 // FIXME: this parser has a regression, it can parse 09 (parsed 0 and
@@ -210,8 +210,7 @@ fn all_octal(s: &[u8]) -> bool {
 named!(octal_lit_<&[u8], ()>,
   do_parse!(
     ws!(opt!(char!('-'))) >>
-    char!('0') >>
-    opt!(verify!(digit, all_octal)) >>
+    verify!(digit, is_octal) >>
     (())
   )
 );

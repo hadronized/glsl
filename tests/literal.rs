@@ -26,7 +26,7 @@ fn parse_decimal_lit() {
 
 #[test]
 fn parse_octal_lit() {
-  assert_eq!(parser::octal_lit(&b"3"[..]), IResult::Error(ErrorKind::Char));
+  assert_eq!(parser::octal_lit(&b"3"[..]), IResult::Error(ErrorKind::Verify));
   assert_eq!(parser::octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
   assert_eq!(parser::octal_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
   assert_eq!(parser::octal_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Verify));
