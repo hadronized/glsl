@@ -204,8 +204,6 @@ fn is_octal(s: &[u8]) -> bool {
   s[0] == b'0' && s.iter().all(|&c| c >= b'0' && c <= b'7')
 }
 
-// FIXME: this parser has a regression, it can parse 09 (parsed 0 and
-// remains 9 to parse -> stupid)
 /// Parse an octal literal string.
 named!(octal_lit_<&[u8], ()>,
   do_parse!(
