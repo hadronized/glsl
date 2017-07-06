@@ -242,9 +242,9 @@ named!(pub hexadecimal_lit, recognize!(hexadecimal_lit_));
 /// Parse a literal integral string.
 named!(pub integral_lit,
   alt!(
-    decimal_lit |
+    hexadecimal_lit |
     octal_lit |
-    hexadecimal_lit
+    decimal_lit
   )
 );
 

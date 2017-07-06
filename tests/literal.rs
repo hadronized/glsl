@@ -54,7 +54,6 @@ fn parse_integral_lit() {
   assert_eq!(parser::integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
   assert_eq!(parser::integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
   assert_eq!(parser::integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
-  assert_eq!(parser::integral_lit(&b"0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Alt));
 }
 
 #[test]
@@ -69,7 +68,6 @@ fn parse_integral_neg_lit() {
   assert_eq!(parser::integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"-0x0123456789ABCDEF"[..]));
   assert_eq!(parser::integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
   assert_eq!(parser::integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
-  assert_eq!(parser::integral_lit(&b"-0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Alt));
 }
 
 #[test]
