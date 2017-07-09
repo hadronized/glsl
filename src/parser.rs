@@ -518,15 +518,42 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
   )
 );
 
+fn postfix_expr_rec(i: &[u8]) -> IResult<&[u8], syntax::Expr> {
+  let (i1, pfe) = try_parse!(i, postfix_expr);
+
+  alt!(i1,
+    // bracket
+    do_parse!(
+      a: array_specifier >>
+      (syntax::Expr::Bracket(Box::new(pfe.clone()), a))
+    ) |
+
+    // dot
+    do_parse!(
+      fs: dot_field_selection >>
+      (syntax::Expr::Dot(Box::new(pfe.clone()), fs))
+    ) |
+
+    // inc
+    do_parse!(
+      tag!("++") >>
+      (syntax::Expr::PostInc(Box::new(pfe.clone())))
+    ) |
+
+    // dec
+    do_parse!(
+      tag!("--") >>
+      (syntax::Expr::PostDec(Box::new(pfe)))
+    )
+  )
+}
+
 /// Parse a postfix expression.
 named!(pub postfix_expr<&[u8], syntax::Expr>,
   alt!(
-    primary_expr |
-    postfix_expr_bracket |
     function_call |
-    dot_expr |
-    postfix_inc |
-    postfix_dec
+    primary_expr |
+    postfix_expr_rec
   )
 );
 
@@ -545,38 +572,6 @@ named!(unary_expr<&[u8], syntax::Expr>,
 /// Parse an expression between parens.
 named!(parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(postfix_expr), char!(')'))));
 
-/// Parse a postfix expression with brackets (array annotation).
-named!(postfix_expr_bracket<&[u8], syntax::Expr>,
-  do_parse!(
-    e: postfix_expr >>
-    char!('[') >>
-    a: ws!(expr) >>
-    char!(']') >>
-
-    (syntax::Expr::Bracket(Box::new(e), syntax::ArraySpecifier::ExplicitlySized(Box::new(a))))
-  )
-);
-
-/// Parse a postfix incrementation expression.
-named!(postfix_inc<&[u8], syntax::Expr>,
-  do_parse!(
-    e: postfix_expr >>
-    tag!("++") >>
-
-    (syntax::Expr::PostInc(Box::new(e)))
-  )
-);
-
-/// Parse a postfix decrementation expression.
-named!(postfix_dec<&[u8], syntax::Expr>,
-  do_parse!(
-    e: postfix_expr >>
-    tag!("--") >>
-
-    (syntax::Expr::PostDec(Box::new(e)))
-  )
-);
-
 /// Parse a dot field selection.
 named!(dot_field_selection<&[u8], syntax::FieldSelection>,
   do_parse!(
@@ -590,15 +585,6 @@ named!(dot_field_selection<&[u8], syntax::FieldSelection>,
       next: next
     })
   )
-);
-
-/// Parse a dot expression.
-named!(dot_expr<&[u8], syntax::Expr>,
-  ws!(do_parse!(
-    e: postfix_expr >>
-    fs: dot_field_selection >>
-    (syntax::Expr::Dot(Box::new(e), fs))
-  ))
 );
 
 /// Parse a declaration.
