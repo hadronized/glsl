@@ -509,13 +509,12 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 /// Parse a primary expression.
 named!(pub primary_expr<&[u8], syntax::Expr>,
   alt!(
-    // primary expression
+    parens_expr |
     map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
     map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
     map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
-    parens_expr
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s))
   )
 );
 
