@@ -913,14 +913,14 @@ named!(expr<&[u8], syntax::Expr>,
 /// Parse an assignment expression.
 named!(assignment_expr<&[u8], syntax::Expr>,
   alt!(
-    cond_expr |
     ws!(do_parse!(
       e: unary_expr >>
       o: assignment_op >>
       v: assignment_expr >>
 
       (syntax::Expr::Assignment(Box::new(e), o, Box::new(v)))
-    ))
+    )) |
+    cond_expr
   )
 );
 
