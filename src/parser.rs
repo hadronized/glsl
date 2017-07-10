@@ -32,7 +32,7 @@ named!(pub comments, recognize!(many0!(comment)));
 /// Parser rewriter, discarding whitespaces and comments.
 macro_rules! bl {
   ($i:expr, $($args:tt)*) => {{
-    sep!($i, comment, $($args)*)
+    sep!($i, comments, $($args)*)
   }}
 }
 
@@ -1410,7 +1410,7 @@ mod tests {
 
   #[test]
   fn parse_multiline_comments() {
-    assert_eq!(comment(&b"/* lol\nfoo\n*/\n/*bar\n*/"[..]), IResult::Done(&b"bar"[..], &b"/* lol\nfoo\n*/"[..]));
+    assert_eq!(comments(&b"/* lol\nfoo\n*/\n/*bar\n*/"[..]), IResult::Done(&b""[..], &b"/* lol\nfoo\n*/\n/*bar\n*/"[..]));
   }
 
   #[test]
