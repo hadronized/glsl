@@ -12,10 +12,24 @@
 // The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
 // try the second branch, which is… a recursive call to the same function. That will
 // basically loop for ever.
-use nom::{ErrorKind, IResult, Needed, digit};
+use nom::{ErrorKind, IResult, Needed, anychar, digit};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
+
+named!(discard_comment,
+  alt!(
+    delimited!(tag!("//"), take_until!("\n"), char!('\n')) |
+    delimited!(tag!("/*"), take_until!("*/"), tag!("*/"))
+  )
+);
+
+/// Parser rewriter, discarding whitespaces and comments.
+macro_rules! bl {
+  ($i:expr, $($args:tt)*) => {{
+    sep!($i, discard_comment, $($args)*)
+  }}
+}
 
 // Turn a &[u8] into a String.
 #[inline]
@@ -1373,6 +1387,16 @@ named!(translation_unit<&[u8], syntax::TranslationUnit>,
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn parse_uniline_comment() {
+    assert_eq!(discard_comment(&b"// lol\nfoo"[..]), IResult::Done(&b"foo"[..], &b" lol"[..]));
+  }
+
+  #[test]
+  fn parse_multiline_comment() {
+    assert_eq!(discard_comment(&b"/* lol\nfoo\n*/bar"[..]), IResult::Done(&b"bar"[..], &b" lol\nfoo\n"[..]));
+  }
 
   #[test]
   fn parse_unsigned_suffix() {
