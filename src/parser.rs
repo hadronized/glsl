@@ -559,8 +559,8 @@ named!(postfix_expr<&[u8], syntax::Expr>,
 /// Parse a unary expression.
 named!(unary_expr<&[u8], syntax::Expr>,
   do_parse!(
-    e: postfix_expr >>
     o: unary_op >>
+    e: postfix_expr >>
     (syntax::Expr::Unary(o, Box::new(e)))
   )
 );
