@@ -1,4 +1,4 @@
-use nom::{ErrorKind, IResult, alphanumeric, digit};
+use nom::{ErrorKind, IResult, Needed, alphanumeric, digit};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -1328,3 +1328,532 @@ named!(translation_unit<&[u8], syntax::TranslationUnit>,
     ))
   )
 );
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn parse_unsigned_suffix() {
+    assert_eq!(unsigned_suffix(&b"u"[..]), IResult::Done(&b""[..], 'u'));
+    assert_eq!(unsigned_suffix(&b"U"[..]), IResult::Done(&b""[..], 'U'));
+  }
+  
+  #[test]
+  fn parse_nonzero_digit() {
+    assert_eq!(nonzero_digit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
+    assert_eq!(nonzero_digit(&b"12345953"[..]), IResult::Done(&b""[..], &b"12345953"[..]));
+    assert_eq!(nonzero_digit(&b"03"[..]), IResult::Error(ErrorKind::Verify));
+  }
+  
+  #[test]
+  fn parse_decimal_lit() {
+    assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
+    assert_eq!(decimal_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
+    assert_eq!(decimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Verify));
+  }
+  
+  #[test]
+  fn parse_octal_lit() {
+    assert_eq!(octal_lit(&b"3"[..]), IResult::Error(ErrorKind::Verify));
+    assert_eq!(octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
+    assert_eq!(octal_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
+    assert_eq!(octal_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Verify));
+  }
+  
+  #[test]
+  fn parse_hexadecimal_lit() {
+    assert_eq!(hexadecimal_lit(&b"3"[..]), IResult::Error(ErrorKind::Alt));
+    assert_eq!(hexadecimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Alt));
+    assert_eq!(hexadecimal_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
+    assert_eq!(hexadecimal_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+    assert_eq!(hexadecimal_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+    assert_eq!(hexadecimal_lit(&b"0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Verify));
+  }
+  
+  #[test]
+  fn parse_integral_lit() {
+    assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
+    assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
+    assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
+    assert_eq!(integral_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
+    assert_eq!(integral_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
+    assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
+    assert_eq!(integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+    assert_eq!(integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
+    assert_eq!(integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+    assert_eq!(integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+  }
+  
+  #[test]
+  fn parse_integral_neg_lit() {
+    assert_eq!(decimal_lit(&b"-3"[..]), IResult::Done(&b""[..], &b"-3"[..]));
+    assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], &b"-3"[..]));
+    assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], &b"-03"[..]));
+    assert_eq!(integral_lit(&b"-07654321234567 "[..]), IResult::Done(&b" "[..], &b"-07654321234567"[..]));
+    assert_eq!(integral_lit(&b"-07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
+    assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], &b"-0x3"[..]));
+    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"-0x0123456789ABCDEF"[..]));
+    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"-0x0123456789ABCDEF"[..]));
+    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
+    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
+  }
+  
+  #[test]
+  fn parse_float_lit() {
+    assert_eq!(float_lit(&b"0"[..]), IResult::Incomplete(Needed::Size(2)));
+    assert_eq!(float_lit(&b"0."[..]), IResult::Incomplete(Needed::Unknown));
+    assert_eq!(float_lit(&b".0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(float_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
+    assert_eq!(float_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
+    assert_eq!(float_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
+    assert_eq!(float_lit(&b".035f"[..]), IResult::Done(&b""[..], &b".035f"[..]));
+    assert_eq!(float_lit(&b"0.f"[..]), IResult::Done(&b""[..], &b"0.f"[..]));
+    assert_eq!(float_lit(&b"0.035f"[..]), IResult::Done(&b""[..], &b"0.035f"[..]));
+    assert_eq!(float_lit(&b".035F"[..]), IResult::Done(&b""[..], &b".035F"[..]));
+    assert_eq!(float_lit(&b"0.F"[..]), IResult::Done(&b""[..], &b"0.F"[..]));
+    assert_eq!(float_lit(&b"0.035F"[..]), IResult::Done(&b""[..], &b"0.035F"[..]));
+    assert_eq!(float_lit(&b"1.03e+34 "[..]), IResult::Done(&b" "[..], &b"1.03e+34"[..]));
+    assert_eq!(float_lit(&b"1.03E+34 "[..]), IResult::Done(&b" "[..], &b"1.03E+34"[..]));
+    assert_eq!(float_lit(&b"1.03e-34 "[..]), IResult::Done(&b" "[..], &b"1.03e-34"[..]));
+    assert_eq!(float_lit(&b"1.03E-34 "[..]), IResult::Done(&b" "[..], &b"1.03E-34"[..]));
+    assert_eq!(float_lit(&b"1.03e+34f"[..]), IResult::Done(&b""[..], &b"1.03e+34f"[..]));
+    assert_eq!(float_lit(&b"1.03E+34f"[..]), IResult::Done(&b""[..], &b"1.03E+34f"[..]));
+    assert_eq!(float_lit(&b"1.03e-34f"[..]), IResult::Done(&b""[..], &b"1.03e-34f"[..]));
+    assert_eq!(float_lit(&b"1.03E-34f"[..]), IResult::Done(&b""[..], &b"1.03E-34f"[..]));
+    assert_eq!(float_lit(&b"1.03e+34F"[..]), IResult::Done(&b""[..], &b"1.03e+34F"[..]));
+    assert_eq!(float_lit(&b"1.03E+34F"[..]), IResult::Done(&b""[..], &b"1.03E+34F"[..]));
+    assert_eq!(float_lit(&b"1.03e-34F"[..]), IResult::Done(&b""[..], &b"1.03e-34F"[..]));
+    assert_eq!(float_lit(&b"1.03E-34F"[..]), IResult::Done(&b""[..], &b"1.03E-34F"[..]));
+  }
+  
+  #[test]
+  fn parse_float_neg_lit() {
+    assert_eq!(float_lit(&b"-0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(float_lit(&b"-0."[..]), IResult::Incomplete(Needed::Unknown));
+    assert_eq!(float_lit(&b"-.0"[..]), IResult::Incomplete(Needed::Size(4)));
+    assert_eq!(float_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
+    assert_eq!(float_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
+    assert_eq!(float_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
+    assert_eq!(float_lit(&b"-.035f"[..]), IResult::Done(&b""[..], &b"-.035f"[..]));
+    assert_eq!(float_lit(&b"-0.f"[..]), IResult::Done(&b""[..], &b"-0.f"[..]));
+    assert_eq!(float_lit(&b"-0.035f"[..]), IResult::Done(&b""[..], &b"-0.035f"[..]));
+    assert_eq!(float_lit(&b"-.035F"[..]), IResult::Done(&b""[..], &b"-.035F"[..]));
+    assert_eq!(float_lit(&b"-0.F"[..]), IResult::Done(&b""[..], &b"-0.F"[..]));
+    assert_eq!(float_lit(&b"-0.035F"[..]), IResult::Done(&b""[..], &b"-0.035F"[..]));
+    assert_eq!(float_lit(&b"-1.03e+34 "[..]), IResult::Done(&b" "[..], &b"-1.03e+34"[..]));
+    assert_eq!(float_lit(&b"-1.03E+34 "[..]), IResult::Done(&b" "[..], &b"-1.03E+34"[..]));
+    assert_eq!(float_lit(&b"-1.03e-34 "[..]), IResult::Done(&b" "[..], &b"-1.03e-34"[..]));
+    assert_eq!(float_lit(&b"-1.03E-34 "[..]), IResult::Done(&b" "[..], &b"-1.03E-34"[..]));
+    assert_eq!(float_lit(&b"-1.03e+34f"[..]), IResult::Done(&b""[..], &b"-1.03e+34f"[..]));
+    assert_eq!(float_lit(&b"-1.03E+34f"[..]), IResult::Done(&b""[..], &b"-1.03E+34f"[..]));
+    assert_eq!(float_lit(&b"-1.03e-34f"[..]), IResult::Done(&b""[..], &b"-1.03e-34f"[..]));
+    assert_eq!(float_lit(&b"-1.03E-34f"[..]), IResult::Done(&b""[..], &b"-1.03E-34f"[..]));
+    assert_eq!(float_lit(&b"-1.03e+34F"[..]), IResult::Done(&b""[..], &b"-1.03e+34F"[..]));
+    assert_eq!(float_lit(&b"-1.03E+34F"[..]), IResult::Done(&b""[..], &b"-1.03E+34F"[..]));
+    assert_eq!(float_lit(&b"-1.03e-34F"[..]), IResult::Done(&b""[..], &b"-1.03e-34F"[..]));
+    assert_eq!(float_lit(&b"-1.03E-34F"[..]), IResult::Done(&b""[..], &b"-1.03E-34F"[..]));
+  }
+  
+  #[test]
+  fn parse_double_lit() {
+    assert_eq!(double_lit(&b"0"[..]), IResult::Incomplete(Needed::Size(2)));
+    assert_eq!(double_lit(&b"0."[..]), IResult::Incomplete(Needed::Unknown));
+    assert_eq!(double_lit(&b".0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(double_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
+    assert_eq!(double_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
+    assert_eq!(double_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
+    assert_eq!(double_lit(&b"0.lf"[..]), IResult::Done(&b""[..], &b"0.lf"[..]));
+    assert_eq!(double_lit(&b"0.035lf"[..]), IResult::Done(&b""[..], &b"0.035lf"[..]));
+    assert_eq!(double_lit(&b".035lf"[..]), IResult::Done(&b""[..], &b".035lf"[..]));
+    assert_eq!(double_lit(&b".035LF"[..]), IResult::Done(&b""[..], &b".035LF"[..]));
+    assert_eq!(double_lit(&b"0.LF"[..]), IResult::Done(&b""[..], &b"0.LF"[..]));
+    assert_eq!(double_lit(&b"0.035LF"[..]), IResult::Done(&b""[..], &b"0.035LF"[..]));
+    assert_eq!(double_lit(&b"1.03e+34lf"[..]), IResult::Done(&b""[..], &b"1.03e+34lf"[..]));
+    assert_eq!(double_lit(&b"1.03E+34lf"[..]), IResult::Done(&b""[..], &b"1.03E+34lf"[..]));
+    assert_eq!(double_lit(&b"1.03e-34lf"[..]), IResult::Done(&b""[..], &b"1.03e-34lf"[..]));
+    assert_eq!(double_lit(&b"1.03E-34lf"[..]), IResult::Done(&b""[..], &b"1.03E-34lf"[..]));
+    assert_eq!(double_lit(&b"1.03e+34LF"[..]), IResult::Done(&b""[..], &b"1.03e+34LF"[..]));
+    assert_eq!(double_lit(&b"1.03E+34LF"[..]), IResult::Done(&b""[..], &b"1.03E+34LF"[..]));
+    assert_eq!(double_lit(&b"1.03e-34LF"[..]), IResult::Done(&b""[..], &b"1.03e-34LF"[..]));
+    assert_eq!(double_lit(&b"1.03E-34LF"[..]), IResult::Done(&b""[..], &b"1.03E-34LF"[..]));
+  }
+  
+  #[test]
+  fn parse_double_neg_lit() {
+    assert_eq!(double_lit(&b"-0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(double_lit(&b"-0."[..]), IResult::Incomplete(Needed::Unknown));
+    assert_eq!(double_lit(&b"-.0"[..]), IResult::Incomplete(Needed::Size(4)));
+    assert_eq!(double_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
+    assert_eq!(double_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
+    assert_eq!(double_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
+    assert_eq!(double_lit(&b"-0.lf"[..]), IResult::Done(&b""[..], &b"-0.lf"[..]));
+    assert_eq!(double_lit(&b"-0.035lf"[..]), IResult::Done(&b""[..], &b"-0.035lf"[..]));
+    assert_eq!(double_lit(&b"-.035lf"[..]), IResult::Done(&b""[..], &b"-.035lf"[..]));
+    assert_eq!(double_lit(&b"-.035LF"[..]), IResult::Done(&b""[..], &b"-.035LF"[..]));
+    assert_eq!(double_lit(&b"-0.LF"[..]), IResult::Done(&b""[..], &b"-0.LF"[..]));
+    assert_eq!(double_lit(&b"-0.035LF"[..]), IResult::Done(&b""[..], &b"-0.035LF"[..]));
+    assert_eq!(double_lit(&b"-1.03e+34lf"[..]), IResult::Done(&b""[..], &b"-1.03e+34lf"[..]));
+    assert_eq!(double_lit(&b"-1.03E+34lf"[..]), IResult::Done(&b""[..], &b"-1.03E+34lf"[..]));
+    assert_eq!(double_lit(&b"-1.03e-34lf"[..]), IResult::Done(&b""[..], &b"-1.03e-34lf"[..]));
+    assert_eq!(double_lit(&b"-1.03E-34lf"[..]), IResult::Done(&b""[..], &b"-1.03E-34lf"[..]));
+    assert_eq!(double_lit(&b"-1.03e+34LF"[..]), IResult::Done(&b""[..], &b"-1.03e+34LF"[..]));
+    assert_eq!(double_lit(&b"-1.03E+34LF"[..]), IResult::Done(&b""[..], &b"-1.03E+34LF"[..]));
+    assert_eq!(double_lit(&b"-1.03e-34LF"[..]), IResult::Done(&b""[..], &b"-1.03e-34LF"[..]));
+    assert_eq!(double_lit(&b"-1.03E-34LF"[..]), IResult::Done(&b""[..], &b"-1.03E-34LF"[..]));
+  }
+
+  #[test]
+  fn parse_identifier() {
+    assert_eq!(identifier(&b"a"[..]), IResult::Done(&b""[..], "a".to_owned()));
+    assert_eq!(identifier(&b"ab_cd"[..]), IResult::Done(&b""[..], "ab_cd".to_owned()));
+    assert_eq!(identifier(&b"Ab_cd"[..]), IResult::Done(&b""[..], "Ab_cd".to_owned()));
+    assert_eq!(identifier(&b"Ab_c8d"[..]), IResult::Done(&b""[..], "Ab_c8d".to_owned()));
+    assert_eq!(identifier(&b"Ab_c8d9"[..]), IResult::Done(&b""[..], "Ab_c8d9".to_owned()));
+    assert_eq!(identifier(&b"0Ab_c8d9"[..]), IResult::Error(ErrorKind::Verify));
+  }
+
+  #[test]
+  fn parse_array_specifier_unsized() {
+    assert_eq!(array_specifier(&b"[]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::Unsized));
+    assert_eq!(array_specifier(&b"[ ]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::Unsized));
+    assert_eq!(array_specifier(&b"  [\n]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::Unsized));
+  }
+  
+  #[test]
+  fn parse_array_specifier_sized() {
+    let ix = syntax::Expr::IntConst("0".to_owned());
+    assert_eq!(array_specifier(&b"[0]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone()))));
+  }
+
+  #[test]
+  fn parse_precise_qualifier() {
+    assert_eq!(precise_qualifier(&b"precise"[..]), IResult::Done(&b""[..], ()));
+  }
+  
+  #[test]
+  fn parse_invariant_qualifier() {
+    assert_eq!(invariant_qualifier(&b"invariant"[..]), IResult::Done(&b""[..], ()));
+  }
+  
+  #[test]
+  fn parse_interpolation_qualifier() {
+    assert_eq!(interpolation_qualifier(&b"smooth"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::Smooth));
+    assert_eq!(interpolation_qualifier(&b"flat"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::Flat));
+    assert_eq!(interpolation_qualifier(&b"noperspective"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::NoPerspective));
+  }
+  
+  #[test]
+  fn parse_precision_qualifier() {
+    assert_eq!(precision_qualifier(&b"high"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::High));
+    assert_eq!(precision_qualifier(&b"medium"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Medium));
+    assert_eq!(precision_qualifier(&b"low"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Low));
+  }
+  
+  #[test]
+  fn parse_storage_qualifier() {
+    assert_eq!(storage_qualifier(&b"const"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Const));
+    assert_eq!(storage_qualifier(&b"inout"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::InOut));
+    assert_eq!(storage_qualifier(&b"in "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::In));
+    assert_eq!(storage_qualifier(&b"out"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Out));
+    assert_eq!(storage_qualifier(&b"centroid"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Centroid));
+    assert_eq!(storage_qualifier(&b"patch"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Patch));
+    assert_eq!(storage_qualifier(&b"sample"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Sample));
+    assert_eq!(storage_qualifier(&b"uniform"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Uniform));
+    assert_eq!(storage_qualifier(&b"buffer"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Buffer));
+    assert_eq!(storage_qualifier(&b"shared"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Shared));
+    assert_eq!(storage_qualifier(&b"coherent"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Coherent));
+    assert_eq!(storage_qualifier(&b"volatile"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Volatile));
+    assert_eq!(storage_qualifier(&b"restrict"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Restrict));
+    assert_eq!(storage_qualifier(&b"readonly"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::ReadOnly));
+    assert_eq!(storage_qualifier(&b"writeonly"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::WriteOnly));
+    assert_eq!(storage_qualifier(&b"subroutine a"[..]), IResult::Done(&b" a"[..], syntax::StorageQualifier::Subroutine(vec![])));
+  
+    let a = "vec3".to_owned();
+    let b = "float".to_owned();
+    let c = "dmat43".to_owned();
+    let types = vec![a, b, c];
+    assert_eq!(storage_qualifier(&b"subroutine (vec3, float, dmat43)"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Subroutine(types)));
+  }
+  
+  #[test]
+  fn parse_layout_qualifier_std430() {
+    let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Identifier("std430".to_owned(), None)] };
+  
+    assert_eq!(layout_qualifier(&b"layout (std430)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b" layout  (std430   )"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b" layout \n\t (  std430  )"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b" layout(std430)"[..]), IResult::Done(&b""[..], expected));
+  }
+  
+  #[test]
+  fn parse_layout_qualifier_shared() {
+    let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Shared] };
+  
+    assert_eq!(layout_qualifier(&b"layout (shared)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b"   layout ( shared )"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b"   layout(shared)"[..]), IResult::Done(&b""[..], expected));
+  }
+  
+  #[test]
+  fn parse_layout_qualifier_list() {
+    let id_0 = syntax::LayoutQualifierSpec::Shared;
+    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+    let expected = syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] };
+  
+    assert_eq!(layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b"layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(layout_qualifier(&b"   layout\n\n\t (    shared , std140, max_vertices= 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+  
+  #[test]
+  fn parse_type_qualifier() {
+    let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
+    let id_0 = syntax::LayoutQualifierSpec::Shared;
+    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+    let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] });
+    let expected = syntax::TypeQualifier { qualifiers: vec![storage_qual, layout_qual] };
+  
+    assert_eq!(type_qualifier(&b"const layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(type_qualifier(&b"    const layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_struct_field_specifier() {
+    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
+  
+    assert_eq!(struct_field_specifier(&b"vec4 foo;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_field_specifier(&b"  vec4     foo ; "[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+  
+  #[test]
+  fn parse_struct_field_specifier_type_name() {
+    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()), identifiers: vec!["x".to_owned()] };
+  
+    assert_eq!(struct_field_specifier(&b"S0238_3 x;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_field_specifier(&b"  S0238_3     x ; "[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+  
+  #[test]
+  fn parse_struct_field_specifier_several() {
+    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned(), "bar".to_owned(), "zoo".to_owned()] };
+  
+    assert_eq!(struct_field_specifier(&b"vec4 foo, bar, zoo;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_field_specifier(&b"  vec4     foo , bar  , zoo ; "[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+  
+  #[test]
+  fn parse_struct_specifier_one_field() {
+    let field = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
+    let expected = syntax::StructSpecifier { name: Some("TestStruct".to_owned()), fields: vec![field] };
+  
+    assert_eq!(struct_specifier(&b"struct TestStruct { vec4 foo; }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_specifier(&b"   struct      TestStruct \n \n\n {\n    vec4   foo  ;\n }"[..]), IResult::Done(&b""[..], expected));
+  }
+  
+  #[test]
+  fn parse_struct_specifier_multi_fields() {
+    let a = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
+    let b = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Float, identifiers: vec!["bar".to_owned()] };
+    let c = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::UInt, identifiers: vec!["zoo".to_owned()] };
+    let d = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::BVec3, identifiers: vec!["foo_BAR_zoo3497_34".to_owned()] };
+    let e = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()), identifiers: vec!["x".to_owned()] };
+    let expected = syntax::StructSpecifier { name: Some("_TestStruct_934i".to_owned()), fields: vec![a, b, c, d, e] };
+  
+    assert_eq!(struct_specifier(&b"struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_specifier(&b"struct _TestStruct_934i{vec4 foo;float bar;uint zoo;bvec3 foo_BAR_zoo3497_34;S0238_3 x;}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(struct_specifier(&b"   struct _TestStruct_934i\n   {  vec4\nfoo ;   \n\t float\n\t\t  bar  ;   \nuint   zoo;    \n bvec3   foo_BAR_zoo3497_34\n\n\t\n\t\n  ; S0238_3 x;}"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_type_specifier() {
+    assert_eq!(type_specifier(&b"bool"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Bool));
+    assert_eq!(type_specifier(&b"int"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Int));
+    assert_eq!(type_specifier(&b"uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UInt));
+    assert_eq!(type_specifier(&b"float"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Float));
+    assert_eq!(type_specifier(&b"double"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Double));
+    assert_eq!(type_specifier(&b"vec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec2));
+    assert_eq!(type_specifier(&b"vec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec3));
+    assert_eq!(type_specifier(&b"vec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec4));
+    assert_eq!(type_specifier(&b"dvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec2));
+    assert_eq!(type_specifier(&b"dvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec3));
+    assert_eq!(type_specifier(&b"dvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec4));
+    assert_eq!(type_specifier(&b"bvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec2));
+    assert_eq!(type_specifier(&b"bvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec3));
+    assert_eq!(type_specifier(&b"bvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec4));
+    assert_eq!(type_specifier(&b"ivec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec2));
+    assert_eq!(type_specifier(&b"ivec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec3));
+    assert_eq!(type_specifier(&b"ivec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec4));
+    assert_eq!(type_specifier(&b"uvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec2));
+    assert_eq!(type_specifier(&b"uvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec3));
+    assert_eq!(type_specifier(&b"uvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec4));
+    assert_eq!(type_specifier(&b"mat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat2));
+    assert_eq!(type_specifier(&b"mat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat3));
+    assert_eq!(type_specifier(&b"mat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat4));
+    assert_eq!(type_specifier(&b"mat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat2));
+    assert_eq!(type_specifier(&b"mat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat23));
+    assert_eq!(type_specifier(&b"mat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat24));
+    assert_eq!(type_specifier(&b"mat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat32));
+    assert_eq!(type_specifier(&b"mat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat3));
+    assert_eq!(type_specifier(&b"mat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat34));
+    assert_eq!(type_specifier(&b"mat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat42));
+    assert_eq!(type_specifier(&b"mat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat43));
+    assert_eq!(type_specifier(&b"mat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat4));
+    assert_eq!(type_specifier(&b"dmat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat2));
+    assert_eq!(type_specifier(&b"dmat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat3));
+    assert_eq!(type_specifier(&b"dmat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat4));
+    assert_eq!(type_specifier(&b"dmat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat2));
+    assert_eq!(type_specifier(&b"dmat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat23));
+    assert_eq!(type_specifier(&b"dmat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat24));
+    assert_eq!(type_specifier(&b"dmat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat32));
+    assert_eq!(type_specifier(&b"dmat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat3));
+    assert_eq!(type_specifier(&b"dmat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat34));
+    assert_eq!(type_specifier(&b"dmat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat42));
+    assert_eq!(type_specifier(&b"dmat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat43));
+    assert_eq!(type_specifier(&b"dmat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat4));
+    assert_eq!(type_specifier(&b"sampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1D));
+    assert_eq!(type_specifier(&b"image1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image1D));
+    assert_eq!(type_specifier(&b"sampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2D));
+    assert_eq!(type_specifier(&b"image2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2D));
+    assert_eq!(type_specifier(&b"sampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler3D));
+    assert_eq!(type_specifier(&b"image3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image3D));
+    assert_eq!(type_specifier(&b"samplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCube));
+    assert_eq!(type_specifier(&b"imageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageCube));
+    assert_eq!(type_specifier(&b"sampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DRect));
+    assert_eq!(type_specifier(&b"image2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DRect));
+    assert_eq!(type_specifier(&b"sampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DArray));
+    assert_eq!(type_specifier(&b"image1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image1DArray));
+    assert_eq!(type_specifier(&b"sampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DArray));
+    assert_eq!(type_specifier(&b"image2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DArray));
+    assert_eq!(type_specifier(&b"samplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerBuffer));
+    assert_eq!(type_specifier(&b"imageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageBuffer));
+    assert_eq!(type_specifier(&b"sampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DMS));
+    assert_eq!(type_specifier(&b"image2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DMS));
+    assert_eq!(type_specifier(&b"sampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DMSArray));
+    assert_eq!(type_specifier(&b"image2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DMSArray));
+    assert_eq!(type_specifier(&b"samplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeArray));
+    assert_eq!(type_specifier(&b"imageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageCubeArray));
+    assert_eq!(type_specifier(&b"sampler1DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DShadow));
+    assert_eq!(type_specifier(&b"sampler2DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DShadow));
+    assert_eq!(type_specifier(&b"sampler2DRectShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DRectShadow));
+    assert_eq!(type_specifier(&b"sampler1DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DArrayShadow));
+    assert_eq!(type_specifier(&b"sampler2DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DArrayShadow));
+    assert_eq!(type_specifier(&b"samplerCubeShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeShadow));
+    assert_eq!(type_specifier(&b"samplerCubeArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeArrayShadow));
+    assert_eq!(type_specifier(&b"isampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler1D));
+    assert_eq!(type_specifier(&b"iimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage1D));
+    assert_eq!(type_specifier(&b"isampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2D));
+    assert_eq!(type_specifier(&b"iimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2D));
+    assert_eq!(type_specifier(&b"isampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler3D));
+    assert_eq!(type_specifier(&b"iimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage3D));
+    assert_eq!(type_specifier(&b"isamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerCube));
+    assert_eq!(type_specifier(&b"iimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageCube));
+    assert_eq!(type_specifier(&b"isampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DRect));
+    assert_eq!(type_specifier(&b"iimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DRect));
+    assert_eq!(type_specifier(&b"isampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler1DArray));
+    assert_eq!(type_specifier(&b"iimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage1DArray));
+    assert_eq!(type_specifier(&b"isampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DArray));
+    assert_eq!(type_specifier(&b"iimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DArray));
+    assert_eq!(type_specifier(&b"isamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerBuffer));
+    assert_eq!(type_specifier(&b"iimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageBuffer));
+    assert_eq!(type_specifier(&b"isampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DMS));
+    assert_eq!(type_specifier(&b"iimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DMS));
+    assert_eq!(type_specifier(&b"isampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DMSArray));
+    assert_eq!(type_specifier(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DMSArray));
+    assert_eq!(type_specifier(&b"isamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerCubeArray));
+    assert_eq!(type_specifier(&b"iimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageCubeArray));
+    assert_eq!(type_specifier(&b"atomic_uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::AtomicUInt));
+    assert_eq!(type_specifier(&b"usampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler1D));
+    assert_eq!(type_specifier(&b"uimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage1D));
+    assert_eq!(type_specifier(&b"usampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2D));
+    assert_eq!(type_specifier(&b"uimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2D));
+    assert_eq!(type_specifier(&b"usampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler3D));
+    assert_eq!(type_specifier(&b"uimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage3D));
+    assert_eq!(type_specifier(&b"usamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerCube));
+    assert_eq!(type_specifier(&b"uimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageCube));
+    assert_eq!(type_specifier(&b"usampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DRect));
+    assert_eq!(type_specifier(&b"uimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DRect));
+    assert_eq!(type_specifier(&b"usampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler1DArray));
+    assert_eq!(type_specifier(&b"uimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage1DArray));
+    assert_eq!(type_specifier(&b"usampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DArray));
+    assert_eq!(type_specifier(&b"uimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DArray));
+    assert_eq!(type_specifier(&b"usamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerBuffer));
+    assert_eq!(type_specifier(&b"uimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageBuffer));
+    assert_eq!(type_specifier(&b"usampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DMS));
+    assert_eq!(type_specifier(&b"uimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DMS));
+    assert_eq!(type_specifier(&b"usampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DMSArray));
+    assert_eq!(type_specifier(&b"uimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DMSArray));
+    assert_eq!(type_specifier(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerCubeArray));
+    assert_eq!(type_specifier(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageCubeArray));
+  }
+  
+  #[test]
+  fn parse_fully_specified_type() {
+    let ty = syntax::TypeSpecifier::IImage2DMSArray;
+    let expected = syntax::FullySpecifiedType { qualifier: None, ty: ty };
+  
+    assert_eq!(fully_specified_type(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+  
+  #[test]
+  fn parse_fully_specified_type_with_qualifier() {
+    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".to_owned(), "S032_29k".to_owned()]));
+    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let ty = syntax::TypeSpecifier::IImage2DMSArray;
+    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty: ty };
+  
+    assert_eq!(fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray "[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_primary_expr_intconst() {
+    assert_eq!(primary_expr(&b"0 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst("0".to_owned())));
+    assert_eq!(primary_expr(&b"1 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst("1".to_owned())));
+  }
+  
+  #[test]
+  fn parse_primary_expr_uintconst() {
+    assert_eq!(primary_expr(&b"0u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst("0".to_owned())));
+    assert_eq!(primary_expr(&b"1u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst("1".to_owned())));
+  }
+  
+  #[test]
+  fn parse_primary_expr_floatconst() {
+    assert_eq!(primary_expr(&b"0. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("0.".to_owned())));
+    assert_eq!(primary_expr(&b"1. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("1.".to_owned())));
+  }
+  
+  #[test]
+  fn parse_primary_expr_doubleconst() {
+    assert_eq!(primary_expr(&b"0.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("0.lf".to_owned())));
+    assert_eq!(primary_expr(&b"1.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("1.lf".to_owned())));
+  }
+  
+  #[test]
+  fn parse_primary_expr_boolconst() {
+    assert_eq!(primary_expr(&b"false "[..]), IResult::Done(&b" "[..], syntax::Expr::BoolConst(false.to_owned())));
+    assert_eq!(primary_expr(&b"true "[..]), IResult::Done(&b" "[..], syntax::Expr::BoolConst(true.to_owned())));
+  }
+  
+  #[test]
+  fn parse_primary_expr_parens() {
+    assert_eq!(primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+    assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+    assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
+    assert_eq!(primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
+    assert_eq!(primary_expr(&b"(true)"[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
+  }
+  
+  #[test]
+  fn parse_postfix_expr_bracket() {
+    let id = syntax::Expr::Variable("foo".to_owned());
+    let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst("7354".to_owned())));
+    let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
+  
+    assert_eq!(postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected));
+  }
+}
