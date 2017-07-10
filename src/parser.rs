@@ -983,7 +983,7 @@ named!(exclusive_or_expr<&[u8], syntax::Expr>,
     and_expr |
     ws!(do_parse!(
       a: exclusive_or_expr >>
-      char!('|') >>
+      char!('^') >>
       b: and_expr >>
 
       (syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a), Box::new(b)))
@@ -997,7 +997,7 @@ named!(and_expr<&[u8], syntax::Expr>,
     equality_expr |
     ws!(do_parse!(
       a: and_expr >>
-      char!('|') >>
+      char!('&') >>
       b: equality_expr >>
 
       (syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a), Box::new(b)))
