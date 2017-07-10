@@ -1867,7 +1867,7 @@ mod tests {
     assert_eq!(primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
     assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
     assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
-    assert_eq!(primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
+    assert_eq!(primary_expr(&b"  (  (.0) ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
     assert_eq!(primary_expr(&b"(true)"[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
   }
   
