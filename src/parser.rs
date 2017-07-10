@@ -519,42 +519,40 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
   )
 );
 
-fn postfix_expr_rec(i: &[u8]) -> IResult<&[u8], syntax::Expr> {
-  let (i1, pfe) = try_parse!(i, postfix_expr);
+/// Parse a postfix expression.
+named!(postfix_expr<&[u8], syntax::Expr>,
+  alt!(
+    function_call |
 
-  alt!(i1,
     // bracket
     do_parse!(
+      pfe: primary_expr >>
       a: array_specifier >>
       (syntax::Expr::Bracket(Box::new(pfe.clone()), a))
     ) |
 
     // dot
     do_parse!(
+      pfe: primary_expr >>
       fs: dot_field_selection >>
       (syntax::Expr::Dot(Box::new(pfe.clone()), fs))
     ) |
 
     // inc
     do_parse!(
+      pfe: primary_expr >>
       tag!("++") >>
       (syntax::Expr::PostInc(Box::new(pfe.clone())))
     ) |
 
     // dec
     do_parse!(
+      pfe: primary_expr >>
       tag!("--") >>
       (syntax::Expr::PostDec(Box::new(pfe)))
-    )
-  )
-}
+    ) |
 
-/// Parse a postfix expression.
-named!(pub postfix_expr<&[u8], syntax::Expr>,
-  alt!(
-    primary_expr |
-    function_call |
-    postfix_expr_rec
+    primary_expr
   )
 );
 
@@ -817,15 +815,15 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
 /// Parse a function call.
 named!(function_call<&[u8], syntax::Expr>,
   ws!(do_parse!(
-    fc: alt!(function_call_header_with_parameters | function_call_header_no_parameters) >>
+    fc: alt!(function_call_header_with_parameters | function_call_header_no_parameter) >>
     char!(')') >>
     (fc)
   ))
 );
 
-named!(function_call_header_no_parameters<&[u8], syntax::Expr>,
+named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
   do_parse!(
-    fi: function_call_header >>
+    fi: function_identifier >>
     opt!(void) >>
 
     (syntax::Expr::FunCall(fi, Vec::new()))
@@ -834,7 +832,7 @@ named!(function_call_header_no_parameters<&[u8], syntax::Expr>,
 
 named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
   ws!(do_parse!(
-    fi: function_call_header >>
+    fi: function_identifier >>
     first_arg: assignment_expr >>
     rest_args: many0!(ws!(do_parse!(char!(',') >> arg: assignment_expr >> (arg)))) >>
 
@@ -857,8 +855,8 @@ named!(function_call_header<&[u8], syntax::FunIdentifier>,
 /// Parse a function identifier.
 named!(function_identifier<&[u8], syntax::FunIdentifier>,
   alt!(
-    map!(type_specifier, syntax::FunIdentifier::TypeSpecifier) |
-    map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e)))
+    map!(type_specifier, syntax::FunIdentifier::TypeSpecifier) //|
+    //map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e))) // FIXME
   )
 );
 
@@ -1542,7 +1540,6 @@ mod tests {
   }
   
   #[test]
-  #[ignore]
   fn parse_array_specifier_sized() {
     let ix = syntax::Expr::IntConst("0".to_owned());
     assert_eq!(array_specifier(&b"[0]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone()))));
@@ -1618,7 +1615,6 @@ mod tests {
   }
   
   #[test]
-  #[ignore]
   fn parse_layout_qualifier_list() {
     let id_0 = syntax::LayoutQualifierSpec::Shared;
     let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
@@ -1631,7 +1627,6 @@ mod tests {
   }
   
   #[test]
-  #[ignore]
   fn parse_type_qualifier() {
     let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
     let id_0 = syntax::LayoutQualifierSpec::Shared;
