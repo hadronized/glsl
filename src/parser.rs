@@ -17,17 +17,17 @@ use std::str::{from_utf8_unchecked};
 
 use syntax;
 
-named!(discard_comment,
-  alt!(
-    delimited!(tag!("//"), take_until!("\n"), char!('\n')) |
+named!(comment,
+  ws!(alt!(
+    preceded!(tag!("//"), take_until!("\n")) |
     delimited!(tag!("/*"), take_until!("*/"), tag!("*/"))
-  )
+  ))
 );
 
 /// Parser rewriter, discarding whitespaces and comments.
 macro_rules! bl {
   ($i:expr, $($args:tt)*) => {{
-    sep!($i, discard_comment, $($args)*)
+    sep!($i, comment, $($args)*)
   }}
 }
 
@@ -1390,12 +1390,12 @@ mod tests {
 
   #[test]
   fn parse_uniline_comment() {
-    assert_eq!(discard_comment(&b"// lol\nfoo"[..]), IResult::Done(&b"foo"[..], &b" lol"[..]));
+    assert_eq!(comment(&b"// lol\nfoo"[..]), IResult::Done(&b"foo"[..], &b"lol"[..]));
   }
 
   #[test]
   fn parse_multiline_comment() {
-    assert_eq!(discard_comment(&b"/* lol\nfoo\n*/bar"[..]), IResult::Done(&b"bar"[..], &b" lol\nfoo\n"[..]));
+    assert_eq!(comment(&b"/* lol\nfoo\n*/bar"[..]), IResult::Done(&b"bar"[..], &b"lol\nfoo\n"[..]));
   }
 
   #[test]
