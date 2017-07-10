@@ -346,10 +346,10 @@ pub enum Expr {
 pub enum UnaryOp {
   Inc,
   Dec,
-  Plus,
-  Dash,
-  Bang,
-  Tilde
+  Add,
+  Minus,
+  Not,
+  Complement
 }
 
 /// All binary operators that exist in GLSL.

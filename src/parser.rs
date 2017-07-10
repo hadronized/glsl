@@ -349,10 +349,10 @@ named!(bool_lit<&[u8], bool>,
 /// Parse a unary operator.
 named!(unary_op<&[u8], syntax::UnaryOp>,
   alt!(
-    value!(syntax::UnaryOp::Plus, char!('+')) |
-    value!(syntax::UnaryOp::Dash, char!('-')) |
-    value!(syntax::UnaryOp::Bang, char!('!')) |
-    value!(syntax::UnaryOp::Tilde, char!('~'))
+    value!(syntax::UnaryOp::Add, char!('+')) |
+    value!(syntax::UnaryOp::Minus, char!('-')) |
+    value!(syntax::UnaryOp::Not, char!('!')) |
+    value!(syntax::UnaryOp::Complement, char!('~'))
   )
 );
 
@@ -1556,22 +1556,22 @@ mod tests {
 
   #[test]
   fn parse_unary_op_add() {
-    assert_eq!(unary_op(&b"+"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Plus));
+    assert_eq!(unary_op(&b"+"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Add));
   }
 
   #[test]
   fn parse_unary_op_dash() {
-    assert_eq!(unary_op(&b"-"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Dash));
+    assert_eq!(unary_op(&b"-"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Minus));
   }
 
   #[test]
   fn parse_unary_op_bang() {
-    assert_eq!(unary_op(&b"!"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Bang));
+    assert_eq!(unary_op(&b"!"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Not));
   }
 
   #[test]
   fn parse_unary_op_tilde() {
-    assert_eq!(unary_op(&b"~"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Tilde));
+    assert_eq!(unary_op(&b"~"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Complement));
   }
 
   #[test]
