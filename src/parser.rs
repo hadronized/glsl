@@ -12,17 +12,22 @@
 // The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
 // try the second branch, which is… a recursive call to the same function. That will
 // basically loop for ever.
-use nom::{ErrorKind, IResult, Needed, anychar, digit};
+use nom::{ErrorKind, IResult, Needed, anychar, digit, sp};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
 
-named!(comment,
-  ws!(alt!(
-    preceded!(tag!("//"), take_until!("\n")) |
-    delimited!(tag!("/*"), take_until!("*/"), tag!("*/"))
+/// Parse a single comment.
+named!(pub comment,
+  recognize!(alt!(
+    ws!(preceded!(tag!("//"), take_until!("\n"))) |
+    ws!(delimited!(tag!("/*"), take_until!("*/"), tag!("*/"))) |
+    sp
   ))
 );
+
+/// Parse several comments.
+named!(pub comments, recognize!(many0!(comment)));
 
 /// Parser rewriter, discarding whitespaces and comments.
 macro_rules! bl {
@@ -1390,12 +1395,22 @@ mod tests {
 
   #[test]
   fn parse_uniline_comment() {
-    assert_eq!(comment(&b"// lol\nfoo"[..]), IResult::Done(&b"foo"[..], &b"lol"[..]));
+    assert_eq!(comment(&b"// lol\nfoo"[..]), IResult::Done(&b"foo"[..], &b"// lol\n"[..]));
+  }
+
+  #[test]
+  fn parse_uniline_comments() {
+    assert_eq!(comments(&b"// lol\n// test\n"[..]), IResult::Done(&b""[..], &b"// lol\n// test\n"[..]));
   }
 
   #[test]
   fn parse_multiline_comment() {
-    assert_eq!(comment(&b"/* lol\nfoo\n*/bar"[..]), IResult::Done(&b"bar"[..], &b"lol\nfoo\n"[..]));
+    assert_eq!(comment(&b"/* lol\nfoo\n*/bar"[..]), IResult::Done(&b"bar"[..], &b"/* lol\nfoo\n*/"[..]));
+  }
+
+  #[test]
+  fn parse_multiline_comments() {
+    assert_eq!(comment(&b"/* lol\nfoo\n*/\n/*bar\n*/"[..]), IResult::Done(&b"bar"[..], &b"/* lol\nfoo\n*/"[..]));
   }
 
   #[test]
