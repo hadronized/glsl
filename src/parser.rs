@@ -509,12 +509,13 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 /// Parse a primary expression.
 named!(pub primary_expr<&[u8], syntax::Expr>,
   alt!(
-    parens_expr |
     map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
     map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
     map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s))
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
+    map!(identifier, syntax::Expr::Variable) |
+    parens_expr
   )
 );
 
@@ -1872,7 +1873,6 @@ mod tests {
   }
   
   #[test]
-  #[ignore]
   fn parse_postfix_expr_bracket() {
     let id = syntax::Expr::Variable("foo".to_owned());
     let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst("7354".to_owned())));
