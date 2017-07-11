@@ -546,7 +546,7 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
     map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
     map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(dbg_dmp!(bool_lit), |s| syntax::Expr::BoolConst(s)) |
+    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
     map!(identifier, syntax::Expr::Variable) |
     parens_expr
   )
@@ -585,7 +585,7 @@ named!(postfix_expr<&[u8], syntax::Expr>,
       (syntax::Expr::PostDec(Box::new(pfe)))
     ) |
 
-    dbg_dmp!(primary_expr)
+    primary_expr
   )
 );
 
