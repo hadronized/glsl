@@ -12,7 +12,7 @@
 // The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
 // try the second branch, which is… a recursive call to the same function. That will
 // basically loop for ever.
-use nom::{ErrorKind, IResult, Needed, anychar, digit, sp};
+use nom::{ErrorKind, IResult, anychar, digit, sp};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -546,7 +546,7 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
     map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
     map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
     map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
+    map!(dbg_dmp!(bool_lit), |s| syntax::Expr::BoolConst(s)) |
     map!(identifier, syntax::Expr::Variable) |
     parens_expr
   )
@@ -585,7 +585,7 @@ named!(postfix_expr<&[u8], syntax::Expr>,
       (syntax::Expr::PostDec(Box::new(pfe)))
     ) |
 
-    primary_expr
+    dbg_dmp!(primary_expr)
   )
 );
 
@@ -857,7 +857,7 @@ named!(function_call<&[u8], syntax::Expr>,
 
 named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
   do_parse!(
-    fi: function_identifier >>
+    fi: function_call_header >>
     opt!(void) >>
 
     (syntax::Expr::FunCall(fi, Vec::new()))
@@ -866,7 +866,7 @@ named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
 
 named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
   ws!(do_parse!(
-    fi: function_identifier >>
+    fi: function_call_header >>
     first_arg: assignment_expr >>
     rest_args: many0!(ws!(do_parse!(char!(',') >> arg: assignment_expr >> (arg)))) >>
 
@@ -1481,9 +1481,8 @@ mod tests {
   
   #[test]
   fn parse_float_lit() {
-    assert_eq!(float_lit(&b"0"[..]), IResult::Incomplete(Needed::Size(2)));
-    assert_eq!(float_lit(&b"0."[..]), IResult::Incomplete(Needed::Unknown));
-    assert_eq!(float_lit(&b".0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(float_lit(&b"0.;"[..]), IResult::Done(&b";"[..], &b"0."[..]));
+    assert_eq!(float_lit(&b".0;"[..]), IResult::Done(&b";"[..], &b".0"[..]));
     assert_eq!(float_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
     assert_eq!(float_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
     assert_eq!(float_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
@@ -1509,9 +1508,6 @@ mod tests {
   
   #[test]
   fn parse_float_neg_lit() {
-    assert_eq!(float_lit(&b"-0"[..]), IResult::Incomplete(Needed::Size(3)));
-    assert_eq!(float_lit(&b"-0."[..]), IResult::Incomplete(Needed::Unknown));
-    assert_eq!(float_lit(&b"-.0"[..]), IResult::Incomplete(Needed::Size(4)));
     assert_eq!(float_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
     assert_eq!(float_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
     assert_eq!(float_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
@@ -1537,9 +1533,8 @@ mod tests {
   
   #[test]
   fn parse_double_lit() {
-    assert_eq!(double_lit(&b"0"[..]), IResult::Incomplete(Needed::Size(2)));
-    assert_eq!(double_lit(&b"0."[..]), IResult::Incomplete(Needed::Unknown));
-    assert_eq!(double_lit(&b".0"[..]), IResult::Incomplete(Needed::Size(3)));
+    assert_eq!(double_lit(&b"0.;"[..]), IResult::Done(&b";"[..], &b"0."[..]));
+    assert_eq!(double_lit(&b".0;"[..]), IResult::Done(&b";"[..], &b".0"[..]));
     assert_eq!(double_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
     assert_eq!(double_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
     assert_eq!(double_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
@@ -1561,9 +1556,8 @@ mod tests {
   
   #[test]
   fn parse_double_neg_lit() {
-    assert_eq!(double_lit(&b"-0"[..]), IResult::Incomplete(Needed::Size(3)));
-    assert_eq!(double_lit(&b"-0."[..]), IResult::Incomplete(Needed::Unknown));
-    assert_eq!(double_lit(&b"-.0"[..]), IResult::Incomplete(Needed::Size(4)));
+    assert_eq!(double_lit(&b"-0.;"[..]), IResult::Done(&b";"[..], &b"-0."[..]));
+    assert_eq!(double_lit(&b"-.0;"[..]), IResult::Done(&b";"[..], &b"-.0"[..]));
     assert_eq!(double_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
     assert_eq!(double_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
     assert_eq!(double_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
