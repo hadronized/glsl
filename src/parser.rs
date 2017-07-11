@@ -849,7 +849,7 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
 /// Parse a function call.
 named!(function_call<&[u8], syntax::Expr>,
   ws!(do_parse!(
-    fc: alt!(function_call_header_with_parameters | function_call_header_no_parameter) >>
+    fc: alt!(function_call_header_no_parameter | function_call_header_with_parameters) >>
     char!(')') >>
     (fc)
   ))
@@ -1942,6 +1942,28 @@ mod tests {
     assert_eq!(primary_expr(&b"(true) "[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
   }
   
+  #[test]
+  fn parse_postfix_function_call_no_args() {
+    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::Vec3);
+    let args = Vec::new();
+    let expected = syntax::Expr::FunCall(fun, args);
+
+    assert_eq!(postfix_expr(&b"vec3()"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" vec3   (  ) "[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" vec3   (\nvoid\n) "[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_postfix_function_call_one_arg() {
+    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
+    let args = vec![syntax::Expr::IntConst("0".to_owned())];
+    let expected = syntax::Expr::FunCall(fun, args);
+
+    assert_eq!(postfix_expr(&b"foo(0)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   ( 0 ) "[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   (\n0\t\n) "[..]), IResult::Done(&b""[..], expected));
+  }
+
   #[test]
   fn parse_postfix_expr_bracket() {
     let id = syntax::Expr::Variable("foo".to_owned());
