@@ -848,20 +848,20 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
 
 /// Parse a function call.
 named!(function_call<&[u8], syntax::Expr>,
-  ws!(do_parse!(
-    fc: alt!(function_call_header_no_parameter | function_call_header_with_parameters) >>
-    char!(')') >>
-    (fc)
-  ))
+  alt!(
+    function_call_header_no_parameter |
+    function_call_header_with_parameters
+  )
 );
 
 named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
-  do_parse!(
+  ws!(do_parse!(
     fi: function_call_header >>
     opt!(void) >>
+    char!(')') >>
 
     (syntax::Expr::FunCall(fi, Vec::new()))
-  )
+  ))
 );
 
 named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
@@ -869,6 +869,7 @@ named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
     fi: function_call_header >>
     first_arg: assignment_expr >>
     rest_args: many0!(ws!(do_parse!(char!(',') >> arg: assignment_expr >> (arg)))) >>
+    char!(')') >>
 
     ({
       let mut args = rest_args.clone();
