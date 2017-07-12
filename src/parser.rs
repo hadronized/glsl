@@ -5,13 +5,13 @@
 // This is a grammar that states that in order to successfully parse a E, we need to parse
 // a A, and it’s possible to have several A. It’s the definition of a non-empty list.
 //
-// If we implement that with the following nom pseud-code:
+// If we implement that with the following nom pseudo-code:
 //
 //    E = alt!(A, do_parse!(E >> char!(',') >> A))
 //
 // The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
 // try the second branch, which is… a recursive call to the same function. That will
-// basically loop for ever.
+// basically loop forever.
 use nom::{ErrorKind, IResult, anychar, digit, sp};
 use std::str::{from_utf8_unchecked};
 
