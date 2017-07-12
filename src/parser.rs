@@ -1966,6 +1966,20 @@ mod tests {
   }
 
   #[test]
+  fn parse_postfix_function_call_multi_arg() {
+    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
+    let args = vec![
+      syntax::Expr::IntConst("0".to_owned()),
+      syntax::Expr::BoolConst(false),
+      syntax::Expr::Variable("bar".to_owned()),
+   ];
+    let expected = syntax::Expr::FunCall(fun, args);
+
+    assert_eq!(postfix_expr(&b"foo(0, false, bar)"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   ( 0\t, false    ,\t\tbar) "[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
   fn parse_postfix_expr_bracket() {
     let id = syntax::Expr::Variable("foo".to_owned());
     let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst("7354".to_owned())));
