@@ -10,7 +10,7 @@ pub type Identifier = String;
 pub type TypeName = String;
 
 /// Type specifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeSpecifier {
   // transparent types
   Bool,
@@ -133,27 +133,27 @@ pub enum TypeSpecifier {
 }
 
 /// Struct specifier. Used to create new, user-defined types.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StructSpecifier {
   pub name: Option<String>,
   pub fields: Vec<StructFieldSpecifier>,
 }
 
 /// Struct field specifier. Used to add fields to struct specifiers.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct StructFieldSpecifier {
   pub ty: TypeSpecifier,
   pub identifiers: Vec<Identifier> // several identifiers of the same type
 }
 
 /// Type qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TypeQualifier {
   pub qualifiers: NonEmpty<TypeQualifierSpec>
 }
 
 /// Type qualifier spec.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TypeQualifierSpec {
   Storage(StorageQualifier),
   Layout(LayoutQualifier),
@@ -164,7 +164,7 @@ pub enum TypeQualifierSpec {
 }
 
 /// Storage qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum StorageQualifier {
   Const,
   InOut,
@@ -185,20 +185,20 @@ pub enum StorageQualifier {
 }
 
 /// Layout qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct LayoutQualifier {
   pub ids: NonEmpty<LayoutQualifierSpec>
 }
 
 /// Layout qualifier spec.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LayoutQualifierSpec {
   Identifier(Identifier, Option<Box<Expr>>),
   Shared
 }
 
 /// Precision qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum PrecisionQualifier {
   High,
   Medium,
@@ -206,7 +206,7 @@ pub enum PrecisionQualifier {
 }
 
 /// Interpolation qualifier.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InterpolationQualifier {
   Smooth,
   Flat,
@@ -214,21 +214,21 @@ pub enum InterpolationQualifier {
 }
 
 /// Fully specified type.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FullySpecifiedType {
   pub qualifier: Option<TypeQualifier>,
   pub ty: TypeSpecifier
 }
 
 /// Dimensionality of an arary.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ArraySpecifier {
   Unsized,
   ExplicitlySized(Box<Expr>)
 }
 
 /// A declaration.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Declaration {
   FunctionPrototype(FunctionPrototype),
   InitDeclaratorList(InitDeclaratorList),
@@ -239,14 +239,14 @@ pub enum Declaration {
 
 /// Function identifier. Constructors are recognized via type specifiers and methods (.length),
 /// subroutine array calls and identifiers are recognized via postfix expressions.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FunIdentifier {
   TypeSpecifier(TypeSpecifier),
   Expr(Box<Expr>)
 }
 
 /// Function prototype.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionPrototype {
   pub ty: FullySpecifiedType,
   pub name: Identifier,
@@ -254,14 +254,14 @@ pub struct FunctionPrototype {
 }
 
 /// Function parameter declaration.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum FunctionParameterDeclaration {
   Named(Option<TypeQualifier>, FunctionParameterDeclarator),
   Unnamed(Option<TypeQualifier>, TypeSpecifier)
 }
 
 /// Function parameter declarator.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameterDeclarator {
   pub ty: TypeSpecifier,
   pub name: Identifier,
@@ -269,14 +269,14 @@ pub struct FunctionParameterDeclarator {
 }
 
 /// Init declarator list.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum InitDeclaratorList {
   Single(SingleDeclaration),
   Complex(Box<InitDeclaratorList>, Identifier, Option<ArraySpecifier>, Option<Initializer>)
 }
 
 /// Single declaration.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SingleDeclaration {
   pub ty: FullySpecifiedType,
   pub name: Option<Identifier>,
@@ -285,14 +285,14 @@ pub struct SingleDeclaration {
 }
 
 /// Initializer.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Initializer {
   AssignmentExpr(Box<Expr>),
   List(Vec<Initializer>)
 }
 
 /// Field selection.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FieldSelection {
   pub field: Identifier,
   pub array_specifier: Option<ArraySpecifier>,
@@ -304,20 +304,20 @@ pub struct FieldSelection {
 /// then an expression which evaluates to what the statement “returns”.
 ///
 /// An expression is either an assignment or a list (comma) of assignments.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
   /// A variable expression, using an identifier.
   Variable(Identifier),
   /// Integral constant expression.
-  IntConst(String),
+  IntConst(i32),
   /// Unsigned integral constant expression.
-  UIntConst(String),
+  UIntConst(u32),
   /// Boolean constant expression.
   BoolConst(bool),
   /// Single precision floating expression.
-  FloatConst(String),
+  FloatConst(f32),
   /// Double precision floating expression.
-  DoubleConst(String),
+  DoubleConst(f64),
   /// A unary expression, gathering a single expression and a unary operator.
   Unary(UnaryOp, Box<Expr>),
   /// A binary expression, gathering two expressions and a binary operator.
@@ -342,7 +342,7 @@ pub enum Expr {
 }
 
 /// All unary operators that exist in GLSL.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum UnaryOp {
   Inc,
   Dec,
@@ -353,7 +353,7 @@ pub enum UnaryOp {
 }
 
 /// All binary operators that exist in GLSL.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BinaryOp {
   Or,
   Xor,
@@ -377,7 +377,7 @@ pub enum BinaryOp {
 }
 
 /// All possible operators for assigning expressions.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum AssignmentOp {
   Equal,
   Mult,
@@ -393,41 +393,41 @@ pub enum AssignmentOp {
 }
 
 /// Starting rule.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TranslationUnit {
   ExternalDeclaration(ExternalDeclaration),
   Comma(Box<TranslationUnit>, ExternalDeclaration)
 }
 
 /// External declaration.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ExternalDeclaration {
   FunctionDefinition(FunctionDefinition),
   Declaration(Declaration)
 }
 
 /// Function definition.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FunctionDefinition {
   pub prototype: FunctionPrototype,
   pub statement: CompoundStatement,
 }
 
 /// Compound statement (with no new scope).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CompoundStatement {
   pub statement_list: Vec<Statement>
 }
 
 /// Statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
   Compound(Box<CompoundStatement>),
   Simple(Box<SimpleStatement>)
 }
 
 /// Simple statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SimpleStatement {
   Declaration(Declaration),
   Expression(ExprStatement),
@@ -442,41 +442,41 @@ pub enum SimpleStatement {
 pub type ExprStatement = Option<Expr>;
 
 /// Selection statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SelectionStatement {
   If(Box<Expr>, SelectionRestStatement)
 }
 
 /// Condition.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Condition {
   Expr(Box<Expr>),
   Assignment(FullySpecifiedType, Identifier, Initializer)
 }
 
 /// Selection rest statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SelectionRestStatement {
   Statement(Box<Statement>),
   Else(Box<Statement>, Box<Statement>)
 }
 
 /// Switch statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SwitchStatement {
   pub head: Box<Expr>,
   pub body: Vec<Statement>
 }
 
 /// Case label statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CaseLabel {
   Case(Box<Expr>),
   Def
 }
 
 /// Iteration statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum IterationStatement {
   While(Condition, Box<Statement>),
   DoWhile(Box<Statement>, Box<Expr>),
@@ -484,21 +484,21 @@ pub enum IterationStatement {
 }
 
 /// For init statement
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ForInitStatement {
   Expression(Option<Expr>),
   Declaration(Box<Declaration>)
 }
 
 /// For init statement
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ForRestStatement {
   pub condition: Option<Condition>,
   pub post_expr: Option<Box<Expr>>
 }
 
 /// Jump statement.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum JumpStatement {
   Continue,
   Break,

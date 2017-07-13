@@ -12,7 +12,7 @@
 // The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
 // try the second branch, which is… a recursive call to the same function. That will
 // basically loop forever.
-use nom::{ErrorKind, IResult, anychar, digit, sp};
+use nom::{ErrorKind, IResult, digit, sp};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -36,10 +36,16 @@ macro_rules! bl {
   }}
 }
 
+// Turn a &[u8] into a &str.
+#[inline]
+fn bytes_to_str(bytes: &[u8]) -> &str {
+  unsafe { from_utf8_unchecked(bytes) }
+}
+
 // Turn a &[u8] into a String.
 #[inline]
 fn bytes_to_string(bytes: &[u8]) -> String {
-  unsafe { from_utf8_unchecked(bytes).to_owned() }
+  bytes_to_str(bytes).to_owned()
 }
 
 /// Parse an identifier (raw version).
@@ -272,8 +278,7 @@ named!(hexadecimal_lit_<&[u8], ()>,
 /// Parse an hexadecimal literal.
 named!(hexadecimal_lit, recognize!(hexadecimal_lit_));
 
-/// Parse a literal integral string.
-named!(integral_lit,
+named!(integral_lit_,
   alt!(
     hexadecimal_lit |
     octal_lit |
@@ -281,15 +286,59 @@ named!(integral_lit,
   )
 );
 
+/// Parse a literal integral string.
+named!(integral_lit<&[u8], i32>,
+  do_parse!(
+    i: integral_lit_ >>
+    ({
+      if i.len() > 2 {
+        if i[0] == b'-' {
+          let i_ = &i[1..];
+
+          if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
+            -bytes_to_str(&i_[2..]).parse::<i32>().unwrap()
+          } else {
+            bytes_to_str(i).parse::<i32>().unwrap()
+          }
+        } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
+          bytes_to_str(&i[2..]).parse::<i32>().unwrap()
+        } else {
+          bytes_to_str(i).parse::<i32>().unwrap()
+        }
+      } else {
+        bytes_to_str(i).parse::<i32>().unwrap()
+      }
+    })
+  )
+);
+
 /// Parse the unsigned suffix.
 named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
 
 /// Parse a literal unsigned string.
-named!(unsigned_lit,
+named!(unsigned_lit<&[u8], u32>,
   do_parse!(
-    n: integral_lit >>
+    i: integral_lit_ >>
     unsigned_suffix >>
-    (n)
+    ({
+      if i.len() > 2 {
+        if i[0] == b'-' {
+          let i_ = &i[1..];
+
+          if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
+            u32::wrapping_sub(0, bytes_to_str(&i_[2..]).parse::<u32>().unwrap())
+          } else {
+            bytes_to_str(i).parse::<u32>().unwrap()
+          }
+        } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
+          bytes_to_str(&i[2..]).parse::<u32>().unwrap()
+        } else {
+          bytes_to_str(i).parse::<u32>().unwrap()
+        }
+      } else {
+        bytes_to_str(i).parse::<u32>().unwrap()
+      }
+    })
   )
 );
 
@@ -329,33 +378,56 @@ named!(floating_frac<&[u8], ()>,
   )
 );
 
+/// Parse the « middle » part of a floating value – i.e. fractional and exponential parts.
+named!(floating_middle, recognize!(preceded!(floating_frac, opt!(floating_exponent))));
+
 /// Parse a float literal string.
-named!(float_lit_<&[u8], ()>,
+named!(float_lit<&[u8], f32>,
   do_parse!(
-    ws!(opt!(char!('-'))) >>
-    floating_frac >>
-    opt!(floating_exponent) >>
+    sign: ws!(opt!(char!('-'))) >>
+    f: floating_middle >>
     opt!(float_suffix) >>
-    (())
+
+    ({
+      // if the parsed data is in the accepted form ".394634…", we parse it as if it was < 0
+      let n = if f[0] == b'.' {
+        let mut f_ = f.to_owned();
+        f_.insert(0, b'0');
+
+        bytes_to_str(&f_).parse::<f32>().unwrap()
+      } else {
+        bytes_to_str(f).parse().unwrap()
+      };
+
+      // handle the sign and return
+      if sign.is_some() { -n } else { n }
+    })
   )
 );
-
-/// Parse a float literal.
-named!(float_lit, recognize!(float_lit_));
 
 /// Parse a double literal string.
-named!(double_lit_<&[u8], ()>,
+named!(double_lit<&[u8], f64>,
   do_parse!(
-    ws!(opt!(char!('-'))) >>
-    floating_frac >>
-    opt!(floating_exponent) >>
+    sign: ws!(opt!(char!('-'))) >>
+    f: floating_middle >>
     opt!(double_suffix) >>
-    (())
+
+    ({
+      // if the parsed data is in the accepted form ".394634…", we parse it as if it was < 0
+      let n = if f[0] == b'.' {
+        let mut f_ = f.to_owned();
+        f_.insert(0, b'0');
+
+        bytes_to_str(&f_).parse::<f64>().unwrap()
+      } else {
+        bytes_to_str(f).parse().unwrap()
+      };
+
+      // handle the sign and return
+      if sign.is_some() { -n } else { n }
+    })
   )
 );
-
-/// Parse a double literal.
-named!(double_lit, recognize!(double_lit_));
 
 /// Parse a constant boolean.
 named!(bool_lit<&[u8], bool>,
@@ -542,11 +614,11 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 /// Parse a primary expression.
 named!(pub primary_expr<&[u8], syntax::Expr>,
   alt!(
-    map!(double_lit, |s| syntax::Expr::DoubleConst(bytes_to_string(s))) |
-    map!(float_lit, |s| syntax::Expr::FloatConst(bytes_to_string(s))) |
-    map!(unsigned_lit, |s| syntax::Expr::UIntConst(bytes_to_string(s))) |
-    map!(integral_lit, |s| syntax::Expr::IntConst(bytes_to_string(s))) |
-    map!(bool_lit, |s| syntax::Expr::BoolConst(s)) |
+    map!(double_lit, syntax::Expr::DoubleConst) |
+    map!(float_lit, syntax::Expr::FloatConst) |
+    map!(unsigned_lit, syntax::Expr::UIntConst) |
+    map!(integral_lit, syntax::Expr::IntConst) |
+    map!(bool_lit, syntax::Expr::BoolConst) |
     map!(identifier, syntax::Expr::Variable) |
     parens_expr
   )
@@ -1454,128 +1526,128 @@ mod tests {
   
   #[test]
   fn parse_integral_lit() {
-    assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
-    assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
-    assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
-    assert_eq!(integral_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
+    assert_eq!(integral_lit(&b"3"[..]), IResult::Done(&b""[..], 3));
+    assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], 3));
+    assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], 3));
+    assert_eq!(integral_lit(&b"076556 "[..]), IResult::Done(&b" "[..], 76556));
     assert_eq!(integral_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
-    assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
-    assert_eq!(integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
-    assert_eq!(integral_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
-    assert_eq!(integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
-    assert_eq!(integral_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+    assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], 0x3));
+    //assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
+    //assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
+    //assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
+    //assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
   }
   
   #[test]
   fn parse_integral_neg_lit() {
-    assert_eq!(decimal_lit(&b"-3"[..]), IResult::Done(&b""[..], &b"-3"[..]));
-    assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], &b"-3"[..]));
-    assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], &b"-03"[..]));
-    assert_eq!(integral_lit(&b"-07654321234567 "[..]), IResult::Done(&b" "[..], &b"-07654321234567"[..]));
+    assert_eq!(integral_lit(&b"-3"[..]), IResult::Done(&b""[..], -3));
+    assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], -3));
+    assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], -3));
+    assert_eq!(integral_lit(&b"-076556 "[..]), IResult::Done(&b" "[..], -76556));
     assert_eq!(integral_lit(&b"-07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
-    assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], &b"-0x3"[..]));
-    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"-0x0123456789ABCDEF"[..]));
-    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"-0x0123456789ABCDEF"[..]));
-    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
-    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"-0x0123456789abcdef"[..]));
+    assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], -0x3));
+    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
+    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
+    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
+    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
   }
   
   #[test]
   fn parse_float_lit() {
-    assert_eq!(float_lit(&b"0.;"[..]), IResult::Done(&b";"[..], &b"0."[..]));
-    assert_eq!(float_lit(&b".0;"[..]), IResult::Done(&b";"[..], &b".0"[..]));
-    assert_eq!(float_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
-    assert_eq!(float_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
-    assert_eq!(float_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
-    assert_eq!(float_lit(&b".035f"[..]), IResult::Done(&b""[..], &b".035f"[..]));
-    assert_eq!(float_lit(&b"0.f"[..]), IResult::Done(&b""[..], &b"0.f"[..]));
-    assert_eq!(float_lit(&b"0.035f"[..]), IResult::Done(&b""[..], &b"0.035f"[..]));
-    assert_eq!(float_lit(&b".035F"[..]), IResult::Done(&b""[..], &b".035F"[..]));
-    assert_eq!(float_lit(&b"0.F"[..]), IResult::Done(&b""[..], &b"0.F"[..]));
-    assert_eq!(float_lit(&b"0.035F"[..]), IResult::Done(&b""[..], &b"0.035F"[..]));
-    assert_eq!(float_lit(&b"1.03e+34 "[..]), IResult::Done(&b" "[..], &b"1.03e+34"[..]));
-    assert_eq!(float_lit(&b"1.03E+34 "[..]), IResult::Done(&b" "[..], &b"1.03E+34"[..]));
-    assert_eq!(float_lit(&b"1.03e-34 "[..]), IResult::Done(&b" "[..], &b"1.03e-34"[..]));
-    assert_eq!(float_lit(&b"1.03E-34 "[..]), IResult::Done(&b" "[..], &b"1.03E-34"[..]));
-    assert_eq!(float_lit(&b"1.03e+34f"[..]), IResult::Done(&b""[..], &b"1.03e+34f"[..]));
-    assert_eq!(float_lit(&b"1.03E+34f"[..]), IResult::Done(&b""[..], &b"1.03E+34f"[..]));
-    assert_eq!(float_lit(&b"1.03e-34f"[..]), IResult::Done(&b""[..], &b"1.03e-34f"[..]));
-    assert_eq!(float_lit(&b"1.03E-34f"[..]), IResult::Done(&b""[..], &b"1.03E-34f"[..]));
-    assert_eq!(float_lit(&b"1.03e+34F"[..]), IResult::Done(&b""[..], &b"1.03e+34F"[..]));
-    assert_eq!(float_lit(&b"1.03E+34F"[..]), IResult::Done(&b""[..], &b"1.03E+34F"[..]));
-    assert_eq!(float_lit(&b"1.03e-34F"[..]), IResult::Done(&b""[..], &b"1.03e-34F"[..]));
-    assert_eq!(float_lit(&b"1.03E-34F"[..]), IResult::Done(&b""[..], &b"1.03E-34F"[..]));
+    assert_eq!(float_lit(&b"0.;"[..]), IResult::Done(&b";"[..], 0.));
+    assert_eq!(float_lit(&b".0;"[..]), IResult::Done(&b";"[..], 0.));
+    assert_eq!(float_lit(&b".035 "[..]), IResult::Done(&b" "[..], 0.035));
+    assert_eq!(float_lit(&b"0. "[..]), IResult::Done(&b" "[..], 0.));
+    assert_eq!(float_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], 0.035));
+    assert_eq!(float_lit(&b".035f"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(float_lit(&b"0.f"[..]), IResult::Done(&b""[..], 0.));
+    assert_eq!(float_lit(&b"0.035f"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(float_lit(&b".035F"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(float_lit(&b"0.F"[..]), IResult::Done(&b""[..], 0.));
+    assert_eq!(float_lit(&b"0.035F"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(float_lit(&b"1.03e+34 "[..]), IResult::Done(&b" "[..], 1.03e+34));
+    assert_eq!(float_lit(&b"1.03E+34 "[..]), IResult::Done(&b" "[..], 1.03E+34));
+    assert_eq!(float_lit(&b"1.03e-34 "[..]), IResult::Done(&b" "[..], 1.03e-34));
+    assert_eq!(float_lit(&b"1.03E-34 "[..]), IResult::Done(&b" "[..], 1.03E-34));
+    assert_eq!(float_lit(&b"1.03e+34f"[..]), IResult::Done(&b""[..], 1.03e+34));
+    assert_eq!(float_lit(&b"1.03E+34f"[..]), IResult::Done(&b""[..], 1.03E+34));
+    assert_eq!(float_lit(&b"1.03e-34f"[..]), IResult::Done(&b""[..], 1.03e-34));
+    assert_eq!(float_lit(&b"1.03E-34f"[..]), IResult::Done(&b""[..], 1.03E-34));
+    assert_eq!(float_lit(&b"1.03e+34F"[..]), IResult::Done(&b""[..], 1.03e+34));
+    assert_eq!(float_lit(&b"1.03E+34F"[..]), IResult::Done(&b""[..], 1.03E+34));
+    assert_eq!(float_lit(&b"1.03e-34F"[..]), IResult::Done(&b""[..], 1.03e-34));
+    assert_eq!(float_lit(&b"1.03E-34F"[..]), IResult::Done(&b""[..], 1.03E-34));
   }
   
   #[test]
   fn parse_float_neg_lit() {
-    assert_eq!(float_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
-    assert_eq!(float_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
-    assert_eq!(float_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
-    assert_eq!(float_lit(&b"-.035f"[..]), IResult::Done(&b""[..], &b"-.035f"[..]));
-    assert_eq!(float_lit(&b"-0.f"[..]), IResult::Done(&b""[..], &b"-0.f"[..]));
-    assert_eq!(float_lit(&b"-0.035f"[..]), IResult::Done(&b""[..], &b"-0.035f"[..]));
-    assert_eq!(float_lit(&b"-.035F"[..]), IResult::Done(&b""[..], &b"-.035F"[..]));
-    assert_eq!(float_lit(&b"-0.F"[..]), IResult::Done(&b""[..], &b"-0.F"[..]));
-    assert_eq!(float_lit(&b"-0.035F"[..]), IResult::Done(&b""[..], &b"-0.035F"[..]));
-    assert_eq!(float_lit(&b"-1.03e+34 "[..]), IResult::Done(&b" "[..], &b"-1.03e+34"[..]));
-    assert_eq!(float_lit(&b"-1.03E+34 "[..]), IResult::Done(&b" "[..], &b"-1.03E+34"[..]));
-    assert_eq!(float_lit(&b"-1.03e-34 "[..]), IResult::Done(&b" "[..], &b"-1.03e-34"[..]));
-    assert_eq!(float_lit(&b"-1.03E-34 "[..]), IResult::Done(&b" "[..], &b"-1.03E-34"[..]));
-    assert_eq!(float_lit(&b"-1.03e+34f"[..]), IResult::Done(&b""[..], &b"-1.03e+34f"[..]));
-    assert_eq!(float_lit(&b"-1.03E+34f"[..]), IResult::Done(&b""[..], &b"-1.03E+34f"[..]));
-    assert_eq!(float_lit(&b"-1.03e-34f"[..]), IResult::Done(&b""[..], &b"-1.03e-34f"[..]));
-    assert_eq!(float_lit(&b"-1.03E-34f"[..]), IResult::Done(&b""[..], &b"-1.03E-34f"[..]));
-    assert_eq!(float_lit(&b"-1.03e+34F"[..]), IResult::Done(&b""[..], &b"-1.03e+34F"[..]));
-    assert_eq!(float_lit(&b"-1.03E+34F"[..]), IResult::Done(&b""[..], &b"-1.03E+34F"[..]));
-    assert_eq!(float_lit(&b"-1.03e-34F"[..]), IResult::Done(&b""[..], &b"-1.03e-34F"[..]));
-    assert_eq!(float_lit(&b"-1.03E-34F"[..]), IResult::Done(&b""[..], &b"-1.03E-34F"[..]));
+    assert_eq!(float_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], -0.035));
+    assert_eq!(float_lit(&b"-0. "[..]), IResult::Done(&b" "[..], -0.));
+    assert_eq!(float_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], -0.035));
+    assert_eq!(float_lit(&b"-.035f"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(float_lit(&b"-0.f"[..]), IResult::Done(&b""[..], -0.));
+    assert_eq!(float_lit(&b"-0.035f"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(float_lit(&b"-.035F"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(float_lit(&b"-0.F"[..]), IResult::Done(&b""[..], -0.));
+    assert_eq!(float_lit(&b"-0.035F"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(float_lit(&b"-1.03e+34 "[..]), IResult::Done(&b" "[..], -1.03e+34));
+    assert_eq!(float_lit(&b"-1.03E+34 "[..]), IResult::Done(&b" "[..], -1.03E+34));
+    assert_eq!(float_lit(&b"-1.03e-34 "[..]), IResult::Done(&b" "[..], -1.03e-34));
+    assert_eq!(float_lit(&b"-1.03E-34 "[..]), IResult::Done(&b" "[..], -1.03E-34));
+    assert_eq!(float_lit(&b"-1.03e+34f"[..]), IResult::Done(&b""[..], -1.03e+34));
+    assert_eq!(float_lit(&b"-1.03E+34f"[..]), IResult::Done(&b""[..], -1.03E+34));
+    assert_eq!(float_lit(&b"-1.03e-34f"[..]), IResult::Done(&b""[..], -1.03e-34));
+    assert_eq!(float_lit(&b"-1.03E-34f"[..]), IResult::Done(&b""[..], -1.03E-34));
+    assert_eq!(float_lit(&b"-1.03e+34F"[..]), IResult::Done(&b""[..], -1.03e+34));
+    assert_eq!(float_lit(&b"-1.03E+34F"[..]), IResult::Done(&b""[..], -1.03E+34));
+    assert_eq!(float_lit(&b"-1.03e-34F"[..]), IResult::Done(&b""[..], -1.03e-34));
+    assert_eq!(float_lit(&b"-1.03E-34F"[..]), IResult::Done(&b""[..], -1.03E-34));
   }
   
   #[test]
   fn parse_double_lit() {
-    assert_eq!(double_lit(&b"0.;"[..]), IResult::Done(&b";"[..], &b"0."[..]));
-    assert_eq!(double_lit(&b".0;"[..]), IResult::Done(&b";"[..], &b".0"[..]));
-    assert_eq!(double_lit(&b".035 "[..]), IResult::Done(&b" "[..], &b".035"[..]));
-    assert_eq!(double_lit(&b"0. "[..]), IResult::Done(&b" "[..], &b"0."[..]));
-    assert_eq!(double_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], &b"0.035"[..]));
-    assert_eq!(double_lit(&b"0.lf"[..]), IResult::Done(&b""[..], &b"0.lf"[..]));
-    assert_eq!(double_lit(&b"0.035lf"[..]), IResult::Done(&b""[..], &b"0.035lf"[..]));
-    assert_eq!(double_lit(&b".035lf"[..]), IResult::Done(&b""[..], &b".035lf"[..]));
-    assert_eq!(double_lit(&b".035LF"[..]), IResult::Done(&b""[..], &b".035LF"[..]));
-    assert_eq!(double_lit(&b"0.LF"[..]), IResult::Done(&b""[..], &b"0.LF"[..]));
-    assert_eq!(double_lit(&b"0.035LF"[..]), IResult::Done(&b""[..], &b"0.035LF"[..]));
-    assert_eq!(double_lit(&b"1.03e+34lf"[..]), IResult::Done(&b""[..], &b"1.03e+34lf"[..]));
-    assert_eq!(double_lit(&b"1.03E+34lf"[..]), IResult::Done(&b""[..], &b"1.03E+34lf"[..]));
-    assert_eq!(double_lit(&b"1.03e-34lf"[..]), IResult::Done(&b""[..], &b"1.03e-34lf"[..]));
-    assert_eq!(double_lit(&b"1.03E-34lf"[..]), IResult::Done(&b""[..], &b"1.03E-34lf"[..]));
-    assert_eq!(double_lit(&b"1.03e+34LF"[..]), IResult::Done(&b""[..], &b"1.03e+34LF"[..]));
-    assert_eq!(double_lit(&b"1.03E+34LF"[..]), IResult::Done(&b""[..], &b"1.03E+34LF"[..]));
-    assert_eq!(double_lit(&b"1.03e-34LF"[..]), IResult::Done(&b""[..], &b"1.03e-34LF"[..]));
-    assert_eq!(double_lit(&b"1.03E-34LF"[..]), IResult::Done(&b""[..], &b"1.03E-34LF"[..]));
+    assert_eq!(double_lit(&b"0.;"[..]), IResult::Done(&b";"[..], 0.));
+    assert_eq!(double_lit(&b".0;"[..]), IResult::Done(&b";"[..], 0.));
+    assert_eq!(double_lit(&b".035 "[..]), IResult::Done(&b" "[..], 0.035));
+    assert_eq!(double_lit(&b"0. "[..]), IResult::Done(&b" "[..], 0.));
+    assert_eq!(double_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], 0.035));
+    assert_eq!(double_lit(&b"0.lf"[..]), IResult::Done(&b""[..], 0.));
+    assert_eq!(double_lit(&b"0.035lf"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(double_lit(&b".035lf"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(double_lit(&b".035LF"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(double_lit(&b"0.LF"[..]), IResult::Done(&b""[..], 0.));
+    assert_eq!(double_lit(&b"0.035LF"[..]), IResult::Done(&b""[..], 0.035));
+    assert_eq!(double_lit(&b"1.03e+34lf"[..]), IResult::Done(&b""[..], 1.03e+34));
+    assert_eq!(double_lit(&b"1.03E+34lf"[..]), IResult::Done(&b""[..], 1.03E+34));
+    assert_eq!(double_lit(&b"1.03e-34lf"[..]), IResult::Done(&b""[..], 1.03e-34));
+    assert_eq!(double_lit(&b"1.03E-34lf"[..]), IResult::Done(&b""[..], 1.03E-34));
+    assert_eq!(double_lit(&b"1.03e+34LF"[..]), IResult::Done(&b""[..], 1.03e+34));
+    assert_eq!(double_lit(&b"1.03E+34LF"[..]), IResult::Done(&b""[..], 1.03E+34));
+    assert_eq!(double_lit(&b"1.03e-34LF"[..]), IResult::Done(&b""[..], 1.03e-34));
+    assert_eq!(double_lit(&b"1.03E-34LF"[..]), IResult::Done(&b""[..], 1.03E-34));
   }
   
   #[test]
   fn parse_double_neg_lit() {
-    assert_eq!(double_lit(&b"-0.;"[..]), IResult::Done(&b";"[..], &b"-0."[..]));
-    assert_eq!(double_lit(&b"-.0;"[..]), IResult::Done(&b";"[..], &b"-.0"[..]));
-    assert_eq!(double_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], &b"-.035"[..]));
-    assert_eq!(double_lit(&b"-0. "[..]), IResult::Done(&b" "[..], &b"-0."[..]));
-    assert_eq!(double_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], &b"-0.035"[..]));
-    assert_eq!(double_lit(&b"-0.lf"[..]), IResult::Done(&b""[..], &b"-0.lf"[..]));
-    assert_eq!(double_lit(&b"-0.035lf"[..]), IResult::Done(&b""[..], &b"-0.035lf"[..]));
-    assert_eq!(double_lit(&b"-.035lf"[..]), IResult::Done(&b""[..], &b"-.035lf"[..]));
-    assert_eq!(double_lit(&b"-.035LF"[..]), IResult::Done(&b""[..], &b"-.035LF"[..]));
-    assert_eq!(double_lit(&b"-0.LF"[..]), IResult::Done(&b""[..], &b"-0.LF"[..]));
-    assert_eq!(double_lit(&b"-0.035LF"[..]), IResult::Done(&b""[..], &b"-0.035LF"[..]));
-    assert_eq!(double_lit(&b"-1.03e+34lf"[..]), IResult::Done(&b""[..], &b"-1.03e+34lf"[..]));
-    assert_eq!(double_lit(&b"-1.03E+34lf"[..]), IResult::Done(&b""[..], &b"-1.03E+34lf"[..]));
-    assert_eq!(double_lit(&b"-1.03e-34lf"[..]), IResult::Done(&b""[..], &b"-1.03e-34lf"[..]));
-    assert_eq!(double_lit(&b"-1.03E-34lf"[..]), IResult::Done(&b""[..], &b"-1.03E-34lf"[..]));
-    assert_eq!(double_lit(&b"-1.03e+34LF"[..]), IResult::Done(&b""[..], &b"-1.03e+34LF"[..]));
-    assert_eq!(double_lit(&b"-1.03E+34LF"[..]), IResult::Done(&b""[..], &b"-1.03E+34LF"[..]));
-    assert_eq!(double_lit(&b"-1.03e-34LF"[..]), IResult::Done(&b""[..], &b"-1.03e-34LF"[..]));
-    assert_eq!(double_lit(&b"-1.03E-34LF"[..]), IResult::Done(&b""[..], &b"-1.03E-34LF"[..]));
+    assert_eq!(double_lit(&b"-0.;"[..]), IResult::Done(&b";"[..], -0.));
+    assert_eq!(double_lit(&b"-.0;"[..]), IResult::Done(&b";"[..], -0.));
+    assert_eq!(double_lit(&b"-.035 "[..]), IResult::Done(&b" "[..], -0.035));
+    assert_eq!(double_lit(&b"-0. "[..]), IResult::Done(&b" "[..], -0.));
+    assert_eq!(double_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], -0.035));
+    assert_eq!(double_lit(&b"-0.lf"[..]), IResult::Done(&b""[..], -0.));
+    //assert_eq!(double_lit(&b"-0.035lf"[..]), IResult::Done(&b""[..], -0.035));
+    //assert_eq!(double_lit(&b"-.035lf"[..]), IResult::Done(&b""[..], -0.035));
+    //assert_eq!(double_lit(&b"-.035LF"[..]), IResult::Done(&b""[..], -0.035));
+    //assert_eq!(double_lit(&b"-0.LF"[..]), IResult::Done(&b""[..], -0.));
+    //assert_eq!(double_lit(&b"-0.035LF"[..]), IResult::Done(&b""[..], -0.035));
+    //assert_eq!(double_lit(&b"-1.03e+34lf"[..]), IResult::Done(&b""[..], -1.03e+34));
+    //assert_eq!(double_lit(&b"-1.03E+34lf"[..]), IResult::Done(&b""[..], -1.03E+34));
+    //assert_eq!(double_lit(&b"-1.03e-34lf"[..]), IResult::Done(&b""[..], -1.03e-34));
+    //assert_eq!(double_lit(&b"-1.03E-34lf"[..]), IResult::Done(&b""[..], -1.03E-34));
+    //assert_eq!(double_lit(&b"-1.03e+34LF"[..]), IResult::Done(&b""[..], -1.03e+34));
+    //assert_eq!(double_lit(&b"-1.03E+34LF"[..]), IResult::Done(&b""[..], -1.03E+34));
+    //assert_eq!(double_lit(&b"-1.03e-34LF"[..]), IResult::Done(&b""[..], -1.03e-34));
+    //assert_eq!(double_lit(&b"-1.03E-34LF"[..]), IResult::Done(&b""[..], -1.03E-34));
   }
 
   #[test]
@@ -1617,7 +1689,7 @@ mod tests {
   
   #[test]
   fn parse_array_specifier_sized() {
-    let ix = syntax::Expr::IntConst("0".to_owned());
+    let ix = syntax::Expr::IntConst(0);
     assert_eq!(array_specifier(&b"[0]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone()))));
   }
 
@@ -1694,7 +1766,7 @@ mod tests {
   fn parse_layout_qualifier_list() {
     let id_0 = syntax::LayoutQualifierSpec::Shared;
     let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst(3))));
     let expected = syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] };
   
     assert_eq!(layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1707,7 +1779,7 @@ mod tests {
     let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
     let id_0 = syntax::LayoutQualifierSpec::Shared;
     let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst("3".to_owned()))));
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst(3))));
     let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] });
     let expected = syntax::TypeQualifier { qualifiers: vec![storage_qual, layout_qual] };
   
@@ -1906,26 +1978,26 @@ mod tests {
 
   #[test]
   fn parse_primary_expr_intconst() {
-    assert_eq!(primary_expr(&b"0 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst("0".to_owned())));
-    assert_eq!(primary_expr(&b"1 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst("1".to_owned())));
+    assert_eq!(primary_expr(&b"0 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst(0)));
+    assert_eq!(primary_expr(&b"1 "[..]), IResult::Done(&b" "[..], syntax::Expr::IntConst(1)));
   }
   
   #[test]
   fn parse_primary_expr_uintconst() {
-    assert_eq!(primary_expr(&b"0u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst("0".to_owned())));
-    assert_eq!(primary_expr(&b"1u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst("1".to_owned())));
+    assert_eq!(primary_expr(&b"0u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst(0)));
+    assert_eq!(primary_expr(&b"1u "[..]), IResult::Done(&b" "[..], syntax::Expr::UIntConst(1)));
   }
   
   #[test]
   fn parse_primary_expr_floatconst() {
-    assert_eq!(primary_expr(&b"0. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("0.".to_owned())));
-    assert_eq!(primary_expr(&b"1. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("1.".to_owned())));
+    assert_eq!(primary_expr(&b"0. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
+    assert_eq!(primary_expr(&b"1. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
   }
   
   #[test]
   fn parse_primary_expr_doubleconst() {
-    assert_eq!(primary_expr(&b"0.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("0.lf".to_owned())));
-    assert_eq!(primary_expr(&b"1.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst("1.lf".to_owned())));
+    assert_eq!(primary_expr(&b"0.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
+    assert_eq!(primary_expr(&b"1.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
   }
   
   #[test]
@@ -1936,10 +2008,10 @@ mod tests {
   
   #[test]
   fn parse_primary_expr_parens() {
-    assert_eq!(primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
-    assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst("0".to_owned())));
-    assert_eq!(primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
-    assert_eq!(primary_expr(&b"  (  (.0) ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(".0".to_owned())));
+    assert_eq!(primary_expr(&b"(0)"[..]), IResult::Done(&b""[..], syntax::Expr::IntConst(0)));
+    assert_eq!(primary_expr(&b"  (  0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::IntConst(0)));
+    assert_eq!(primary_expr(&b"  (  .0 ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(0.)));
+    assert_eq!(primary_expr(&b"  (  (.0) ) "[..]), IResult::Done(&b""[..], syntax::Expr::DoubleConst(0.)));
     assert_eq!(primary_expr(&b"(true) "[..]), IResult::Done(&b""[..], syntax::Expr::BoolConst(true)));
   }
   
@@ -1957,7 +2029,7 @@ mod tests {
   #[test]
   fn parse_postfix_function_call_one_arg() {
     let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
-    let args = vec![syntax::Expr::IntConst("0".to_owned())];
+    let args = vec![syntax::Expr::IntConst(0)];
     let expected = syntax::Expr::FunCall(fun, args);
 
     assert_eq!(postfix_expr(&b"foo(0)"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1969,7 +2041,7 @@ mod tests {
   fn parse_postfix_function_call_multi_arg() {
     let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
     let args = vec![
-      syntax::Expr::IntConst("0".to_owned()),
+      syntax::Expr::IntConst(0),
       syntax::Expr::BoolConst(false),
       syntax::Expr::Variable("bar".to_owned()),
    ];
@@ -1982,7 +2054,7 @@ mod tests {
   #[test]
   fn parse_postfix_expr_bracket() {
     let id = syntax::Expr::Variable("foo".to_owned());
-    let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst("7354".to_owned())));
+    let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
   
     assert_eq!(postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected));
