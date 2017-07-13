@@ -296,12 +296,12 @@ named!(integral_lit<&[u8], i32>,
           let i_ = &i[1..];
 
           if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
-            -bytes_to_str(&i_[2..]).parse::<i32>().unwrap()
+            -i32::from_str_radix(bytes_to_str(&i_[2..]), 16).unwrap()
           } else {
             bytes_to_str(i).parse::<i32>().unwrap()
           }
         } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
-          bytes_to_str(&i[2..]).parse::<i32>().unwrap()
+          i32::from_str_radix(bytes_to_str(&i[2..]), 16).unwrap()
         } else {
           bytes_to_str(i).parse::<i32>().unwrap()
         }
@@ -326,12 +326,12 @@ named!(unsigned_lit<&[u8], u32>,
           let i_ = &i[1..];
 
           if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
-            u32::wrapping_sub(0, bytes_to_str(&i_[2..]).parse::<u32>().unwrap())
+            u32::wrapping_sub(0, u32::from_str_radix(bytes_to_str(&i_[2..]), 16).unwrap())
           } else {
             bytes_to_str(i).parse::<u32>().unwrap()
           }
         } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
-          bytes_to_str(&i[2..]).parse::<u32>().unwrap()
+          u32::from_str_radix(bytes_to_str(&i[2..]), 16).unwrap()
         } else {
           bytes_to_str(i).parse::<u32>().unwrap()
         }
@@ -1532,10 +1532,10 @@ mod tests {
     assert_eq!(integral_lit(&b"076556 "[..]), IResult::Done(&b" "[..], 76556));
     assert_eq!(integral_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
     assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], 0x3));
-    //assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
-    //assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
-    //assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
-    //assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
+    assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
+    assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
+    assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
+    assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
   }
   
   #[test]
@@ -1546,10 +1546,10 @@ mod tests {
     assert_eq!(integral_lit(&b"-076556 "[..]), IResult::Done(&b" "[..], -76556));
     assert_eq!(integral_lit(&b"-07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
     assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], -0x3));
-    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
-    assert_eq!(integral_lit(&b"-0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
-    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
-    assert_eq!(integral_lit(&b"-0x0123456789abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
+    assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
+    assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
+    assert_eq!(integral_lit(&b"-0x9abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
+    assert_eq!(integral_lit(&b"-0x9abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
   }
   
   #[test]
@@ -1635,19 +1635,19 @@ mod tests {
     assert_eq!(double_lit(&b"-0. "[..]), IResult::Done(&b" "[..], -0.));
     assert_eq!(double_lit(&b"-0.035 "[..]), IResult::Done(&b" "[..], -0.035));
     assert_eq!(double_lit(&b"-0.lf"[..]), IResult::Done(&b""[..], -0.));
-    //assert_eq!(double_lit(&b"-0.035lf"[..]), IResult::Done(&b""[..], -0.035));
-    //assert_eq!(double_lit(&b"-.035lf"[..]), IResult::Done(&b""[..], -0.035));
-    //assert_eq!(double_lit(&b"-.035LF"[..]), IResult::Done(&b""[..], -0.035));
-    //assert_eq!(double_lit(&b"-0.LF"[..]), IResult::Done(&b""[..], -0.));
-    //assert_eq!(double_lit(&b"-0.035LF"[..]), IResult::Done(&b""[..], -0.035));
-    //assert_eq!(double_lit(&b"-1.03e+34lf"[..]), IResult::Done(&b""[..], -1.03e+34));
-    //assert_eq!(double_lit(&b"-1.03E+34lf"[..]), IResult::Done(&b""[..], -1.03E+34));
-    //assert_eq!(double_lit(&b"-1.03e-34lf"[..]), IResult::Done(&b""[..], -1.03e-34));
-    //assert_eq!(double_lit(&b"-1.03E-34lf"[..]), IResult::Done(&b""[..], -1.03E-34));
-    //assert_eq!(double_lit(&b"-1.03e+34LF"[..]), IResult::Done(&b""[..], -1.03e+34));
-    //assert_eq!(double_lit(&b"-1.03E+34LF"[..]), IResult::Done(&b""[..], -1.03E+34));
-    //assert_eq!(double_lit(&b"-1.03e-34LF"[..]), IResult::Done(&b""[..], -1.03e-34));
-    //assert_eq!(double_lit(&b"-1.03E-34LF"[..]), IResult::Done(&b""[..], -1.03E-34));
+    assert_eq!(double_lit(&b"-0.035lf"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(double_lit(&b"-.035lf"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(double_lit(&b"-.035LF"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(double_lit(&b"-0.LF"[..]), IResult::Done(&b""[..], -0.));
+    assert_eq!(double_lit(&b"-0.035LF"[..]), IResult::Done(&b""[..], -0.035));
+    assert_eq!(double_lit(&b"-1.03e+34lf"[..]), IResult::Done(&b""[..], -1.03e+34));
+    assert_eq!(double_lit(&b"-1.03E+34lf"[..]), IResult::Done(&b""[..], -1.03E+34));
+    assert_eq!(double_lit(&b"-1.03e-34lf"[..]), IResult::Done(&b""[..], -1.03e-34));
+    assert_eq!(double_lit(&b"-1.03E-34lf"[..]), IResult::Done(&b""[..], -1.03E-34));
+    assert_eq!(double_lit(&b"-1.03e+34LF"[..]), IResult::Done(&b""[..], -1.03e+34));
+    assert_eq!(double_lit(&b"-1.03E+34LF"[..]), IResult::Done(&b""[..], -1.03E+34));
+    assert_eq!(double_lit(&b"-1.03e-34LF"[..]), IResult::Done(&b""[..], -1.03e-34));
+    assert_eq!(double_lit(&b"-1.03E-34LF"[..]), IResult::Done(&b""[..], -1.03E-34));
   }
 
   #[test]
