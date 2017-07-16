@@ -50,10 +50,10 @@ fn bytes_to_string(bytes: &[u8]) -> String {
 
 /// Parse an identifier (raw version).
 named!(identifier_str,
-  do_parse!(
+  ws!(do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
     (name)
-  )
+  ))
 );
 
 /// Parse an identifier.
@@ -680,9 +680,10 @@ named!(parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(expr), c
 /// Parse a dot field selection.
 named!(dot_field_selection<&[u8], syntax::FieldSelection>,
   do_parse!(
-    field: identifier >>
-    a: opt!(array_specifier) >>
-    next: map!(opt!(dot_field_selection), |x| x.map(Box::new)) >>
+    char!('.') >>
+    field: dbg_dmp!(identifier) >>
+    a: dbg_dmp!(opt!(array_specifier)) >>
+    next: dbg_dmp!(map!(opt!(dot_field_selection), |x| x.map(Box::new))) >>
 
     (syntax::FieldSelection {
       field: field,
@@ -2057,7 +2058,21 @@ mod tests {
     let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
   
-    assert_eq!(postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo[7354]"[..]), IResult::Done(&b""[..], expected));
+  }
+ 
+  #[test]
+  fn parse_postfix_expr_dot() {
+    let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let bar = syntax::FieldSelection {
+      field: "bar".to_owned(),
+      array_specifier: None,
+      next: None
+    };
+    let expected = syntax::Expr::Dot(foo, bar);
+
+    assert_eq!(postfix_expr(&b"foo.bar;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
