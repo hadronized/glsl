@@ -2074,6 +2074,24 @@ mod tests {
 
     assert_eq!(postfix_expr(&b"foo.bar;"[..]), IResult::Done(&b";"[..], expected));
   }
+  
+  #[test]
+  fn parse_postfix_expr_dot_several() {
+    let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let zoo = syntax::FieldSelection {
+      field: "zoo".to_owned(),
+      array_specifier: None,
+      next: None
+    };
+    let bar = syntax::FieldSelection {
+      field: "bar".to_owned(),
+      array_specifier: None,
+      next: Some(Box::new(zoo))
+    };
+    let expected = syntax::Expr::Dot(foo, bar);
+
+    assert_eq!(postfix_expr(&b"foo.bar.zoo;"[..]), IResult::Done(&b";"[..], expected));
+  }
 
   #[test]
   fn parse_function_identifier_typename() {
