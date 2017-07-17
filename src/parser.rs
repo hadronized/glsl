@@ -440,6 +440,8 @@ named!(bool_lit<&[u8], bool>,
 /// Parse a unary operator.
 named!(unary_op<&[u8], syntax::UnaryOp>,
   alt!(
+    value!(syntax::UnaryOp::Inc, tag!("++")) |
+    value!(syntax::UnaryOp::Dec, tag!("--")) |
     value!(syntax::UnaryOp::Add, char!('+')) |
     value!(syntax::UnaryOp::Minus, char!('-')) |
     value!(syntax::UnaryOp::Not, char!('!')) |
@@ -1663,22 +1665,32 @@ mod tests {
 
   #[test]
   fn parse_unary_op_add() {
-    assert_eq!(unary_op(&b"+"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Add));
+    assert_eq!(unary_op(&b"+ "[..]), IResult::Done(&b" "[..], syntax::UnaryOp::Add));
   }
 
   #[test]
-  fn parse_unary_op_dash() {
-    assert_eq!(unary_op(&b"-"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Minus));
+  fn parse_unary_op_minus() {
+    assert_eq!(unary_op(&b"- "[..]), IResult::Done(&b" "[..], syntax::UnaryOp::Minus));
   }
 
   #[test]
-  fn parse_unary_op_bang() {
+  fn parse_unary_op_not() {
     assert_eq!(unary_op(&b"!"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Not));
   }
 
   #[test]
-  fn parse_unary_op_tilde() {
+  fn parse_unary_op_complement() {
     assert_eq!(unary_op(&b"~"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Complement));
+  }
+
+  #[test]
+  fn parse_unary_op_inc() {
+    assert_eq!(unary_op(&b"++"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Inc));
+  }
+
+  #[test]
+  fn parse_unary_op_dec() {
+    assert_eq!(unary_op(&b"--"[..]), IResult::Done(&b""[..], syntax::UnaryOp::Dec));
   }
 
   #[test]
@@ -2115,6 +2127,46 @@ mod tests {
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Add, Box::new(foo));
 
     assert_eq!(unary_expr(&b"+foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_minus() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Minus, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"-foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_not() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Not, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"!foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_complement() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Complement, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"~foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_inc() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"++foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_dec() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Dec, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"--foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
 
   #[test]
