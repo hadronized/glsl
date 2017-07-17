@@ -2170,6 +2170,40 @@ mod tests {
   }
 
   #[test]
+  fn parse_expr_add_2() {
+    let one = Box::new(syntax::Expr::IntConst(1));
+    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one.clone(), one);
+
+    assert_eq!(expr(&b" 1 + 1 ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"1+1;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"(1 + 1);"[..]), IResult::Done(&b";"[..], expected));
+  }
+  
+  #[test]
+  fn parse_expr_add_3() {
+    let one = Box::new(syntax::Expr::UIntConst(1));
+    let two = Box::new(syntax::Expr::UIntConst(2));
+    let three = Box::new(syntax::Expr::UIntConst(3));
+    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)));
+
+    assert_eq!(expr(&b" 1u + 2u + 3u ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"1u+2u+3u;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"(1u + (2u + 3u));"[..]), IResult::Done(&b";"[..], expected));
+  }
+
+  #[test]
+  fn parse_expr_add_mult_3() {
+    let one = Box::new(syntax::Expr::UIntConst(1));
+    let two = Box::new(syntax::Expr::UIntConst(2));
+    let three = Box::new(syntax::Expr::UIntConst(3));
+    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, two)), three);
+
+    assert_eq!(expr(&b" 1u * 2u + 3u ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"1u*2u+3u;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"(1u * 2u) + 3u;"[..]), IResult::Done(&b";"[..], expected));
+  }
+
+  #[test]
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
     assert_eq!(function_identifier(&b"foo"[..]), IResult::Done(&b""[..], expected));
