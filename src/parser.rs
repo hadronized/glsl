@@ -2094,6 +2094,30 @@ mod tests {
   }
 
   #[test]
+  fn parse_postfix_postinc() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::PostInc(Box::new(foo));
+
+    assert_eq!(postfix_expr(&b"foo++"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_postfix_postdec() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::PostDec(Box::new(foo));
+
+    assert_eq!(postfix_expr(&b"foo--"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_unary_add() {
+    let foo = syntax::Expr::Variable("foo".to_owned());
+    let expected = syntax::Expr::Unary(syntax::UnaryOp::Add, Box::new(foo));
+
+    assert_eq!(unary_expr(&b"+foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
     assert_eq!(function_identifier(&b"foo"[..]), IResult::Done(&b""[..], expected));
