@@ -221,7 +221,7 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 );
 
 /// Parse the void type.
-named!(void, tag!("void"));
+named!(void<&[u8], ()>, value!((), tag!("void")));
 
 /// Parse a digit that precludes a leading 0.
 named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
@@ -2248,5 +2248,10 @@ mod tests {
     let src = b"iimage2DArray foo() {}";
 
     assert_eq!(function_definition(&src[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_void() {
+    assert_eq!(void(&b"void"[..]), IResult::Done(&b""[..], ()));
   }
 }
