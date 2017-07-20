@@ -221,7 +221,7 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 );
 
 /// Parse the void type.
-named!(void<&[u8], ()>, value!((), tag!("void")));
+named!(pub void<&[u8], ()>, value!((), tag!("void")));
 
 /// Parse a digit that precludes a leading 0.
 named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
@@ -287,7 +287,7 @@ named!(integral_lit_,
 );
 
 /// Parse a literal integral string.
-named!(integral_lit<&[u8], i32>,
+named!(pub integral_lit<&[u8], i32>,
   do_parse!(
     i: integral_lit_ >>
     ({
@@ -316,7 +316,7 @@ named!(integral_lit<&[u8], i32>,
 named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
 
 /// Parse a literal unsigned string.
-named!(unsigned_lit<&[u8], u32>,
+named!(pub unsigned_lit<&[u8], u32>,
   do_parse!(
     i: integral_lit_ >>
     unsigned_suffix >>
@@ -382,7 +382,7 @@ named!(floating_frac<&[u8], ()>,
 named!(floating_middle, recognize!(preceded!(floating_frac, opt!(floating_exponent))));
 
 /// Parse a float literal string.
-named!(float_lit<&[u8], f32>,
+named!(pub float_lit<&[u8], f32>,
   do_parse!(
     sign: ws!(opt!(char!('-'))) >>
     f: floating_middle >>
@@ -406,7 +406,7 @@ named!(float_lit<&[u8], f32>,
 );
 
 /// Parse a double literal string.
-named!(double_lit<&[u8], f64>,
+named!(pub double_lit<&[u8], f64>,
   do_parse!(
     sign: ws!(opt!(char!('-'))) >>
     f: floating_middle >>
@@ -430,7 +430,7 @@ named!(double_lit<&[u8], f64>,
 );
 
 /// Parse a constant boolean.
-named!(bool_lit<&[u8], bool>,
+named!(pub bool_lit<&[u8], bool>,
   alt!(
     value!(true, tag!("true")) |
     value!(false, tag!("false"))
@@ -438,7 +438,7 @@ named!(bool_lit<&[u8], bool>,
 );
 
 /// Parse a unary operator.
-named!(unary_op<&[u8], syntax::UnaryOp>,
+named!(pub unary_op<&[u8], syntax::UnaryOp>,
   alt!(
     value!(syntax::UnaryOp::Inc, tag!("++")) |
     value!(syntax::UnaryOp::Dec, tag!("--")) |
@@ -471,7 +471,7 @@ named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
 );
 
 /// Parse a storage qualifier subroutine rule with a list of type names.
-named!(storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
+named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
   ws!(do_parse!(
     tag!("subroutine") >>
     identifiers: delimited!(char!('('),
@@ -482,7 +482,7 @@ named!(storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a storage qualifier subroutine rule.
-named!(storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
+named!(pub storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
   alt!(
     storage_qualifier_subroutine_list |
     value!(syntax::StorageQualifier::Subroutine(Vec::new()), tag!("subroutine"))
@@ -515,9 +515,7 @@ named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
 named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
   ws!(do_parse!(
     tag!("layout") >>
-    char!('(') >>
-    x: layout_qualifier_inner >>
-    char!(')') >>
+    x: delimited!(char!('('), layout_qualifier_inner, char!(')')) >>
     (x)
   ))
 );
@@ -627,7 +625,7 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a postfix expression.
-named!(postfix_expr<&[u8], syntax::Expr>,
+named!(pub postfix_expr<&[u8], syntax::Expr>,
   alt!(
     function_call |
 
@@ -664,7 +662,7 @@ named!(postfix_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a unary expression.
-named!(unary_expr<&[u8], syntax::Expr>,
+named!(pub unary_expr<&[u8], syntax::Expr>,
   alt!(
     do_parse!(
       op: unary_op >>
@@ -677,10 +675,10 @@ named!(unary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an expression between parens.
-named!(parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(expr), char!(')'))));
+named!(pub parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(expr), char!(')'))));
 
 /// Parse a dot field selection.
-named!(dot_field_selection<&[u8], syntax::FieldSelection>,
+named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
   do_parse!(
     char!('.') >>
     field: dbg_dmp!(identifier) >>
@@ -922,7 +920,7 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
 );
 
 /// Parse a function call.
-named!(function_call<&[u8], syntax::Expr>,
+named!(pub function_call<&[u8], syntax::Expr>,
   alt!(
     function_call_header_no_parameter |
     function_call_header_with_parameters
@@ -963,7 +961,7 @@ named!(function_call_header<&[u8], syntax::FunIdentifier>,
 );
 
 /// Parse a function identifier.
-named!(function_identifier<&[u8], syntax::FunIdentifier>,
+named!(pub function_identifier<&[u8], syntax::FunIdentifier>,
   alt!(
     map!(type_specifier, syntax::FunIdentifier::TypeSpecifier) //|
     //map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e))) // FIXME
@@ -971,7 +969,7 @@ named!(function_identifier<&[u8], syntax::FunIdentifier>,
 );
 
 /// Parse the most general expression.
-named!(expr<&[u8], syntax::Expr>,
+named!(pub expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     first: assignment_expr >>
     a: alt!(
@@ -987,7 +985,7 @@ named!(expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an assignment expression.
-named!(assignment_expr<&[u8], syntax::Expr>,
+named!(pub assignment_expr<&[u8], syntax::Expr>,
   alt!(
     ws!(do_parse!(
       e: unary_expr >>
@@ -1001,7 +999,7 @@ named!(assignment_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an assignment operator.
-named!(assignment_op<&[u8], syntax::AssignmentOp>,
+named!(pub assignment_op<&[u8], syntax::AssignmentOp>,
   alt!(
     value!(syntax::AssignmentOp::Equal, char!('=')) |
     value!(syntax::AssignmentOp::Mult, tag!("*=")) |
@@ -2253,5 +2251,60 @@ mod tests {
   #[test]
   fn parse_void() {
     assert_eq!(void(&b"void"[..]), IResult::Done(&b""[..], ()));
+  }
+
+  #[test]
+  fn parse_assignment_op_equal() {
+    assert_eq!(assignment_op(&b"= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Equal));
+  }
+
+  #[test]
+  fn parse_assignment_op_mult() {
+    assert_eq!(assignment_op(&b"*= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Mult));
+  }
+
+  #[test]
+  fn parse_assignment_op_div() {
+    assert_eq!(assignment_op(&b"/= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Div));
+  }
+
+  #[test]
+  fn parse_assignment_op_mod() {
+    assert_eq!(assignment_op(&b"%= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Mod));
+  }
+
+  #[test]
+  fn parse_assignment_op_add() {
+    assert_eq!(assignment_op(&b"+= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Add));
+  }
+
+  #[test]
+  fn parse_assignment_op_sub() {
+    assert_eq!(assignment_op(&b"-= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Sub));
+  }
+
+  #[test]
+  fn parse_assignment_op_lshift() {
+    assert_eq!(assignment_op(&b"<<= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::LShift));
+  }
+
+  #[test]
+  fn parse_assignment_op_rshift() {
+    assert_eq!(assignment_op(&b">>= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::RShift));
+  }
+
+  #[test]
+  fn parse_assignment_op_and() {
+    assert_eq!(assignment_op(&b"&= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::And));
+  }
+
+  #[test]
+  fn parse_assignment_op_xor() {
+    assert_eq!(assignment_op(&b"^= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Xor));
+  }
+
+  #[test]
+  fn parse_assignment_op_or() {
+    assert_eq!(assignment_op(&b"|= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Or));
   }
 }
