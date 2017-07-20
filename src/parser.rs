@@ -2204,6 +2204,19 @@ mod tests {
   }
 
   #[test]
+  fn parse_expr_add_sub_mult_div() {
+    let one = Box::new(syntax::Expr::IntConst(1));
+    let two = Box::new(syntax::Expr::IntConst(2));
+    let three = Box::new(syntax::Expr::IntConst(3));
+    let four = Box::new(syntax::Expr::IntConst(4));
+    let five = Box::new(syntax::Expr::IntConst(5));
+    let six = Box::new(syntax::Expr::IntConst(6));
+    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
+
+    assert_eq!(expr(&b"1 * (2 + 3) + 4 * (5 + 6);"[..]), IResult::Done(&b";"[..], expected.clone()));
+  }
+
+  #[test]
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
     assert_eq!(function_identifier(&b"foo"[..]), IResult::Done(&b""[..], expected));
