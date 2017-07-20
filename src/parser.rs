@@ -1016,7 +1016,7 @@ named!(pub assignment_op<&[u8], syntax::AssignmentOp>,
 );
 
 /// Parse a conditional expression.
-named!(cond_expr<&[u8], syntax::Expr>,
+named!(pub cond_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: logical_or_expr >>
     e: alt!(
@@ -1035,7 +1035,7 @@ named!(cond_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical OR expression.
-named!(logical_or_expr<&[u8], syntax::Expr>,
+named!(pub logical_or_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: logical_xor_expr >>
     n: alt!(
@@ -1051,7 +1051,7 @@ named!(logical_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical XOR expression.
-named!(logical_xor_expr<&[u8], syntax::Expr>,
+named!(pub logical_xor_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: logical_and_expr >>
     n: alt!(
@@ -1067,7 +1067,7 @@ named!(logical_xor_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical AND expression.
-named!(logical_and_expr<&[u8], syntax::Expr>,
+named!(pub logical_and_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: inclusive_or_expr >>
     n: alt!(
@@ -1083,7 +1083,7 @@ named!(logical_and_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise OR expression.
-named!(inclusive_or_expr<&[u8], syntax::Expr>,
+named!(pub inclusive_or_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: exclusive_or_expr >>
     n: alt!(
@@ -1099,7 +1099,7 @@ named!(inclusive_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise XOR expression.
-named!(exclusive_or_expr<&[u8], syntax::Expr>,
+named!(pub exclusive_or_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: and_expr >>
     n: alt!(
@@ -1115,7 +1115,7 @@ named!(exclusive_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise AND expression.
-named!(and_expr<&[u8], syntax::Expr>,
+named!(pub and_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: equality_expr >>
     n: alt!(
@@ -1131,7 +1131,7 @@ named!(and_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an equality expression.
-named!(equality_expr<&[u8], syntax::Expr>,
+named!(pub equality_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: rel_expr >>
     n: alt!(
@@ -1150,7 +1150,7 @@ named!(equality_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a relational expression.
-named!(rel_expr<&[u8], syntax::Expr>,
+named!(pub rel_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: shift_expr >>
     n: alt!(
@@ -1171,7 +1171,7 @@ named!(rel_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a shift expression.
-named!(shift_expr<&[u8], syntax::Expr>,
+named!(pub shift_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: additive_expr >>
     n: alt!(
@@ -1190,7 +1190,7 @@ named!(shift_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an additive expression.
-named!(additive_expr<&[u8], syntax::Expr>,
+named!(pub additive_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: multiplicative_expr >>
     n: alt!(
@@ -1209,7 +1209,7 @@ named!(additive_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a multiplicative expression.
-named!(multiplicative_expr<&[u8], syntax::Expr>,
+named!(pub multiplicative_expr<&[u8], syntax::Expr>,
   ws!(do_parse!(
     a: unary_expr >>
     n: alt!(
