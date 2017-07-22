@@ -1243,7 +1243,7 @@ named!(simple_statement<&[u8], syntax::SimpleStatement>,
 );
 
 /// Parse an expression statement.
-named!(expr_statement<&[u8], syntax::ExprStatement>,
+named!(pub expr_statement<&[u8], syntax::ExprStatement>,
   ws!(do_parse!(
     e: opt!(expr) >>
     char!(';') >>
