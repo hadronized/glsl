@@ -410,6 +410,7 @@ named!(pub double_lit<&[u8], f64>,
   do_parse!(
     sign: ws!(opt!(char!('-'))) >>
     f: floating_middle >>
+    not!(float_suffix) >> // prevent from parsing 3.f ("f", Double(3.)) while it should be ("", Float(3.))
     opt!(double_suffix) >>
 
     ({
@@ -681,9 +682,9 @@ named!(pub parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(expr
 named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
   do_parse!(
     char!('.') >>
-    field: dbg_dmp!(identifier) >>
-    a: dbg_dmp!(opt!(array_specifier)) >>
-    next: dbg_dmp!(map!(opt!(dot_field_selection), |x| x.map(Box::new))) >>
+    field: identifier >>
+    a: opt!(array_specifier) >>
+    next: map!(opt!(dot_field_selection), |x| x.map(Box::new)) >>
 
     (syntax::FieldSelection {
       field: field,
@@ -1562,6 +1563,7 @@ mod tests {
     assert_eq!(float_lit(&b"0.035 "[..]), IResult::Done(&b" "[..], 0.035));
     assert_eq!(float_lit(&b".035f"[..]), IResult::Done(&b""[..], 0.035));
     assert_eq!(float_lit(&b"0.f"[..]), IResult::Done(&b""[..], 0.));
+    assert_eq!(float_lit(&b"314.f"[..]), IResult::Done(&b""[..], 314.));
     assert_eq!(float_lit(&b"0.035f"[..]), IResult::Done(&b""[..], 0.035));
     assert_eq!(float_lit(&b".035F"[..]), IResult::Done(&b""[..], 0.035));
     assert_eq!(float_lit(&b"0.F"[..]), IResult::Done(&b""[..], 0.));
@@ -2001,14 +2003,20 @@ mod tests {
   
   #[test]
   fn parse_primary_expr_floatconst() {
-    assert_eq!(primary_expr(&b"0. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
-    assert_eq!(primary_expr(&b"1. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
+    assert_eq!(primary_expr(&b"0.f "[..]), IResult::Done(&b" "[..], syntax::Expr::FloatConst(0.)));
+    assert_eq!(primary_expr(&b"1.f "[..]), IResult::Done(&b" "[..], syntax::Expr::FloatConst(1.)));
+    assert_eq!(primary_expr(&b"0.F "[..]), IResult::Done(&b" "[..], syntax::Expr::FloatConst(0.)));
+    assert_eq!(primary_expr(&b"1.F "[..]), IResult::Done(&b" "[..], syntax::Expr::FloatConst(1.)));
   }
   
   #[test]
   fn parse_primary_expr_doubleconst() {
+    assert_eq!(primary_expr(&b"0. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
+    assert_eq!(primary_expr(&b"1. "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
     assert_eq!(primary_expr(&b"0.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
     assert_eq!(primary_expr(&b"1.lf "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
+    assert_eq!(primary_expr(&b"0.LF "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(0.)));
+    assert_eq!(primary_expr(&b"1.LF "[..]), IResult::Done(&b" "[..], syntax::Expr::DoubleConst(1.)));
   }
   
   #[test]
@@ -2168,6 +2176,12 @@ mod tests {
   }
 
   #[test]
+  fn parse_expr_float() {
+    assert_eq!(expr(&b"314.;"[..]), IResult::Done(&b";"[..], syntax::Expr::DoubleConst(314.)));
+    assert_eq!(expr(&b"314.f;"[..]), IResult::Done(&b";"[..], syntax::Expr::FloatConst(314.)));
+  }
+
+  #[test]
   fn parse_expr_add_2() {
     let one = Box::new(syntax::Expr::IntConst(1));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one.clone(), one);
@@ -2306,5 +2320,16 @@ mod tests {
   #[test]
   fn parse_assignment_op_or() {
     assert_eq!(assignment_op(&b"|= "[..]), IResult::Done(&b" "[..], syntax::AssignmentOp::Or));
+  }
+
+  #[test]
+  fn parse_expr_statement() {
+    let expected = Some(syntax::Expr::Assignment(Box::new(syntax::Expr::Variable("foo".to_owned())),
+                                                 syntax::AssignmentOp::Equal,
+                                                 Box::new(syntax::Expr::FloatConst(314.))));
+
+    assert_eq!(expr_statement(&b"foo = 314.f;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(expr_statement(&b"foo=314.f;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(expr_statement(&b"\n\t foo\n\t=  \n314.f\n   ;"[..]), IResult::Done(&b""[..], expected));
   }
 }
