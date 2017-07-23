@@ -443,8 +443,9 @@ pub type ExprStatement = Option<Expr>;
 
 /// Selection statement.
 #[derive(Clone, Debug, PartialEq)]
-pub enum SelectionStatement {
-  If(Box<Expr>, SelectionRestStatement)
+pub struct SelectionStatement {
+  pub cond: Box<Expr>,
+  pub rest: SelectionRestStatement
 }
 
 /// Condition.

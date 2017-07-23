@@ -1259,7 +1259,10 @@ named!(selection_statement<&[u8], syntax::SelectionStatement>,
     cond_expr: expr >>
     char!(')') >>
     srs: selection_rest_statement >>
-    (syntax::SelectionStatement::If(Box::new(cond_expr), srs))
+    (syntax::SelectionStatement {
+      cond: Box::new(cond_expr),
+      rest: srs
+    })
   ))
 );
 
@@ -1291,17 +1294,17 @@ named!(switch_statement<&[u8], syntax::SwitchStatement>,
 );
 
 /// Parse a case label.
-named!(case_label<&[u8], syntax::CaseLabel>,
+named!(pub case_label<&[u8], syntax::CaseLabel>,
   alt!(
     ws!(do_parse!(
       tag!("case") >>
       e: expr >>
-      char!(';') >>
+      char!(':') >>
       (syntax::CaseLabel::Case(Box::new(e)))
     )) |
     ws!(do_parse!(
       tag!("default") >>
-      char!(';') >>
+      char!(':') >>
       (syntax::CaseLabel::Def)
     ))
   )
@@ -2332,4 +2335,32 @@ mod tests {
     assert_eq!(expr_statement(&b"foo=314.f;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(expr_statement(&b"\n\t foo\n\t=  \n314.f\n   ;"[..]), IResult::Done(&b""[..], expected));
   }
+
+  #[test]
+  fn parse_case_label_def() {
+    assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
+    assert_eq!(case_label(&b"  default   : "[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
+  }
+
+  #[test]
+  fn parse_case_label() {
+    let expected = syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(3)));
+
+    assert_eq!(case_label(&b"case 3:"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(case_label(&b"  case\n\t 3   : "[..]), IResult::Done(&b""[..], expected));
+  }
+
+  // TODO: write that after having tested statements
+  //#[test]
+  //fn parse_selection_statement() {
+  //  let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
+  //                                  Box::new(syntax::Expr::Variable("foo".to_owned())),
+  //                                  Box::new(syntax::Expr::IntConst(10)));
+  //  let body = 
+  //  let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
+  //  let expected = syntax::SelectionStatement {
+  //    cond: Box::new(cond),
+  //    rest: rest
+  //  };
+  //}
 }
