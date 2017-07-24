@@ -2483,6 +2483,8 @@ mod tests {
     assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
   }
 
+  // TODO: unit test for syntax::Declaration::Global
+
   #[test]
   fn parse_case_label_def() {
     assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
