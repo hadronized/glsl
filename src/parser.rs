@@ -725,7 +725,7 @@ named!(block_declaration<&[u8], syntax::Declaration>,
     char!('{') >>
     fields: many1!(struct_field_specifier) >>
     char!('}') >>
-    a: alt!(
+    a: dbg_dmp!(alt!(
          value!(None, char!(';')) |
          ws!(do_parse!(
            a: alt!(
@@ -741,7 +741,7 @@ named!(block_declaration<&[u8], syntax::Declaration>,
 
            (a)
          ))
-       ) >>
+       )) >>
 
     (syntax::Declaration::Block(qual, name, fields, a))
   ))
@@ -2454,8 +2454,8 @@ mod tests {
                                               vec![f0, f1, f2],
                                               None);
 
-    assert_eq!(declaration(&b"uniform UniformBlockTest { float a; vec3 b; foo c, d; } K"[..]), IResult::Done(&b"K"[..], expected.clone()));
-    assert_eq!(declaration(&b"\n\tuniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }K"[..]), IResult::Done(&b"K"[..], expected));
+    assert_eq!(declaration(&b"uniform UniformBlockTest { float a; vec3 b; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"\n\tuniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]
