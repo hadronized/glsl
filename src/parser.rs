@@ -1268,15 +1268,19 @@ named!(selection_statement<&[u8], syntax::SelectionStatement>,
 );
 
 named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
-  alt!(
-    map!(statement, |st| syntax::SelectionRestStatement::Statement(Box::new(st))) |
-    ws!(do_parse!(
-      cond: statement >>
-      tag!("else") >>
-      rest: statement >>
-      (syntax::SelectionRestStatement::Else(Box::new(cond), Box::new(rest)))
-    ))
-  )
+  ws!(do_parse!(
+    st: statement >>
+    r: alt!(
+         ws!(do_parse!(
+           tag!("else") >>
+           rest: statement >>
+           (syntax::SelectionRestStatement::Else(Box::new(st.clone()), Box::new(rest)))
+         )) |
+
+         value!(syntax::SelectionRestStatement::Statement(Box::new(st)))
+       ) >>
+    (r)
+  ))
 );
 
 /// Parse a switch statement.
@@ -2515,5 +2519,26 @@ mod tests {
 
     assert_eq!(selection_statement(&b"if (foo < 10) { return false; }K"[..]), IResult::Done(&b"K"[..], expected.clone()));
     assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return false;}K"[..]), IResult::Done(&b"K"[..], expected));
+  }
+
+  #[test]
+  fn parse_selection_statement_if_else() {
+    let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
+                                    Box::new(syntax::Expr::Variable("foo".to_owned())),
+                                    Box::new(syntax::Expr::IntConst(10)));
+    let if_ret = Box::new(syntax::Expr::FloatConst(0.));
+    let if_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(if_ret))));
+    let if_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![if_st] }));
+    let else_ret = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let else_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(else_ret))));
+    let else_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![else_st] }));
+    let rest = syntax::SelectionRestStatement::Else(Box::new(if_body), Box::new(else_body));
+    let expected = syntax::SelectionStatement {
+      cond: Box::new(cond),
+      rest: rest
+    };
+
+    assert_eq!(selection_statement(&b"if (foo < 10) { return 0.f; } else { return foo; }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"[..]), IResult::Done(&b""[..], expected));
   }
 }
