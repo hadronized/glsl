@@ -287,7 +287,7 @@ pub struct SingleDeclaration {
 /// Initializer.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Initializer {
-  AssignmentExpr(Box<Expr>),
+  Simple(Box<Expr>),
   List(Vec<Initializer>)
 }
 

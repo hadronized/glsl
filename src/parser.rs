@@ -829,7 +829,7 @@ named!(single_declaration<&[u8], syntax::SingleDeclaration>,
 /// Parse an initializer.
 named!(initializer<&[u8], syntax::Initializer>,
   alt!(
-    map!(assignment_expr, |e| syntax::Initializer::AssignmentExpr(Box::new(e))) |
+    map!(assignment_expr, |e| syntax::Initializer::Simple(Box::new(e))) |
     ws!(do_parse!(
       char!('{') >>
       il: initializer_list >>
@@ -2361,6 +2361,25 @@ mod tests {
     assert_eq!(declaration(&b"vec3 foo(vec2, out float the_arg);"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"  vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"vec3 foo(vec2,out float the_arg);"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  fn parse_declaration_init_declarator_list_single() {
+    let ty = syntax::FullySpecifiedType {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Int
+    };
+    let sd = syntax::SingleDeclaration {
+      ty: ty,
+      name: Some("foo".to_owned()),
+      array_specifier: None,
+      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
+    };
+    let idl = syntax::InitDeclaratorList::Single(sd);
+    let expected = syntax::Declaration::InitDeclaratorList(idl);
+
+    assert_eq!(declaration(&b"int foo = 34;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"int foo=34;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34  ;"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]
