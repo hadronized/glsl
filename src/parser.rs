@@ -857,8 +857,8 @@ named!(initializer_list<&[u8], Vec<syntax::Initializer>>,
 
 named!(function_declarator<&[u8], syntax::FunctionPrototype>,
   alt!(
-    map!(function_header, |(ret_ty, fun_name)| syntax::FunctionPrototype { ty: ret_ty, name: fun_name, parameters: Vec::new() }) |
-    function_header_with_parameters
+    function_header_with_parameters |
+    map!(function_header, |(ret_ty, fun_name)| syntax::FunctionPrototype { ty: ret_ty, name: fun_name, parameters: Vec::new() })
   )
 );
 
@@ -2338,6 +2338,32 @@ mod tests {
   }
 
   #[test]
+  fn parse_declaration_function_prototype() {
+    let rt = syntax::FullySpecifiedType {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Vec3
+    };
+    let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, syntax::TypeSpecifier::Vec2);
+    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Out);
+    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let arg1 = syntax::FunctionParameterDeclaration::Named(Some(qual), syntax::FunctionParameterDeclarator {
+      ty: syntax::TypeSpecifier::Float,
+      name: "the_arg".to_owned(),
+      array_spec: None
+    });
+    let fp = syntax::FunctionPrototype {
+      ty: rt,
+      name: "foo".to_owned(),
+      parameters: vec![arg0, arg1]
+    };
+    let expected = syntax::Declaration::FunctionPrototype(fp);
+
+    assert_eq!(declaration(&b"vec3 foo(vec2, out float the_arg);"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"  vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"vec3 foo(vec2,out float the_arg);"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
   fn parse_case_label_def() {
     assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
     assert_eq!(case_label(&b"  default   : "[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
@@ -2361,7 +2387,7 @@ mod tests {
   //  let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
   //  let expected = syntax::SelectionStatement {
   //    cond: Box::new(cond),
-  //    rest: rest
+  //    rest: rest
   //  };
   //}
 }
