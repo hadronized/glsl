@@ -2499,17 +2499,21 @@ mod tests {
     assert_eq!(case_label(&b"  case\n\t 3   : "[..]), IResult::Done(&b""[..], expected));
   }
 
-  // TODO: write that after having tested statements
-  //#[test]
-  //fn parse_selection_statement() {
-  //  let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
-  //                                  Box::new(syntax::Expr::Variable("foo".to_owned())),
-  //                                  Box::new(syntax::Expr::IntConst(10)));
-  //  let body = 
-  //  let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
-  //  let expected = syntax::SelectionStatement {
-  //    cond: Box::new(cond),
-  //    rest: rest
-  //  };
-  //}
+  #[test]
+  fn parse_selection_statement_if() {
+    let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
+                                    Box::new(syntax::Expr::Variable("foo".to_owned())),
+                                    Box::new(syntax::Expr::IntConst(10)));
+    let ret = Box::new(syntax::Expr::BoolConst(false));
+    let st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(ret))));
+    let body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![st] }));
+    let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
+    let expected = syntax::SelectionStatement {
+      cond: Box::new(cond),
+      rest: rest
+    };
+
+    assert_eq!(selection_statement(&b"if (foo < 10) { return false; }K"[..]), IResult::Done(&b"K"[..], expected.clone()));
+    assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return false;}K"[..]), IResult::Done(&b"K"[..], expected));
+  }
 }
