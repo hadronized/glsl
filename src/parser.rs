@@ -2459,6 +2459,31 @@ mod tests {
   }
 
   #[test]
+  fn parse_declaration_buffer_block() {
+    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer);
+    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let f0 = syntax::StructFieldSpecifier {
+      ty: syntax::TypeSpecifier::Float,
+      identifiers: vec!["a".to_owned()]
+    };
+    let f1 = syntax::StructFieldSpecifier {
+      ty: syntax::TypeSpecifier::Vec3,
+      identifiers: vec!["b".to_owned()]
+    };
+    let f2 = syntax::StructFieldSpecifier {
+      ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
+      identifiers: vec!["c".to_owned(), "d".to_owned()]
+    };
+    let expected = syntax::Declaration::Block(qual,
+                                              "UniformBlockTest".to_owned(),
+                                              vec![f0, f1, f2],
+                                              None);
+
+    assert_eq!(declaration(&b"buffer UniformBlockTest { float a; vec3 b; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
   fn parse_case_label_def() {
     assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
     assert_eq!(case_label(&b"  default   : "[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
