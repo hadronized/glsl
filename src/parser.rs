@@ -697,8 +697,8 @@ named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
 /// Parse a declaration.
 named!(declaration<&[u8], syntax::Declaration>,
   alt!(
-    map!(function_prototype, syntax::Declaration::FunctionPrototype) |
-    map!(init_declarator_list, syntax::Declaration::InitDeclaratorList) |
+    map!(terminated!(function_prototype, char!(';')), syntax::Declaration::FunctionPrototype) |
+    map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList) |
     precision_declaration |
     block_declaration |
     global_declaration
@@ -765,6 +765,7 @@ named!(function_prototype<&[u8], syntax::FunctionPrototype>,
   ))
 );
 
+// TODO: fixme
 /// Parse an init declarator list.
 named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
   alt!(
