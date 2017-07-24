@@ -2227,9 +2227,9 @@ mod tests {
     let four = Box::new(syntax::Expr::IntConst(4));
     let five = Box::new(syntax::Expr::IntConst(5));
     let six = Box::new(syntax::Expr::IntConst(6));
-    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
+    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Div, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
 
-    assert_eq!(expr(&b"1 * (2 + 3) + 4 * (5 + 6);"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(expr(&b"1 * (2 + 3) + 4 / (5 + 6);"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
 
   #[test]
