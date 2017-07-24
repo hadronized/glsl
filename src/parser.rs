@@ -551,9 +551,9 @@ named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
 /// Parse a precision qualifier.
 named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
   alt!(
-    value!(syntax::PrecisionQualifier::High, tag!("high")) |
-    value!(syntax::PrecisionQualifier::Medium, tag!("medium")) |
-    value!(syntax::PrecisionQualifier::Low, tag!("low"))
+    value!(syntax::PrecisionQualifier::High, tag!("highp")) |
+    value!(syntax::PrecisionQualifier::Medium, tag!("mediump")) |
+    value!(syntax::PrecisionQualifier::Low, tag!("lowp"))
   )
 );
 
@@ -1729,9 +1729,9 @@ mod tests {
   
   #[test]
   fn parse_precision_qualifier() {
-    assert_eq!(precision_qualifier(&b"high"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::High));
-    assert_eq!(precision_qualifier(&b"medium"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Medium));
-    assert_eq!(precision_qualifier(&b"low"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Low));
+    assert_eq!(precision_qualifier(&b"highp"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::High));
+    assert_eq!(precision_qualifier(&b"mediump"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Medium));
+    assert_eq!(precision_qualifier(&b"lowp"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Low));
   }
   
   #[test]
@@ -2404,6 +2404,33 @@ mod tests {
     assert_eq!(declaration(&b"int foo = 34, bar = 12;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"int foo=34,bar=12;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_declaration_precision_low() {
+    let qual = syntax::PrecisionQualifier::Low;
+    let ty = syntax::TypeSpecifier::Float;
+    let expected = syntax::Declaration::Precision(qual, ty);
+
+    assert_eq!(declaration(&b"precision lowp float;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_declaration_precision_medium() {
+    let qual = syntax::PrecisionQualifier::Medium;
+    let ty = syntax::TypeSpecifier::Float;
+    let expected = syntax::Declaration::Precision(qual, ty);
+
+    assert_eq!(declaration(&b"precision mediump float;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_declaration_precision_high() {
+    let qual = syntax::PrecisionQualifier::High;
+    let ty = syntax::TypeSpecifier::Float;
+    let expected = syntax::Declaration::Precision(qual, ty);
+
+    assert_eq!(declaration(&b"precision highp float;"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]
