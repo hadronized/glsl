@@ -765,7 +765,7 @@ named!(function_prototype<&[u8], syntax::FunctionPrototype>,
   ))
 );
 
-// TODO: fixme
+// TODO: fixme complex
 /// Parse an init declarator list.
 named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
   alt!(
@@ -2380,6 +2380,30 @@ mod tests {
     assert_eq!(declaration(&b"int foo = 34;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"int foo=34;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34  ;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_declaration_init_declarator_list_complex() {
+    let ty = syntax::FullySpecifiedType {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Int
+    };
+    let sd = syntax::SingleDeclaration {
+      ty: ty,
+      name: Some("foo".to_owned()),
+      array_specifier: None,
+      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
+    };
+    let single = syntax::InitDeclaratorList::Single(sd);
+    let idl = syntax::InitDeclaratorList::Complex(Box::new(single),
+                                                  "bar".to_owned(),
+                                                  None,
+                                                  Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12)))));
+    let expected = syntax::Declaration::InitDeclaratorList(idl);
+
+    assert_eq!(declaration(&b"int foo = 34, bar = 12;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"int foo=34,bar=12;"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]

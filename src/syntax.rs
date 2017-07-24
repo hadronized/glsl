@@ -268,6 +268,8 @@ pub struct FunctionParameterDeclarator {
   pub array_spec: Option<ArraySpecifier>
 }
 
+// FIXME: this enum’s variants are not intuitive at all, maybe we should refactor it in a better
+// way.
 /// Init declarator list.
 #[derive(Clone, Debug, PartialEq)]
 pub enum InitDeclaratorList {
