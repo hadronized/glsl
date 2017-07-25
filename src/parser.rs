@@ -2612,4 +2612,19 @@ mod tests {
     assert_eq!(iteration_statement(&b"while(a>=b){}"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"\t\n  while (  a >=\n\tb  )\t  {   \n}"[..]), IResult::Done(&b""[..], expected));
   }
+
+  #[test]
+  fn parse_iteration_statement_do_while_empty() {
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
+    let cond = Box::new(
+                 syntax::Expr::Binary(syntax::BinaryOp::GTE,
+                                      Box::new(syntax::Expr::Variable("a".to_owned())),
+                                      Box::new(syntax::Expr::Variable("b".to_owned())))
+               );
+    let expected = syntax::IterationStatement::DoWhile(Box::new(st), cond);
+
+    assert_eq!(iteration_statement(&b"do {} while (a >= b);"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"do{}while(a>=b);"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"\tdo \n {\n} while (  a >=\n\tb  )\t  \n;"[..]), IResult::Done(&b""[..], expected));
+  }
 }
