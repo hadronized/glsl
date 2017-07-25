@@ -2490,20 +2490,6 @@ mod tests {
   // TODO: unit test for syntax::Declaration::Global
 
   #[test]
-  fn parse_case_label_def() {
-    assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
-    assert_eq!(case_label(&b"  default   : "[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
-  }
-
-  #[test]
-  fn parse_case_label() {
-    let expected = syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(3)));
-
-    assert_eq!(case_label(&b"case 3:"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(case_label(&b"  case\n\t 3   : "[..]), IResult::Done(&b""[..], expected));
-  }
-
-  #[test]
   fn parse_selection_statement_if() {
     let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
                                     Box::new(syntax::Expr::Variable("foo".to_owned())),
@@ -2594,5 +2580,19 @@ mod tests {
     };
 
     assert_eq!(switch_statement(&b"switch (foo) { case 0: case 1: return 12u; }"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
+
+  #[test]
+  fn parse_case_label_def() {
+    assert_eq!(case_label(&b"default:"[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
+    assert_eq!(case_label(&b"  default   : "[..]), IResult::Done(&b""[..], syntax::CaseLabel::Def));
+  }
+
+  #[test]
+  fn parse_case_label() {
+    let expected = syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(3)));
+
+    assert_eq!(case_label(&b"case 3:"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(case_label(&b"  case\n\t 3   : "[..]), IResult::Done(&b""[..], expected));
   }
 }
