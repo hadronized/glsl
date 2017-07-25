@@ -1233,13 +1233,13 @@ named!(pub multiplicative_expr<&[u8], syntax::Expr>,
 /// Parse a simple statement.
 named!(simple_statement<&[u8], syntax::SimpleStatement>,
   alt!(
-    map!(declaration, syntax::SimpleStatement::Declaration) |
-    map!(expr_statement, syntax::SimpleStatement::Expression) |
-    map!(selection_statement, syntax::SimpleStatement::Selection) |
-    map!(switch_statement, syntax::SimpleStatement::Switch) |
-    map!(case_label, syntax::SimpleStatement::CaseLabel) |
+    map!(jump_statement, syntax::SimpleStatement::Jump) |
     map!(iteration_statement, syntax::SimpleStatement::Iteration) |
-    map!(jump_statement, syntax::SimpleStatement::Jump)
+    map!(case_label, syntax::SimpleStatement::CaseLabel) |
+    map!(switch_statement, syntax::SimpleStatement::Switch) |
+    map!(selection_statement, syntax::SimpleStatement::Selection) |
+    map!(declaration, syntax::SimpleStatement::Declaration) |
+    map!(expr_statement, syntax::SimpleStatement::Expression)
   )
 );
 
