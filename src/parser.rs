@@ -698,7 +698,7 @@ named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
 named!(declaration<&[u8], syntax::Declaration>,
   alt!(
     map!(terminated!(function_prototype, char!(';')), syntax::Declaration::FunctionPrototype) |
-    map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList) |
+    dbg_dmp!(map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList)) |
     precision_declaration |
     block_declaration |
     global_declaration
@@ -2626,5 +2626,56 @@ mod tests {
     assert_eq!(iteration_statement(&b"do {} while (a >= b);"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"do{}while(a>=b);"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"\tdo \n {\n} while (  a >=\n\tb  )\t  \n;"[..]), IResult::Done(&b""[..], expected));
+  }
+  
+  #[test]
+  fn parse_iteration_statement_for_empty() {
+    let init = syntax::ForInitStatement::Declaration(
+                 Box::new(
+                   syntax::Declaration::InitDeclaratorList(
+                     syntax::InitDeclaratorList::Single(
+                       syntax::SingleDeclaration {
+                         ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::Float },
+                         name: Some("i".to_owned()),
+                         array_specifier: None,
+                         initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
+                       }
+                     )
+                   )
+                 )
+               );
+    let rest = syntax::ForRestStatement {
+      condition: Some(syntax::Condition::Expr(Box::new(syntax::Expr::Binary(syntax::BinaryOp::LTE,
+                                                                            Box::new(syntax::Expr::Variable("i".to_owned())),
+                                                                            Box::new(syntax::Expr::FloatConst(10.)))))),
+      post_expr: Some(Box::new(syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(syntax::Expr::Variable("i".to_owned())))))
+    };
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
+    let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
+
+    assert_eq!(iteration_statement(&b"for (float i = 0.f; i < 10.f; ++i) {}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"for(float i=0.f;i<10.f;++i){}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"   for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<  10.f; \n++i\n)\n{\n}"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_jump_continue() {
+    assert_eq!(jump_statement(&b"continue;"[..]), IResult::Done(&b""[..], syntax::JumpStatement::Continue));
+  }
+
+  #[test]
+  fn parse_jump_break() {
+    assert_eq!(jump_statement(&b"break;"[..]), IResult::Done(&b""[..], syntax::JumpStatement::Break));
+  }
+
+  #[test]
+  fn parse_jump_return() {
+    let expected = syntax::JumpStatement::Return(Box::new(syntax::Expr::IntConst(3)));
+    assert_eq!(jump_statement(&b"return 3;"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_jump_discard() {
+    assert_eq!(jump_statement(&b"discard;"[..]), IResult::Done(&b""[..], syntax::JumpStatement::Discard));
   }
 }
