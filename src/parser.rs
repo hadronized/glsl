@@ -725,7 +725,7 @@ named!(block_declaration<&[u8], syntax::Declaration>,
     char!('{') >>
     fields: many1!(struct_field_specifier) >>
     char!('}') >>
-    a: dbg_dmp!(alt!(
+    a: alt!(
          value!(None, char!(';')) |
          ws!(do_parse!(
            a: alt!(
@@ -741,7 +741,7 @@ named!(block_declaration<&[u8], syntax::Declaration>,
 
            (a)
          ))
-       )) >>
+       ) >>
 
     (syntax::Declaration::Block(qual, name, fields, a))
   ))
@@ -1158,10 +1158,10 @@ named!(pub rel_expr<&[u8], syntax::Expr>,
     n: alt!(
          ws!(do_parse!(
            op: alt!(
-                 value!(syntax::BinaryOp::LT, char!('<')) |
-                 value!(syntax::BinaryOp::GT, char!('>')) |
                  value!(syntax::BinaryOp::LTE, tag!("<=")) |
-                 value!(syntax::BinaryOp::GTE, tag!(">="))
+                 value!(syntax::BinaryOp::GTE, tag!(">=")) |
+                 value!(syntax::BinaryOp::LT, char!('<')) |
+                 value!(syntax::BinaryOp::GT, char!('>'))
                ) >>
            b: rel_expr >>
            (syntax::Expr::Binary(op, Box::new(a.clone()), Box::new(b)))
@@ -2594,5 +2594,22 @@ mod tests {
 
     assert_eq!(case_label(&b"case 3:"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(case_label(&b"  case\n\t 3   : "[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_iteration_statement_while_empty() {
+    let cond = syntax::Condition::Expr(
+                 Box::new(
+                   syntax::Expr::Binary(syntax::BinaryOp::GTE,
+                                        Box::new(syntax::Expr::Variable("a".to_owned())),
+                                        Box::new(syntax::Expr::Variable("b".to_owned())))
+                 )
+               );
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
+    let expected = syntax::IterationStatement::While(cond, Box::new(st));
+
+    assert_eq!(iteration_statement(&b"while (a >= b) {}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"while(a>=b){}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"\t\n  while (  a >=\n\tb  )\t  {   \n}"[..]), IResult::Done(&b""[..], expected));
   }
 }
