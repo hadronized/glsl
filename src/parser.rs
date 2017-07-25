@@ -2541,4 +2541,58 @@ mod tests {
     assert_eq!(selection_statement(&b"if (foo < 10) { return 0.f; } else { return foo; }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"[..]), IResult::Done(&b""[..], expected));
   }
+
+  #[test]
+  fn parse_switch_statement_empty() {
+    let head = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let expected = syntax::SwitchStatement {
+      head: head,
+      body: Vec::new()
+    };
+
+    assert_eq!(switch_statement(&b"switch (foo) {}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(switch_statement(&b"switch(foo){}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(switch_statement(&b"  \tswitch\n\n (  foo  \t   \n) { \n\n   }"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_switch_statement_cases() {
+    let head = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let case0 = syntax::Statement::Simple(
+                  Box::new(
+                    syntax::SimpleStatement::CaseLabel(
+                      syntax::CaseLabel::Case(
+                        Box::new(
+                          syntax::Expr::IntConst(0)
+                        )
+                      )
+                    )
+                  ));
+    let case1 = syntax::Statement::Simple(
+                  Box::new(
+                    syntax::SimpleStatement::CaseLabel(
+                      syntax::CaseLabel::Case(
+                        Box::new(
+                          syntax::Expr::IntConst(1)
+                        )
+                      )
+                    )
+                  ));
+    let ret = syntax::Statement::Simple(
+                  Box::new(
+                    syntax::SimpleStatement::Jump(
+                      syntax::JumpStatement::Return(
+                        Box::new(
+                          syntax::Expr::UIntConst(12)
+                        )
+                      )
+                    )
+                  ));
+    let expected = syntax::SwitchStatement {
+      head: head,
+      body: vec![case0, case1, ret]
+    };
+
+    assert_eq!(switch_statement(&b"switch (foo) { case 0: case 1: return 12u; }"[..]), IResult::Done(&b""[..], expected.clone()));
+  }
 }
