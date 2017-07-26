@@ -773,57 +773,69 @@ named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
   )
 );
 
-// TODO: refactor the alt branches into something smarter
+
 /// Parse a single declaration.
 named!(single_declaration<&[u8], syntax::SingleDeclaration>,
-  alt!(
-    ws!(do_parse!(
-      ty: fully_specified_type >>
-      (syntax::SingleDeclaration {
-        ty: ty,
-        name: None,
-        array_specifier: None,
-        initializer: None
-      })
-    )) |
+  ws!(do_parse!(
+    ty: fully_specified_type >>
+    a: alt!(
+         ws!(do_parse!(
+           name: identifier >>
+           a: alt!(
+                ws!(do_parse!(
+                  arr_spec: array_specifier >>
+                  a: alt!(
+                       ws!(do_parse!(
+                         char!('=') >>
+                         init: initializer >>
+                         (syntax::SingleDeclaration {
+                            ty: ty.clone(),
+                            name: Some(name.clone()),
+                            array_specifier: Some(arr_spec.clone()),
+                            initializer: Some(init)
+                         })
+                       )) |
 
-    ws!(do_parse!(
-      ty: fully_specified_type >>
-      name: identifier >>
-      (syntax::SingleDeclaration {
-        ty: ty,
-        name: Some(name),
-        array_specifier: None,
-        initializer: None
-      })
-    )) |
+                       value!(syntax::SingleDeclaration {
+                         ty: ty.clone(),
+                         name: Some(name.clone()),
+                         array_specifier: Some(arr_spec.clone()),
+                         initializer: None
+                       })
+                     ) >>
+                  (a)
+                )) |
 
-    ws!(do_parse!(
-      ty: fully_specified_type >>
-      name: identifier >>
-      a: array_specifier >>
-      (syntax::SingleDeclaration {
-        ty: ty,
-        name: Some(name),
-        array_specifier: Some(a),
-        initializer: None
-      })
-    )) |
+                ws!(do_parse!(
+                  char!('=') >>
+                  init: initializer >>
+                  (syntax::SingleDeclaration {
+                    ty: ty.clone(),
+                    name: Some(name.clone()),
+                    array_specifier: None,
+                    initializer: Some(init)
+                  })
+                )) |
 
-    ws!(do_parse!(
-      ty: fully_specified_type >>
-      name: identifier >>
-      a: opt!(array_specifier) >>
-      char!('=') >>
-      ini: initializer >>
-      (syntax::SingleDeclaration {
-        ty: ty,
-        name: Some(name),
-        array_specifier: a,
-        initializer: Some(ini)
-      })
-    ))
-  )
+                value!(syntax::SingleDeclaration {
+                  ty: ty.clone(),
+                  name: Some(name.clone()),
+                  array_specifier: None,
+                  initializer: None
+                })
+              ) >>
+           (a)
+         )) |
+
+         value!(syntax::SingleDeclaration {
+           ty: ty,
+           name: None,
+           array_specifier: None,
+           initializer: None
+         })
+       ) >>
+    (a)
+  ))
 );
 
 /// Parse an initializer.
