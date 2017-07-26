@@ -781,50 +781,14 @@ named!(single_declaration<&[u8], syntax::SingleDeclaration>,
     a: alt!(
          ws!(do_parse!(
            name: identifier >>
-           a: alt!(
-                ws!(do_parse!(
-                  arr_spec: array_specifier >>
-                  a: alt!(
-                       ws!(do_parse!(
-                         char!('=') >>
-                         init: initializer >>
-                         (syntax::SingleDeclaration {
-                            ty: ty.clone(),
-                            name: Some(name.clone()),
-                            array_specifier: Some(arr_spec.clone()),
-                            initializer: Some(init)
-                         })
-                       )) |
-
-                       value!(syntax::SingleDeclaration {
-                         ty: ty.clone(),
-                         name: Some(name.clone()),
-                         array_specifier: Some(arr_spec.clone()),
-                         initializer: None
-                       })
-                     ) >>
-                  (a)
-                )) |
-
-                ws!(do_parse!(
-                  char!('=') >>
-                  init: initializer >>
-                  (syntax::SingleDeclaration {
-                    ty: ty.clone(),
-                    name: Some(name.clone()),
-                    array_specifier: None,
-                    initializer: Some(init)
-                  })
-                )) |
-
-                value!(syntax::SingleDeclaration {
-                  ty: ty.clone(),
-                  name: Some(name.clone()),
-                  array_specifier: None,
-                  initializer: None
-                })
-              ) >>
-           (a)
+           arr_spec: opt!(array_specifier) >>
+           init: opt!(preceded!(char!('='), initializer)) >>
+           (syntax::SingleDeclaration {
+             ty: ty.clone(),
+             name: Some(name),
+             array_specifier: arr_spec,
+             initializer: init
+           })
          )) |
 
          value!(syntax::SingleDeclaration {
