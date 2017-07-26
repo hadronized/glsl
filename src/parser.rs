@@ -2358,6 +2358,7 @@ mod tests {
     assert_eq!(declaration(&b"vec3 foo(vec2,out float the_arg);"[..]), IResult::Done(&b""[..], expected));
   }
 
+  #[test]
   fn parse_declaration_init_declarator_list_single() {
     let ty = syntax::FullySpecifiedType {
       qualifier: None,
