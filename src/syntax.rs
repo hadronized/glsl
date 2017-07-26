@@ -270,9 +270,9 @@ pub struct FunctionParameterDeclarator {
 
 /// Init declarator list.
 #[derive(Clone, Debug, PartialEq)]
-pub enum InitDeclaratorList {
-  Single(SingleDeclaration),
-  Several(Box<InitDeclaratorList>, Identifier, Option<ArraySpecifier>, Option<Initializer>)
+pub struct InitDeclaratorList {
+  pub head: SingleDeclaration,
+  pub tail: Vec<SingleDeclarationNoType>
 }
 
 /// Single declaration.
@@ -280,6 +280,14 @@ pub enum InitDeclaratorList {
 pub struct SingleDeclaration {
   pub ty: FullySpecifiedType,
   pub name: Option<Identifier>,
+  pub array_specifier: Option<ArraySpecifier>,
+  pub initializer: Option<Initializer>
+}
+
+/// A single declaration with implicit, already-defined type.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SingleDeclarationNoType {
+  pub name: Identifier,
   pub array_specifier: Option<ArraySpecifier>,
   pub initializer: Option<Initializer>
 }

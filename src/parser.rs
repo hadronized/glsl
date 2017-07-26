@@ -768,9 +768,24 @@ named!(function_prototype<&[u8], syntax::FunctionPrototype>,
 // TODO: fixme complex
 /// Parse an init declarator list.
 named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
-  alt!(
-    map!(single_declaration, syntax::InitDeclaratorList::Single)
-  )
+  ws!(do_parse!(
+    first: single_declaration >>
+    rest: many0!(ws!(do_parse!(
+            char!(',') >>
+            name: identifier >>
+            arr_spec: opt!(array_specifier) >>
+            init: opt!(preceded!(char!('='), initializer)) >>
+            (syntax::SingleDeclarationNoType {
+              name: name,
+              array_specifier: arr_spec,
+              initializer: init
+            })
+          ))) >>
+    (syntax::InitDeclaratorList {
+      head: first,
+      tail: rest
+    })
+  ))
 );
 
 
@@ -2354,7 +2369,7 @@ mod tests {
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
-    let idl = syntax::InitDeclaratorList::Single(sd);
+    let idl = syntax::InitDeclaratorList { head: sd, tail: Vec::new() };
     let expected = syntax::Declaration::InitDeclaratorList(idl);
 
     assert_eq!(declaration(&b"int foo = 34;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2374,12 +2389,15 @@ mod tests {
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
-    let single = syntax::InitDeclaratorList::Single(sd);
-    let idl = syntax::InitDeclaratorList::Several(Box::new(single),
-                                                  "bar".to_owned(),
-                                                  None,
-                                                  Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12)))));
-    let expected = syntax::Declaration::InitDeclaratorList(idl);
+    let sdnt = syntax::SingleDeclarationNoType {
+      name: "bar".to_owned(),
+      array_specifier: None,
+      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12))))
+    };
+    let expected = syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
+      head: sd,
+      tail: vec![sdnt]
+    });
 
     assert_eq!(declaration(&b"int foo = 34, bar = 12;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"int foo=34,bar=12;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2609,14 +2627,15 @@ mod tests {
     let init = syntax::ForInitStatement::Declaration(
                  Box::new(
                    syntax::Declaration::InitDeclaratorList(
-                     syntax::InitDeclaratorList::Single(
-                       syntax::SingleDeclaration {
-                         ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::Float },
-                         name: Some("i".to_owned()),
-                         array_specifier: None,
-                         initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
-                       }
-                     )
+                     syntax::InitDeclaratorList {
+                       head: syntax::SingleDeclaration {
+                               ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::Float },
+                               name: Some("i".to_owned()),
+                               array_specifier: None,
+                               initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
+                             },
+                       tail: Vec::new()
+                     }
                    )
                  )
                );
