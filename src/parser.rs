@@ -698,7 +698,7 @@ named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
 named!(declaration<&[u8], syntax::Declaration>,
   alt!(
     map!(terminated!(function_prototype, char!(';')), syntax::Declaration::FunctionPrototype) |
-    dbg_dmp!(map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList)) |
+    map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList) |
     precision_declaration |
     block_declaration |
     global_declaration
@@ -2399,7 +2399,7 @@ mod tests {
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
     let single = syntax::InitDeclaratorList::Single(sd);
-    let idl = syntax::InitDeclaratorList::Complex(Box::new(single),
+    let idl = syntax::InitDeclaratorList::Several(Box::new(single),
                                                   "bar".to_owned(),
                                                   None,
                                                   Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12)))));
