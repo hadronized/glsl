@@ -2665,9 +2665,9 @@ mod tests {
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
     let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
 
-    assert_eq!(iteration_statement(&b"for (float i = 0.f; i < 10.f; ++i) {}"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(iteration_statement(&b"for(float i=0.f;i<10.f;++i){}"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(iteration_statement(&b"   for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<  10.f; \n++i\n)\n{\n}"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(iteration_statement(&b"for (float i = 0.f; i <= 10.f; ++i) {}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"for(float i=0.f;i<=10.f;++i){}"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(iteration_statement(&b"   for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<=  10.f; \n++i\n)\n{\n}"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]
