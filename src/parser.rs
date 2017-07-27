@@ -2698,4 +2698,58 @@ mod tests {
 
     assert_eq!(simple_statement(&b"return false;"[..]), IResult::Done(&b""[..], expected));
   }
+
+  #[test]
+  fn parse_compound_statement() {
+    let st0 = syntax::Statement::Simple(
+                Box::new(
+                  syntax::SimpleStatement::Selection(
+                    syntax::SelectionStatement {
+                      cond: Box::new(syntax::Expr::BoolConst(true)),
+                      rest: syntax::SelectionRestStatement::Statement(
+                              Box::new(
+                                syntax::Statement::Compound(
+                                  Box::new(syntax::CompoundStatement { statement_list: Vec::new() })
+                                )
+                              )
+                            )
+                    }
+                  )
+                )
+              );
+    let st1 = syntax::Statement::Simple(
+                Box::new(
+                  syntax::SimpleStatement::Declaration(
+                    syntax::Declaration::InitDeclaratorList(
+                      syntax::InitDeclaratorList {
+                        head: syntax::SingleDeclaration {
+                          ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::ISampler3D },
+                          name: Some("x".to_owned()),
+                          array_specifier: None,
+                          initializer: None
+                        },
+                        tail: Vec::new()
+                      }
+                    )
+                  )
+                )
+              );
+    let st2 = syntax::Statement::Simple(
+                Box::new(
+                  syntax::SimpleStatement::Jump(
+                    syntax::JumpStatement::Return(
+                      Box::new(
+                        syntax::Expr::IntConst(42)
+                      )
+                    )
+                  )
+                )
+              );
+    let expected = syntax::CompoundStatement {
+      statement_list: vec![st0, st1, st2]
+    };
+
+    assert_eq!(compound_statement(&b"if (true) {} isampler3D x; return 42"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(compound_statement(&b"if(true){}isampler3D x;return 42"[..]), IResult::Done(&b""[..], expected));
+  }
 }
