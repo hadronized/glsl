@@ -26,6 +26,20 @@ named!(pub comment,
   ))
 );
 
+/// Parse an alphanumeric separator. An alphanumeric separator is a char used to separate
+/// alphanumeric tokens. For instance, "in vec3 x" contains three alphanumeric tokens, while
+/// "int x = 3, y, z = 12;" contains six alphanumeric tokens ('=', ',' and ';' are separators).
+///
+/// Whitespace are also considered such separators.
+named!(pub alphasep<&[u8], char>, peek!(one_of!(" \t\n,;:.<>{}[]()+-%*/=^?\"'")));
+
+/// Parse a tag followed by an alphanumeric separator.
+macro_rules! atag {
+  ($i:expr, $s:expr) => {{
+    terminated!($i, tag!($s), alphasep)
+  }}
+}
+
 /// Parse several comments.
 named!(pub comments, recognize!(many0!(comment)));
 
@@ -221,7 +235,7 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 );
 
 /// Parse the void type.
-named!(pub void<&[u8], ()>, value!((), tag!("void")));
+named!(pub void<&[u8], ()>, value!((), atag!("void")));
 
 /// Parse a digit that precludes a leading 0.
 named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
@@ -433,8 +447,8 @@ named!(pub double_lit<&[u8], f64>,
 /// Parse a constant boolean.
 named!(pub bool_lit<&[u8], bool>,
   alt!(
-    value!(true, tag!("true")) |
-    value!(false, tag!("false"))
+    value!(true, atag!("true")) |
+    value!(false, atag!("false"))
   )
 );
 
@@ -464,7 +478,7 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
 /// Parse a struct.
 named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
   ws!(do_parse!(
-    tag!("struct") >>
+    atag!("struct") >>
     name: opt!(identifier) >>
     fields: delimited!(char!('{'), many1!(struct_field_specifier), char!('}')) >>
     (syntax::StructSpecifier { name: name, fields: fields })
@@ -474,7 +488,7 @@ named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
 /// Parse a storage qualifier subroutine rule with a list of type names.
 named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
   ws!(do_parse!(
-    tag!("subroutine") >>
+    atag!("subroutine") >>
     identifiers: delimited!(char!('('),
                             nonempty_identifiers,
                             char!(')')) >>
@@ -486,28 +500,28 @@ named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
 named!(pub storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
   alt!(
     storage_qualifier_subroutine_list |
-    value!(syntax::StorageQualifier::Subroutine(Vec::new()), tag!("subroutine"))
+    value!(syntax::StorageQualifier::Subroutine(Vec::new()), atag!("subroutine"))
   )
 );
 
 /// Parse a storage qualifier.
 named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
   alt!(
-    value!(syntax::StorageQualifier::Const, tag!("const")) |
-    value!(syntax::StorageQualifier::InOut, tag!("inout")) |
-    value!(syntax::StorageQualifier::In, tag!("in")) |
-    value!(syntax::StorageQualifier::Out, tag!("out")) |
-    value!(syntax::StorageQualifier::Centroid, tag!("centroid")) |
-    value!(syntax::StorageQualifier::Patch, tag!("patch")) |
-    value!(syntax::StorageQualifier::Sample, tag!("sample")) |
-    value!(syntax::StorageQualifier::Uniform, tag!("uniform")) |
-    value!(syntax::StorageQualifier::Buffer, tag!("buffer")) |
-    value!(syntax::StorageQualifier::Shared, tag!("shared")) |
-    value!(syntax::StorageQualifier::Coherent, tag!("coherent")) |
-    value!(syntax::StorageQualifier::Volatile, tag!("volatile")) |
-    value!(syntax::StorageQualifier::Restrict, tag!("restrict")) |
-    value!(syntax::StorageQualifier::ReadOnly, tag!("readonly")) |
-    value!(syntax::StorageQualifier::WriteOnly, tag!("writeonly")) |
+    value!(syntax::StorageQualifier::Const, atag!("const")) |
+    value!(syntax::StorageQualifier::InOut, atag!("inout")) |
+    value!(syntax::StorageQualifier::In, atag!("in")) |
+    value!(syntax::StorageQualifier::Out, atag!("out")) |
+    value!(syntax::StorageQualifier::Centroid, atag!("centroid")) |
+    value!(syntax::StorageQualifier::Patch, atag!("patch")) |
+    value!(syntax::StorageQualifier::Sample, atag!("sample")) |
+    value!(syntax::StorageQualifier::Uniform, atag!("uniform")) |
+    value!(syntax::StorageQualifier::Buffer, atag!("buffer")) |
+    value!(syntax::StorageQualifier::Shared, atag!("shared")) |
+    value!(syntax::StorageQualifier::Coherent, atag!("coherent")) |
+    value!(syntax::StorageQualifier::Volatile, atag!("volatile")) |
+    value!(syntax::StorageQualifier::Restrict, atag!("restrict")) |
+    value!(syntax::StorageQualifier::ReadOnly, atag!("readonly")) |
+    value!(syntax::StorageQualifier::WriteOnly, atag!("writeonly")) |
     storage_qualifier_subroutine
   )
 );
@@ -515,7 +529,7 @@ named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
 /// Parse a layout qualifier.
 named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
   ws!(do_parse!(
-    tag!("layout") >>
+    atag!("layout") >>
     x: delimited!(char!('('), layout_qualifier_inner, char!(')')) >>
     (x)
   ))
@@ -537,7 +551,7 @@ named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
 
 named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
   alt!(
-    value!(syntax::LayoutQualifierSpec::Shared, tag!("shared")) |
+    value!(syntax::LayoutQualifierSpec::Shared, atag!("shared")) |
     ws!(do_parse!(
       i: identifier >>
       char!('=') >>
@@ -551,28 +565,28 @@ named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
 /// Parse a precision qualifier.
 named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
   alt!(
-    value!(syntax::PrecisionQualifier::High, tag!("highp")) |
-    value!(syntax::PrecisionQualifier::Medium, tag!("mediump")) |
-    value!(syntax::PrecisionQualifier::Low, tag!("lowp"))
+    value!(syntax::PrecisionQualifier::High, atag!("highp")) |
+    value!(syntax::PrecisionQualifier::Medium, atag!("mediump")) |
+    value!(syntax::PrecisionQualifier::Low, atag!("lowp"))
   )
 );
 
 /// Parse an interpolation qualifier.
 named!(pub interpolation_qualifier<&[u8], syntax::InterpolationQualifier>,
   alt!(
-    value!(syntax::InterpolationQualifier::Smooth, tag!("smooth")) |
-    value!(syntax::InterpolationQualifier::Flat, tag!("flat")) |
-    value!(syntax::InterpolationQualifier::NoPerspective, tag!("noperspective"))
+    value!(syntax::InterpolationQualifier::Smooth, atag!("smooth")) |
+    value!(syntax::InterpolationQualifier::Flat, atag!("flat")) |
+    value!(syntax::InterpolationQualifier::NoPerspective, atag!("noperspective"))
   )
 );
 
 /// Parse an invariant qualifier.
 named!(pub invariant_qualifier<&[u8], ()>,
-  value!((), tag!("invariant")));
+  value!((), atag!("invariant")));
 
 /// Parse a precise qualifier.
 named!(pub precise_qualifier<&[u8], ()>,
-  value!((), tag!("precise")));
+  value!((), atag!("precise")));
 
 /// Parse a type qualifier.
 named!(pub type_qualifier<&[u8], syntax::TypeQualifier>,
@@ -708,7 +722,7 @@ named!(declaration<&[u8], syntax::Declaration>,
 /// Parse a precision declaration.
 named!(precision_declaration<&[u8], syntax::Declaration>,
   ws!(do_parse!(
-    tag!("precision") >>
+    atag!("precision") >>
     qual: precision_qualifier >>
     ty: type_specifier >>
     char!(';') >>
@@ -1246,7 +1260,7 @@ named!(pub expr_statement<&[u8], syntax::ExprStatement>,
 /// Parse a selection statement.
 named!(selection_statement<&[u8], syntax::SelectionStatement>,
   ws!(do_parse!(
-    tag!("if") >>
+    atag!("if") >>
     char!('(') >>
     cond_expr: expr >>
     char!(')') >>
@@ -1263,7 +1277,7 @@ named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
     st: statement >>
     r: alt!(
          ws!(do_parse!(
-           tag!("else") >>
+           atag!("else") >>
            rest: statement >>
            (syntax::SelectionRestStatement::Else(Box::new(st.clone()), Box::new(rest)))
          )) |
@@ -1277,7 +1291,7 @@ named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
 /// Parse a switch statement.
 named!(switch_statement<&[u8], syntax::SwitchStatement>,
   ws!(do_parse!(
-    tag!("switch") >>
+    atag!("switch") >>
     char!('(') >>
     head: expr >>
     char!(')') >>
@@ -1293,13 +1307,13 @@ named!(switch_statement<&[u8], syntax::SwitchStatement>,
 named!(pub case_label<&[u8], syntax::CaseLabel>,
   alt!(
     ws!(do_parse!(
-      tag!("case") >>
+      atag!("case") >>
       e: expr >>
       char!(':') >>
       (syntax::CaseLabel::Case(Box::new(e)))
     )) |
     ws!(do_parse!(
-      tag!("default") >>
+      atag!("default") >>
       char!(':') >>
       (syntax::CaseLabel::Def)
     ))
@@ -1317,7 +1331,7 @@ named!(iteration_statement<&[u8], syntax::IterationStatement>,
 
 named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
-    tag!("while") >>
+    atag!("while") >>
     char!('(') >>
     cond: condition >>
     char!(')') >>
@@ -1328,9 +1342,9 @@ named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
 
 named!(iteration_statement_do_while<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
-    tag!("do") >>
+    atag!("do") >>
     st: statement >>
-    tag!("while") >>
+    atag!("while") >>
     char!('(') >>
     e: expr >>
     char!(')') >>
@@ -1341,7 +1355,7 @@ named!(iteration_statement_do_while<&[u8], syntax::IterationStatement>,
 
 named!(iteration_statement_for<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
-    tag!("for") >>
+    atag!("for") >>
     char!('(') >>
     head: iteration_statement_for_init_statement >>
     rest: iteration_statement_for_rest_statement >>
@@ -1378,20 +1392,20 @@ named!(jump_statement<&[u8], syntax::JumpStatement>,
 );
 
 named!(jump_statement_continue<&[u8], syntax::JumpStatement>,
-  ws!(do_parse!(tag!("continue") >> char!(';') >> (syntax::JumpStatement::Continue)))
+  ws!(do_parse!(atag!("continue") >> char!(';') >> (syntax::JumpStatement::Continue)))
 );
 
 named!(jump_statement_break<&[u8], syntax::JumpStatement>,
-  ws!(do_parse!(tag!("break") >> char!(';') >> (syntax::JumpStatement::Break)))
+  ws!(do_parse!(atag!("break") >> char!(';') >> (syntax::JumpStatement::Break)))
 );
 
 named!(jump_statement_discard<&[u8], syntax::JumpStatement>,
-  ws!(do_parse!(tag!("discard") >> char!(';') >> (syntax::JumpStatement::Discard)))
+  ws!(do_parse!(atag!("discard") >> char!(';') >> (syntax::JumpStatement::Discard)))
 );
 
 named!(jump_statement_return<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(
-    tag!("return") >>
+    atag!("return") >>
     e: expr >>
     char!(';') >>
     (syntax::JumpStatement::Return(Box::new(e)))
@@ -1702,50 +1716,52 @@ mod tests {
   #[test]
   fn parse_array_specifier_sized() {
     let ix = syntax::Expr::IntConst(0);
+
     assert_eq!(array_specifier(&b"[0]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone()))));
+    assert_eq!(array_specifier(&b"[\n0   \t]"[..]), IResult::Done(&b""[..], syntax::ArraySpecifier::ExplicitlySized(Box::new(ix))));
   }
 
   #[test]
   fn parse_precise_qualifier() {
-    assert_eq!(precise_qualifier(&b"precise"[..]), IResult::Done(&b""[..], ()));
+    assert_eq!(precise_qualifier(&b"precise "[..]), IResult::Done(&b" "[..], ()));
   }
   
   #[test]
   fn parse_invariant_qualifier() {
-    assert_eq!(invariant_qualifier(&b"invariant"[..]), IResult::Done(&b""[..], ()));
+    assert_eq!(invariant_qualifier(&b"invariant "[..]), IResult::Done(&b" "[..], ()));
   }
   
   #[test]
   fn parse_interpolation_qualifier() {
-    assert_eq!(interpolation_qualifier(&b"smooth"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::Smooth));
-    assert_eq!(interpolation_qualifier(&b"flat"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::Flat));
-    assert_eq!(interpolation_qualifier(&b"noperspective"[..]), IResult::Done(&b""[..], syntax::InterpolationQualifier::NoPerspective));
+    assert_eq!(interpolation_qualifier(&b"smooth "[..]), IResult::Done(&b" "[..], syntax::InterpolationQualifier::Smooth));
+    assert_eq!(interpolation_qualifier(&b"flat "[..]), IResult::Done(&b" "[..], syntax::InterpolationQualifier::Flat));
+    assert_eq!(interpolation_qualifier(&b"noperspective "[..]), IResult::Done(&b" "[..], syntax::InterpolationQualifier::NoPerspective));
   }
   
   #[test]
   fn parse_precision_qualifier() {
-    assert_eq!(precision_qualifier(&b"highp"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::High));
-    assert_eq!(precision_qualifier(&b"mediump"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Medium));
-    assert_eq!(precision_qualifier(&b"lowp"[..]), IResult::Done(&b""[..], syntax::PrecisionQualifier::Low));
+    assert_eq!(precision_qualifier(&b"highp "[..]), IResult::Done(&b" "[..], syntax::PrecisionQualifier::High));
+    assert_eq!(precision_qualifier(&b"mediump "[..]), IResult::Done(&b" "[..], syntax::PrecisionQualifier::Medium));
+    assert_eq!(precision_qualifier(&b"lowp "[..]), IResult::Done(&b" "[..], syntax::PrecisionQualifier::Low));
   }
   
   #[test]
   fn parse_storage_qualifier() {
-    assert_eq!(storage_qualifier(&b"const"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Const));
-    assert_eq!(storage_qualifier(&b"inout"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::InOut));
+    assert_eq!(storage_qualifier(&b"const "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Const));
+    assert_eq!(storage_qualifier(&b"inout "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::InOut));
     assert_eq!(storage_qualifier(&b"in "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::In));
-    assert_eq!(storage_qualifier(&b"out"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Out));
-    assert_eq!(storage_qualifier(&b"centroid"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Centroid));
-    assert_eq!(storage_qualifier(&b"patch"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Patch));
-    assert_eq!(storage_qualifier(&b"sample"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Sample));
-    assert_eq!(storage_qualifier(&b"uniform"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Uniform));
-    assert_eq!(storage_qualifier(&b"buffer"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Buffer));
-    assert_eq!(storage_qualifier(&b"shared"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Shared));
-    assert_eq!(storage_qualifier(&b"coherent"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Coherent));
-    assert_eq!(storage_qualifier(&b"volatile"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Volatile));
-    assert_eq!(storage_qualifier(&b"restrict"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Restrict));
-    assert_eq!(storage_qualifier(&b"readonly"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::ReadOnly));
-    assert_eq!(storage_qualifier(&b"writeonly"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::WriteOnly));
+    assert_eq!(storage_qualifier(&b"out "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Out));
+    assert_eq!(storage_qualifier(&b"centroid "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Centroid));
+    assert_eq!(storage_qualifier(&b"patch "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Patch));
+    assert_eq!(storage_qualifier(&b"sample "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Sample));
+    assert_eq!(storage_qualifier(&b"uniform "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Uniform));
+    assert_eq!(storage_qualifier(&b"buffer "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Buffer));
+    assert_eq!(storage_qualifier(&b"shared "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Shared));
+    assert_eq!(storage_qualifier(&b"coherent "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Coherent));
+    assert_eq!(storage_qualifier(&b"volatile "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Volatile));
+    assert_eq!(storage_qualifier(&b"restrict "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::Restrict));
+    assert_eq!(storage_qualifier(&b"readonly "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::ReadOnly));
+    assert_eq!(storage_qualifier(&b"writeonly "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::WriteOnly));
     assert_eq!(storage_qualifier(&b"subroutine a"[..]), IResult::Done(&b" a"[..], syntax::StorageQualifier::Subroutine(vec![])));
   
     let a = "vec3".to_owned();
@@ -2263,7 +2279,7 @@ mod tests {
 
   #[test]
   fn parse_void() {
-    assert_eq!(void(&b"void"[..]), IResult::Done(&b""[..], ()));
+    assert_eq!(void(&b"void "[..]), IResult::Done(&b" "[..], ()));
   }
 
   #[test]
