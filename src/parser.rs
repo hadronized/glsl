@@ -2690,4 +2690,12 @@ mod tests {
   fn parse_jump_discard() {
     assert_eq!(jump_statement(&b"discard;"[..]), IResult::Done(&b""[..], syntax::JumpStatement::Discard));
   }
+
+  #[test]
+  fn parse_simple_statement_return() {
+    let e = syntax::Expr::BoolConst(false);
+    let expected = syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(Box::new(e)));
+
+    assert_eq!(simple_statement(&b"return false;"[..]), IResult::Done(&b""[..], expected));
+  }
 }
