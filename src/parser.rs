@@ -2700,6 +2700,13 @@ mod tests {
   }
 
   #[test]
+  fn parse_compound_statement_empty() {
+    let expected = syntax::CompoundStatement { statement_list: Vec::new() };
+
+    assert_eq!(compound_statement(&b"{}"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
   fn parse_compound_statement() {
     let st0 = syntax::Statement::Simple(
                 Box::new(
@@ -2749,7 +2756,7 @@ mod tests {
       statement_list: vec![st0, st1, st2]
     };
 
-    assert_eq!(compound_statement(&b"if (true) {} isampler3D x; return 42"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(compound_statement(&b"if(true){}isampler3D x;return 42"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(compound_statement(&b"{ if (true) {} isampler3D x; return 42 ; }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(compound_statement(&b"{if(true){}isampler3D x;return 42;}"[..]), IResult::Done(&b""[..], expected));
   }
 }
