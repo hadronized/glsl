@@ -43,6 +43,7 @@ macro_rules! atag {
 /// Parse several comments.
 named!(pub comments, recognize!(many0!(comment)));
 
+#[macro_export]
 /// Parser rewriter, discarding whitespaces and comments.
 macro_rules! bl {
   ($i:expr, $($args:tt)*) => {{
@@ -709,7 +710,7 @@ named!(pub dot_field_selection<&[u8], syntax::FieldSelection>,
 );
 
 /// Parse a declaration.
-named!(declaration<&[u8], syntax::Declaration>,
+named!(pub declaration<&[u8], syntax::Declaration>,
   alt!(
     map!(terminated!(function_prototype, char!(';')), syntax::Declaration::FunctionPrototype) |
     map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList) |
@@ -720,7 +721,7 @@ named!(declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a precision declaration.
-named!(precision_declaration<&[u8], syntax::Declaration>,
+named!(pub precision_declaration<&[u8], syntax::Declaration>,
   ws!(do_parse!(
     atag!("precision") >>
     qual: precision_qualifier >>
@@ -732,7 +733,7 @@ named!(precision_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a block declaration.
-named!(block_declaration<&[u8], syntax::Declaration>,
+named!(pub block_declaration<&[u8], syntax::Declaration>,
   ws!(do_parse!(
     qual: type_qualifier >>
     name: identifier >>
@@ -762,7 +763,7 @@ named!(block_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a global declaration.
-named!(global_declaration<&[u8], syntax::Declaration>,
+named!(pub global_declaration<&[u8], syntax::Declaration>,
   ws!(do_parse!(
     qual: type_qualifier >>
     identifiers: many0!(ws!(do_parse!(char!(',') >> i: identifier >> (i)))) >>
@@ -771,7 +772,7 @@ named!(global_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a function prototype.
-named!(function_prototype<&[u8], syntax::FunctionPrototype>,
+named!(pub function_prototype<&[u8], syntax::FunctionPrototype>,
   ws!(do_parse!(
     fp: function_declarator >>
     char!(')') >>
@@ -781,7 +782,7 @@ named!(function_prototype<&[u8], syntax::FunctionPrototype>,
 
 // TODO: fixme complex
 /// Parse an init declarator list.
-named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
+named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList>,
   ws!(do_parse!(
     first: single_declaration >>
     rest: many0!(ws!(do_parse!(
@@ -804,7 +805,7 @@ named!(init_declarator_list<&[u8], syntax::InitDeclaratorList>,
 
 
 /// Parse a single declaration.
-named!(single_declaration<&[u8], syntax::SingleDeclaration>,
+named!(pub single_declaration<&[u8], syntax::SingleDeclaration>,
   ws!(do_parse!(
     ty: fully_specified_type >>
     a: alt!(
@@ -832,7 +833,7 @@ named!(single_declaration<&[u8], syntax::SingleDeclaration>,
 );
 
 /// Parse an initializer.
-named!(initializer<&[u8], syntax::Initializer>,
+named!(pub initializer<&[u8], syntax::Initializer>,
   alt!(
     map!(assignment_expr, |e| syntax::Initializer::Simple(Box::new(e))) |
     ws!(do_parse!(
@@ -847,7 +848,7 @@ named!(initializer<&[u8], syntax::Initializer>,
 );
 
 /// Parse an initializer list.
-named!(initializer_list<&[u8], Vec<syntax::Initializer>>,
+named!(pub initializer_list<&[u8], Vec<syntax::Initializer>>,
   ws!(do_parse!(
     first: initializer >>
     rest: many0!(ws!(do_parse!(char!(',') >> ini: initializer >> (ini)))) >>
@@ -1236,7 +1237,7 @@ named!(pub multiplicative_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a simple statement.
-named!(simple_statement<&[u8], syntax::SimpleStatement>,
+named!(pub simple_statement<&[u8], syntax::SimpleStatement>,
   alt!(
     map!(jump_statement, syntax::SimpleStatement::Jump) |
     map!(iteration_statement, syntax::SimpleStatement::Iteration) |
@@ -1258,7 +1259,7 @@ named!(pub expr_statement<&[u8], syntax::ExprStatement>,
 );
 
 /// Parse a selection statement.
-named!(selection_statement<&[u8], syntax::SelectionStatement>,
+named!(pub selection_statement<&[u8], syntax::SelectionStatement>,
   ws!(do_parse!(
     atag!("if") >>
     char!('(') >>
@@ -1289,7 +1290,7 @@ named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
 );
 
 /// Parse a switch statement.
-named!(switch_statement<&[u8], syntax::SwitchStatement>,
+named!(pub switch_statement<&[u8], syntax::SwitchStatement>,
   ws!(do_parse!(
     atag!("switch") >>
     char!('(') >>
@@ -1321,7 +1322,7 @@ named!(pub case_label<&[u8], syntax::CaseLabel>,
 );
 
 /// Parse an iteration statement.
-named!(iteration_statement<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement<&[u8], syntax::IterationStatement>,
   alt!(
     iteration_statement_while |
     iteration_statement_do_while |
@@ -1329,7 +1330,7 @@ named!(iteration_statement<&[u8], syntax::IterationStatement>,
   )
 );
 
-named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_while<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
     atag!("while") >>
     char!('(') >>
@@ -1340,7 +1341,7 @@ named!(iteration_statement_while<&[u8], syntax::IterationStatement>,
   ))
 );
 
-named!(iteration_statement_do_while<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_do_while<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
     atag!("do") >>
     st: statement >>
@@ -1353,7 +1354,7 @@ named!(iteration_statement_do_while<&[u8], syntax::IterationStatement>,
   ))
 );
 
-named!(iteration_statement_for<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_for<&[u8], syntax::IterationStatement>,
   ws!(do_parse!(
     atag!("for") >>
     char!('(') >>
@@ -1382,7 +1383,7 @@ named!(iteration_statement_for_rest_statement<&[u8], syntax::ForRestStatement>,
 );
 
 /// Parse a jump statement.
-named!(jump_statement<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement<&[u8], syntax::JumpStatement>,
   alt!(
     jump_statement_continue |
     jump_statement_break |
@@ -1391,19 +1392,19 @@ named!(jump_statement<&[u8], syntax::JumpStatement>,
   )
 );
 
-named!(jump_statement_continue<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_continue<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(atag!("continue") >> char!(';') >> (syntax::JumpStatement::Continue)))
 );
 
-named!(jump_statement_break<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_break<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(atag!("break") >> char!(';') >> (syntax::JumpStatement::Break)))
 );
 
-named!(jump_statement_discard<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_discard<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(atag!("discard") >> char!(';') >> (syntax::JumpStatement::Discard)))
 );
 
-named!(jump_statement_return<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_return<&[u8], syntax::JumpStatement>,
   ws!(do_parse!(
     atag!("return") >>
     e: expr >>
@@ -1413,7 +1414,7 @@ named!(jump_statement_return<&[u8], syntax::JumpStatement>,
 );
 
 /// Parse a condition.
-named!(condition<&[u8], syntax::Condition>,
+named!(pub condition<&[u8], syntax::Condition>,
   alt!(
     map!(expr, |e| syntax::Condition::Expr(Box::new(e))) |
     condition_assignment
@@ -1431,7 +1432,7 @@ named!(condition_assignment<&[u8], syntax::Condition>,
 );
 
 /// Parse a statement.
-named!(statement<&[u8], syntax::Statement>,
+named!(pub statement<&[u8], syntax::Statement>,
   alt!(
     map!(compound_statement, |c| syntax::Statement::Compound(Box::new(c))) |
     map!(simple_statement, |s| syntax::Statement::Simple(Box::new(s)))
@@ -1439,7 +1440,7 @@ named!(statement<&[u8], syntax::Statement>,
 );
 
 /// Parse a compound statement.
-named!(compound_statement<&[u8], syntax::CompoundStatement>,
+named!(pub compound_statement<&[u8], syntax::CompoundStatement>,
   ws!(do_parse!(
     char!('{') >>
     stl: many0!(statement) >>
@@ -1449,7 +1450,7 @@ named!(compound_statement<&[u8], syntax::CompoundStatement>,
 );
 
 /// Parse a function definition.
-named!(function_definition<&[u8], syntax::FunctionDefinition>,
+named!(pub function_definition<&[u8], syntax::FunctionDefinition>,
   ws!(do_parse!(
     prototype: function_prototype >>
     st: compound_statement >>
@@ -1458,7 +1459,7 @@ named!(function_definition<&[u8], syntax::FunctionDefinition>,
 );
 
 /// Parse an external declaration.
-named!(external_declaration<&[u8], syntax::ExternalDeclaration>,
+named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
   alt!(
     map!(function_definition, syntax::ExternalDeclaration::FunctionDefinition) |
     map!(declaration, syntax::ExternalDeclaration::Declaration)
@@ -1466,7 +1467,7 @@ named!(external_declaration<&[u8], syntax::ExternalDeclaration>,
 );
 
 /// Parse a translation unit (entry point).
-named!(translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
+named!(pub translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
 
 #[cfg(test)]
 mod tests {
