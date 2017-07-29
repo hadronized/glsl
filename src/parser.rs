@@ -1466,16 +1466,7 @@ named!(external_declaration<&[u8], syntax::ExternalDeclaration>,
 );
 
 /// Parse a translation unit (entry point).
-named!(translation_unit<&[u8], syntax::TranslationUnit>,
-  alt!(
-    map!(external_declaration, syntax::TranslationUnit::ExternalDeclaration) |
-    ws!(do_parse!(
-      tl: translation_unit >>
-      ed: external_declaration >>
-      (syntax::TranslationUnit::Comma(Box::new(tl), ed))
-    ))
-  )
-);
+named!(translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
 
 #[cfg(test)]
 mod tests {

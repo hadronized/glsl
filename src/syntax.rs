@@ -401,11 +401,7 @@ pub enum AssignmentOp {
 }
 
 /// Starting rule.
-#[derive(Clone, Debug, PartialEq)]
-pub enum TranslationUnit {
-  ExternalDeclaration(ExternalDeclaration),
-  Comma(Box<TranslationUnit>, ExternalDeclaration)
-}
+pub type TranslationUnit = NonEmpty<ExternalDeclaration>;
 
 /// External declaration.
 #[derive(Clone, Debug, PartialEq)]
