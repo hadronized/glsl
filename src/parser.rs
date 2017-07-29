@@ -2256,28 +2256,6 @@ mod tests {
   }
 
   #[test]
-  fn parse_function_def() {
-    let rt = syntax::FullySpecifiedType {
-      qualifier: None,
-      ty: syntax::TypeSpecifier::IImage2DArray
-    };
-    let fp = syntax::FunctionPrototype {
-      ty: rt,
-      name: "foo".to_owned(),
-      parameters: Vec::new()
-    };
-    let expected = syntax::FunctionDefinition {
-      prototype: fp,
-      statement: syntax::CompoundStatement {
-        statement_list: Vec::new()
-      }
-    };
-    let src = b"iimage2DArray foo() {}";
-
-    assert_eq!(function_definition(&src[..]), IResult::Done(&b""[..], expected));
-  }
-
-  #[test]
   fn parse_void() {
     assert_eq!(void(&b"void "[..]), IResult::Done(&b" "[..], ()));
   }
@@ -2758,5 +2736,39 @@ mod tests {
 
     assert_eq!(compound_statement(&b"{ if (true) {} isampler3D x; return 42 ; }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(compound_statement(&b"{if(true){}isampler3D x;return 42;}"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_function_definition() {
+    let rt = syntax::FullySpecifiedType {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::IImage2DArray
+    };
+    let fp = syntax::FunctionPrototype {
+      ty: rt,
+      name: "foo".to_owned(),
+      parameters: Vec::new()
+    };
+    let st0 = syntax::Statement::Simple(
+                Box::new(
+                  syntax::SimpleStatement::Jump(
+                    syntax::JumpStatement::Return(
+                      Box::new(
+                        syntax::Expr::Variable("bar".to_owned())
+                      )
+                    )
+                  )
+                )
+              );
+    let expected = syntax::FunctionDefinition {
+      prototype: fp,
+      statement: syntax::CompoundStatement {
+        statement_list: vec![st0]
+      }
+    };
+
+    assert_eq!(function_definition(&b"iimage2DArray foo() { return bar; }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(function_definition(&b"  \niimage2DArray \tfoo\n()\n \n{\n return \nbar\n;\n }"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(function_definition(&b"iimage2DArray foo(){return bar;}"[..]), IResult::Done(&b""[..], expected));
   }
 }
