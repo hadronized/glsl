@@ -1,17 +1,9 @@
-// FIXME: general note on parsers:
-//
-//     E <- A | E, A
-//
-// This is a grammar that states that in order to successfully parse a E, we need to parse
-// a A, and it’s possible to have several A. It’s the definition of a non-empty list.
-//
-// If we implement that with the following nom pseudo-code:
-//
-//    E = alt!(A, do_parse!(E >> char!(',') >> A))
-//
-// The semantic is not the same, as we will try to parse A first. Though, if it fails, it’ll
-// try the second branch, which is… a recursive call to the same function. That will
-// basically loop forever.
+//! GLSL parsers.
+//!
+//! The more general parser is `translation_unit`, that recognize the most external form of a
+//! GLSL source (a shader, basically).
+//!
+//! Other parsers are exported if you want more control on how you want to parse your source.
 use nom::{ErrorKind, IResult, digit, sp};
 use std::str::{from_utf8_unchecked};
 

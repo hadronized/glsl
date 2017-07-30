@@ -1,6 +1,22 @@
+//! GLSL abstract syntax tree and grammar.
+//!
+//! This module exports all the grammar syntax that defines GLSL. You’ll be handling ASTs
+//! representing your GLSL source.
+//!
+//! The most external form of a GLSL parsed AST is `TranslationUnit` (a shader). Some part of the
+//! tree are *boxed*. This is due to the two facts
+//!
+//! - recursion is used, hence we need a way to give our types a static size
+//! - because of some very deep variants, runtime size would explode if no indirection weren’t
+//!   in place
+//!
+//! The types are commented so feel free to inspect each of theme. As a starter, you should read
+//! the documentation of `Expr`, `FunctionDefinition`, `Statement` and `TranslationUnit`.
+
 // FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
 // possible. See <https://github.com/rust-lang/rust/issues/42747>.
 
+/// A non-empty `Vec`. It has at least one element.
 pub type NonEmpty<T> = Vec<T>;
 
 /// A generic identifier.
@@ -488,14 +504,14 @@ pub enum IterationStatement {
   For(ForInitStatement, ForRestStatement, Box<Statement>)
 }
 
-/// For init statement
+/// For init statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ForInitStatement {
   Expression(Option<Expr>),
   Declaration(Box<Declaration>)
 }
 
-/// For init statement
+/// For init statement.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ForRestStatement {
   pub condition: Option<Condition>,
