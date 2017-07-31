@@ -29,6 +29,7 @@ pub type TypeName = String;
 #[derive(Clone, Debug, PartialEq)]
 pub enum TypeSpecifier {
   // transparent types
+  Void,
   Bool,
   Int,
   UInt,

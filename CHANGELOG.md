@@ -1,3 +1,10 @@
+## 0.2.3
+
+> ?
+
+- `void` is now recognized as `TypeSpecifier::Void` instead of the erroneous
+  `TypeSpecifier::TypeName("void")`.
+
 ## 0.2.2
 
 > Monday, July, 31st 2017
