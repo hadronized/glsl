@@ -1,7 +1,12 @@
-## 0.2.3
+## 0.3.0
 
-> ?
+> Monday, July, 31st 2017
 
+- Added a very minimalistic yet working preprocessor. It parses `#version` and `#extension`
+  commands. Those have to be declared at the top of your file, even though this implementation
+  accepts them at any place an external declaration could be defined. Feel free to submit a PR
+  if you want to change that behavior, I don’t really mind.
+- Enhance the runtime error reporting. It’s not perfect, but it’s way better than before!
 - `void` is now recognized as `TypeSpecifier::Void` instead of the erroneous
   `TypeSpecifier::TypeName("void")`.
 
