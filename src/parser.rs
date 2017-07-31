@@ -96,6 +96,7 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
   let (i1, t) = try_parse!(i, identifier_str);
 
   match unsafe { from_utf8_unchecked(t) } {
+    "void" => IResult::Done(i1, syntax::TypeSpecifier::Void),
     "bool" => IResult::Done(i1, syntax::TypeSpecifier::Bool),
     "int" => IResult::Done(i1, syntax::TypeSpecifier::Int),
     "uint" => IResult::Done(i1, syntax::TypeSpecifier::UInt),
@@ -2834,7 +2835,7 @@ mod tests {
       prototype: syntax::FunctionPrototype {
         ty: syntax::FullySpecifiedType {
           qualifier: None,
-          ty: syntax::TypeSpecifier::TypeName("void".to_owned())
+          ty: syntax::TypeSpecifier::Void
         },
         name: "main".to_owned(),
         parameters: Vec::new(),
