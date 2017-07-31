@@ -158,8 +158,9 @@ pub struct StructSpecifier {
 /// Struct field specifier. Used to add fields to struct specifiers.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructFieldSpecifier {
+  pub qualifier: Option<TypeQualifier>,
   pub ty: TypeSpecifier,
-  pub identifiers: Vec<Identifier> // several identifiers of the same type
+  pub identifiers: Vec<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
 }
 
 /// Type qualifier.

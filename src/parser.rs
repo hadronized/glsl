@@ -35,8 +35,8 @@ macro_rules! atag {
 /// Parse several comments.
 named!(pub comments, recognize!(many0!(comment)));
 
-#[macro_export]
 /// Parser rewriter, discarding whitespaces and comments.
+#[macro_export]
 macro_rules! bl {
   ($i:expr, $($args:tt)*) => {{
     sep!($i, comments, $($args)*)
@@ -457,14 +457,37 @@ named!(pub unary_op<&[u8], syntax::UnaryOp>,
   )
 );
 
+/// Parse an identifier with an optional array specifier.
+named!(identifier_array_spec<&[u8], (syntax::Identifier, Option<syntax::ArraySpecifier>)>,
+  do_parse!(
+    ty: identifier >>
+    a: opt!(array_specifier) >>
+    (ty, a)
+  )
+);
+
 /// Parse a struct field declaration.
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   ws!(do_parse!(
+    qual: opt!(type_qualifier) >>
     ty: type_specifier >>
-    identifiers: nonempty_identifiers >>
+    identifiers: ws!(do_parse!(
+                   first: identifier_array_spec >>
+                   rest: many0!(do_parse!(char!(',') >> i: ws!(identifier_array_spec) >> (i))) >>
+
+                   ({
+                     let mut identifiers = rest.clone();
+                     identifiers.insert(0, first);
+                     identifiers
+                   })
+                 )) >>
     char!(';') >>
 
-    (syntax::StructFieldSpecifier { ty: ty, identifiers: identifiers })
+    (syntax::StructFieldSpecifier {
+      qualifier: qual,
+      ty: ty,
+      identifiers: identifiers
+    })
   ))
 );
 
@@ -1801,7 +1824,11 @@ mod tests {
 
   #[test]
   fn parse_struct_field_specifier() {
-    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
+    let expected = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Vec4,
+      identifiers: vec![("foo".to_owned(), None)]
+    };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(struct_field_specifier(&b"  vec4     foo ; "[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1809,7 +1836,11 @@ mod tests {
   
   #[test]
   fn parse_struct_field_specifier_type_name() {
-    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()), identifiers: vec!["x".to_owned()] };
+    let expected = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()),
+      identifiers: vec![("x".to_owned(), None)]
+    };
   
     assert_eq!(struct_field_specifier(&b"S0238_3 x;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(struct_field_specifier(&b"  S0238_3     x ; "[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1817,7 +1848,11 @@ mod tests {
   
   #[test]
   fn parse_struct_field_specifier_several() {
-    let expected = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned(), "bar".to_owned(), "zoo".to_owned()] };
+    let expected = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Vec4,
+      identifiers: vec![("foo".to_owned(), None), ("bar".to_owned(), None), ("zoo".to_owned(), None)]
+    };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo, bar, zoo;"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(struct_field_specifier(&b"  vec4     foo , bar  , zoo ; "[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1825,8 +1860,15 @@ mod tests {
   
   #[test]
   fn parse_struct_specifier_one_field() {
-    let field = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
-    let expected = syntax::StructSpecifier { name: Some("TestStruct".to_owned()), fields: vec![field] };
+    let field = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Vec4,
+      identifiers: vec![("foo".to_owned(), None)]
+    };
+    let expected = syntax::StructSpecifier {
+      name: Some("TestStruct".to_owned()),
+      fields: vec![field]
+    };
   
     assert_eq!(struct_specifier(&b"struct TestStruct { vec4 foo; }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(struct_specifier(&b"   struct      TestStruct \n \n\n {\n    vec4   foo  ;\n }"[..]), IResult::Done(&b""[..], expected));
@@ -1834,12 +1876,35 @@ mod tests {
   
   #[test]
   fn parse_struct_specifier_multi_fields() {
-    let a = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Vec4, identifiers: vec!["foo".to_owned()] };
-    let b = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::Float, identifiers: vec!["bar".to_owned()] };
-    let c = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::UInt, identifiers: vec!["zoo".to_owned()] };
-    let d = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::BVec3, identifiers: vec!["foo_BAR_zoo3497_34".to_owned()] };
-    let e = syntax::StructFieldSpecifier { ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()), identifiers: vec!["x".to_owned()] };
-    let expected = syntax::StructSpecifier { name: Some("_TestStruct_934i".to_owned()), fields: vec![a, b, c, d, e] };
+    let a = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Vec4,
+      identifiers: vec![("foo".to_owned(), None)]
+    };
+    let b = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::Float,
+      identifiers: vec![("bar".to_owned(), None)]
+    };
+    let c = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::UInt,
+      identifiers: vec![("zoo".to_owned(), None)]
+    };
+    let d = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::BVec3,
+      identifiers: vec![("foo_BAR_zoo3497_34".to_owned(), None)]
+    };
+    let e = syntax::StructFieldSpecifier {
+      qualifier: None,
+      ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()),
+      identifiers: vec![("x".to_owned(), None)]
+    };
+    let expected = syntax::StructSpecifier {
+      name: Some("_TestStruct_934i".to_owned()),
+      fields: vec![a, b, c, d, e]
+    };
   
     assert_eq!(struct_specifier(&b"struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(struct_specifier(&b"struct _TestStruct_934i{vec4 foo;float bar;uint zoo;bvec3 foo_BAR_zoo3497_34;S0238_3 x;}"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2415,16 +2480,19 @@ mod tests {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Uniform);
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::Float,
-      identifiers: vec!["a".to_owned()]
+      identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::Vec3,
-      identifiers: vec!["b".to_owned()]
+      identifiers: vec![("b".to_owned(), None)]
     };
     let f2 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
-      identifiers: vec!["c".to_owned(), "d".to_owned()]
+      identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected = syntax::Declaration::Block(qual,
                                               "UniformBlockTest".to_owned(),
@@ -2440,24 +2508,27 @@ mod tests {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer);
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::Float,
-      identifiers: vec!["a".to_owned()]
+      identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::Vec3,
-      identifiers: vec!["b".to_owned()]
+      identifiers: vec![("b".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
     };
     let f2 = syntax::StructFieldSpecifier {
+      qualifier: None,
       ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
-      identifiers: vec!["c".to_owned(), "d".to_owned()]
+      identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected = syntax::Declaration::Block(qual,
                                               "UniformBlockTest".to_owned(),
                                               vec![f0, f1, f2],
                                               None);
 
-    assert_eq!(declaration(&b"buffer UniformBlockTest { float a; vec3 b; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(declaration(&b"buffer UniformBlockTest { float a; vec3 b[]; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
   }
 
   // TODO: unit test for syntax::Declaration::Global
@@ -2754,5 +2825,38 @@ mod tests {
     assert_eq!(function_definition(&b"iimage2DArray foo() { return bar; }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(function_definition(&b"  \niimage2DArray \tfoo\n()\n \n{\n return \nbar\n;\n }"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(function_definition(&b"iimage2DArray foo(){return bar;}"[..]), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_buffer_block_0() {
+    let src = include_bytes!("../data/tests/buffer_block_0.glsl");
+    let main_fn = syntax::ExternalDeclaration::FunctionDefinition(syntax::FunctionDefinition {
+      prototype: syntax::FunctionPrototype {
+        ty: syntax::FullySpecifiedType {
+          qualifier: None,
+          ty: syntax::TypeSpecifier::TypeName("void".to_owned())
+        },
+        name: "main".to_owned(),
+        parameters: Vec::new(),
+      },
+      statement: syntax::CompoundStatement {
+        statement_list: Vec::new()
+      }
+    });
+    let buffer_block = syntax::ExternalDeclaration::Declaration(
+      syntax::Declaration::Block(syntax::TypeQualifier { qualifiers: vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)] },
+                                "Foo".to_owned(),
+                                vec![
+                                  syntax::StructFieldSpecifier {
+                                    qualifier: None,
+                                    ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                                    identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
+                                  }
+                                ],
+                                Some(("main_tiles".to_owned(), None))
+                                ));
+    let expected = vec![buffer_block, main_fn];
+
+    assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
   }
 }
