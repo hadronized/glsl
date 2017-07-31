@@ -424,6 +424,7 @@ pub type TranslationUnit = NonEmpty<ExternalDeclaration>;
 /// External declaration.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExternalDeclaration {
+  Preprocessor(Preprocessor),
   FunctionDefinition(FunctionDefinition),
   Declaration(Declaration)
 }
@@ -543,7 +544,7 @@ pub enum JumpStatement {
 /// >_that kind of feature. To be honest, it’s not worth it to interleave the AST with preprocessor
 /// > command annotations just so that the resulting code size is minimal. Just use a minifier.
 #[derive(Clone, Debug, PartialEq)]
-pub enum PreprocessorCommand {
+pub enum Preprocessor {
   Version(PreprocessorVersion),
   Extension(PreprocessorExtension)
 }
@@ -567,7 +568,7 @@ pub enum PreprocessorVersionProfile {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorExtension {
   pub name: PreprocessorExtensionName,
-  pub behavior: PreprocessorExtensionBehavior
+  pub behavior: Option<PreprocessorExtensionBehavior>
 }
 
 /// An #extension name annotation.

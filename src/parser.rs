@@ -4,7 +4,7 @@
 //! GLSL source (a shader, basically).
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
-use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp, space};
+use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -1539,6 +1539,7 @@ named!(pub function_definition<&[u8], syntax::FunctionDefinition>,
 /// Parse an external declaration.
 named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
   alt!(
+    map!(preprocessor, syntax::ExternalDeclaration::Preprocessor) |
     map!(function_definition, syntax::ExternalDeclaration::FunctionDefinition) |
     map!(declaration, syntax::ExternalDeclaration::Declaration)
   )
@@ -1546,6 +1547,14 @@ named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
 
 /// Parse a translation unit (entry point).
 named!(pub translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
+
+/// Parse a preprocessor command.
+named!(pub preprocessor<&[u8], syntax::Preprocessor>,
+  alt!(
+    map!(pp_version, syntax::Preprocessor::Version) |
+    map!(pp_extension, syntax::Preprocessor::Extension)
+  )
+);
 
 /// Parse a #version number.
 named!(pub pp_version_number<&[u8], u16>,
@@ -1555,25 +1564,65 @@ named!(pub pp_version_number<&[u8], u16>,
 /// Parse a #version profile.
 named!(pub pp_version_profile<&[u8], syntax::PreprocessorVersionProfile>,
   alt!(
-    value!(syntax::PreprocessorVersionProfile::Core, atag!("core")) |
-    value!(syntax::PreprocessorVersionProfile::Compatibility, atag!("compatibility")) |
-    value!(syntax::PreprocessorVersionProfile::ES, atag!("es"))
+    value!(syntax::PreprocessorVersionProfile::Core, tag!("core")) |
+    value!(syntax::PreprocessorVersionProfile::Compatibility, tag!("compatibility")) |
+    value!(syntax::PreprocessorVersionProfile::ES, tag!("es"))
   )
 );
 
+named!(ppws_, eat_separator!(" \t"));
+
+// Eating separator in preprocessor lines.
+macro_rules! ppws {
+  ($i:expr, $($args:tt)*) => {{
+    sep!($i, ppws_, $($args)*)
+  }}
+}
+
 /// Parse a #version.
 named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
-  dbg_dmp!(do_parse!(
-    ws!(char!('#')) >>
-    ws!(atag!("version")) >>
+  ppws!(do_parse!(
+    char!('#') >>
+    tag!("version") >>
     version: pp_version_number >>
-    profile: opt!(delimited!(space, pp_version_profile, opt!(space))) >>
+    profile: opt!(pp_version_profile) >>
     char!('\n') >>
 
     (syntax::PreprocessorVersion {
       version: version as u16,
       profile
     })
+  ))
+);
+
+/// Parse an #extension name.
+named!(pub pp_extension_name<&[u8], syntax::PreprocessorExtensionName>,
+  alt!(
+    value!(syntax::PreprocessorExtensionName::All, tag!("all")) |
+    map!(identifier, syntax::PreprocessorExtensionName::Specific)
+  )
+);
+
+/// Parse an #extension behavior.
+named!(pub pp_extension_behavior<&[u8], syntax::PreprocessorExtensionBehavior>,
+  alt!(
+    value!(syntax::PreprocessorExtensionBehavior::Require, tag!("require")) |
+    value!(syntax::PreprocessorExtensionBehavior::Enable, tag!("enable")) |
+    value!(syntax::PreprocessorExtensionBehavior::Warn, tag!("warn")) |
+    value!(syntax::PreprocessorExtensionBehavior::Disable, tag!("disable"))
+  )
+);
+
+/// Parse an #extension.
+named!(pub pp_extension<&[u8], syntax::PreprocessorExtension>,
+  ppws!(do_parse!(
+    char!('#') >>
+    tag!("extension") >>
+    name: pp_extension_name >>
+    behavior: opt!(ppws!(preceded!(char!(':'), pp_extension_behavior))) >>
+    char!('\n') >>
+
+    (syntax::PreprocessorExtension { name, behavior })
   ))
 );
 
@@ -2999,6 +3048,30 @@ mod tests {
                              syntax::PreprocessorVersion {
                                version: 450,
                                profile: Some(syntax::PreprocessorVersionProfile::Core)
+                             }));
+  }
+  
+  #[test]
+  fn parse_pp_extension_name() {
+    assert_eq!(pp_extension_name(&b"all"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionName::All));
+    assert_eq!(pp_extension_name(&b"GL_foobar_extension "[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionName::Specific("GL_foobar_extension".to_owned())));
+  }
+
+  #[test]
+  fn parse_pp_extension_behavior() {
+    assert_eq!(pp_extension_behavior(&b"require"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionBehavior::Require));
+    assert_eq!(pp_extension_behavior(&b"enable"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionBehavior::Enable));
+    assert_eq!(pp_extension_behavior(&b"warn"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionBehavior::Warn));
+    assert_eq!(pp_extension_behavior(&b"disable"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionBehavior::Disable));
+  }
+
+  #[test]
+  fn parse_pp_extension() {
+    assert_eq!(pp_extension(&b"#extension all: require\n"[..]),
+               IResult::Done(&b""[..],
+                             syntax::PreprocessorExtension {
+                               name: syntax::PreprocessorExtensionName::All,
+                               behavior: Some(syntax::PreprocessorExtensionBehavior::Require)
                              }));
   }
 }
