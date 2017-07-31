@@ -12,3 +12,5 @@ documentation = "https://docs.rs/glsl"
 
 [dependencies.nom]
 version = "3.2"
+default-features = true
+features = ["verbose-errors"]

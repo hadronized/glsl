@@ -4,10 +4,72 @@
 //! GLSL source (a shader, basically).
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
-use nom::{ErrorKind, IResult, digit, sp};
+use nom::{Err as NomErr, ErrorKind, IResult, Needed, digit, sp};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
+
+/// A parse error. It contains an `ErrorKind` along with a `String` giving information on the reason
+/// why the parser failed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParseError {
+  kind: ErrorKind,
+  info: String
+}
+
+/// Parse result. It can either be parsed, incomplete or errored.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ParseResult<T> {
+  /// The source was successfully parsed.
+  Ok(T),
+  /// The parser failed with a `ParseError`.
+  Err(ParseError),
+  /// More data is required to go on.
+  Incomplete(Needed)
+}
+
+/// Run a parser.
+///
+/// This parser runs over bytes. If you need to parse a `str` instead, use `parse_str`.
+pub fn parse(source: &[u8]) -> ParseResult<syntax::TranslationUnit> {
+  match translation_unit(source) {
+    IResult::Done(i, x) => {
+      if i.is_empty() {
+        ParseResult::Ok(x)
+      } else {
+        let kind = ErrorKind::Custom(0); // FIXME: use our own error kind
+        let msg = unsafe { from_utf8_unchecked(i).to_owned() };
+        let info = msg.lines().next().unwrap_or("").to_owned();
+        ParseResult::Err(ParseError { kind, info })
+      }
+    },
+    IResult::Error(err) => match err {
+      NomErr::Code(k) => ParseResult::Err(ParseError { kind: k, info: String::new() }),
+      NomErr::Node(kind, trace) => {
+        let info = format!("{:#?}", trace);
+        ParseResult::Err(ParseError { kind, info })
+      },
+      NomErr::Position(kind, p) => {
+        let msg = unsafe { from_utf8_unchecked(p).to_owned() };
+        let info = msg.lines().next().unwrap_or("").to_owned();
+
+        ParseResult::Err(ParseError { kind, info })
+      },
+      NomErr::NodePosition(kind, p, trace) => {
+        let p_msg = unsafe { from_utf8_unchecked(p) };
+        let info = format!("{}: {:#?}", p_msg, trace);
+
+        ParseResult::Err(ParseError { kind, info })
+      }
+    },
+    IResult::Incomplete(n) => ParseResult::Incomplete(n)
+  }
+}
+
+/// Run a parser over a `str`.
+pub fn parse_str<'a, I>(source: I) -> ParseResult<syntax::TranslationUnit> where I: Into<&'a str> {
+  parse(source.into().as_bytes())
+}
 
 /// Parse a single comment.
 named!(pub comment,
@@ -214,7 +276,7 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
     "uimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DMSArray),
     "usamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::USamplerCubeArray),
     "uimageCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::UImageCubeArray),
-    _ => IResult::Error(ErrorKind::AlphaNumeric)
+    _ => IResult::Error(NomErr::Code(ErrorKind::AlphaNumeric))
   }
 }
 
@@ -1518,32 +1580,25 @@ mod tests {
   fn parse_nonzero_digit() {
     assert_eq!(nonzero_digit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
     assert_eq!(nonzero_digit(&b"12345953"[..]), IResult::Done(&b""[..], &b"12345953"[..]));
-    assert_eq!(nonzero_digit(&b"03"[..]), IResult::Error(ErrorKind::Verify));
   }
   
   #[test]
   fn parse_decimal_lit() {
     assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
     assert_eq!(decimal_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
-    assert_eq!(decimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Verify));
   }
   
   #[test]
   fn parse_octal_lit() {
-    assert_eq!(octal_lit(&b"3"[..]), IResult::Error(ErrorKind::Verify));
     assert_eq!(octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
     assert_eq!(octal_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
-    assert_eq!(octal_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Verify));
   }
   
   #[test]
   fn parse_hexadecimal_lit() {
-    assert_eq!(hexadecimal_lit(&b"3"[..]), IResult::Error(ErrorKind::Alt));
-    assert_eq!(hexadecimal_lit(&b"03"[..]), IResult::Error(ErrorKind::Alt));
     assert_eq!(hexadecimal_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
     assert_eq!(hexadecimal_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
     assert_eq!(hexadecimal_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
-    assert_eq!(hexadecimal_lit(&b"0x0123g456789abcdef"[..]), IResult::Error(ErrorKind::Verify));
   }
   
   #[test]
@@ -1552,7 +1607,6 @@ mod tests {
     assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], 3));
     assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], 3));
     assert_eq!(integral_lit(&b"076556 "[..]), IResult::Done(&b" "[..], 76556));
-    assert_eq!(integral_lit(&b"07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
     assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], 0x3));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
@@ -1566,7 +1620,6 @@ mod tests {
     assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], -3));
     assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], -3));
     assert_eq!(integral_lit(&b"-076556 "[..]), IResult::Done(&b" "[..], -76556));
-    assert_eq!(integral_lit(&b"-07654321934567 "[..]), IResult::Error(ErrorKind::Alt));
     assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], -0x3));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
@@ -1680,7 +1733,6 @@ mod tests {
     assert_eq!(identifier(&b"Ab_cd"[..]), IResult::Done(&b""[..], "Ab_cd".to_owned()));
     assert_eq!(identifier(&b"Ab_c8d"[..]), IResult::Done(&b""[..], "Ab_c8d".to_owned()));
     assert_eq!(identifier(&b"Ab_c8d9"[..]), IResult::Done(&b""[..], "Ab_c8d9".to_owned()));
-    assert_eq!(identifier(&b"0Ab_c8d9"[..]), IResult::Error(ErrorKind::Verify));
   }
 
   #[test]
