@@ -528,3 +528,62 @@ pub enum JumpStatement {
   Return(Box<Expr>),
   Discard
 }
+
+/// Some basic preprocessor commands.
+///
+/// As it’s important to carry them around the AST because they cannot be substituted in a normal
+/// preprocessor (they’re used by GPU’s compilers), those preprocessor commands are available for
+/// inspection.
+///
+/// > Important note: others preprocessor commands can be used in your source. However, they’ll get
+/// > substituted upfront. For instance, if you use have `#define foo 42` defined in your file, 
+/// > every occurrence to `foo` will get replaced by `42` and then treated as a normal GLSL
+/// > expression (in that case, ending as an `Expr::IntConst(42)` value). This might be unfortunate
+/// > for people seeking minimal size. However, you’re free to use a minifier aftewards to re-enable
+/// >_that kind of feature. To be honest, it’s not worth it to interleave the AST with preprocessor
+/// > command annotations just so that the resulting code size is minimal. Just use a minifier.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreprocessorCommand {
+  Version(PreprocessorVersion),
+  Extension(PreprocessorExtension)
+}
+
+/// A #version preprocessor command.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorVersion {
+  pub version: u16,
+  pub profile: Option<PreprocessorVersionProfile>
+}
+
+/// A #version profile annotation.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreprocessorVersionProfile {
+  Core,
+  Compatibility,
+  ES
+}
+
+/// An #extension preprocessor command.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorExtension {
+  pub name: PreprocessorExtensionName,
+  pub behavior: PreprocessorExtensionBehavior
+}
+
+/// An #extension name annotation.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreprocessorExtensionName {
+  /// All extensions you could ever imagine in your whole lifetime (how crazy is that!).
+  All,
+  /// A specific extension.
+  Specific(String)
+}
+
+/// An #extension behavior annotation.
+#[derive(Clone, Debug, PartialEq)]
+pub enum PreprocessorExtensionBehavior {
+  Require,
+  Enable,
+  Warn,
+  Disable
+}

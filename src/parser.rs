@@ -4,7 +4,7 @@
 //! GLSL source (a shader, basically).
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
-use nom::{Err as NomErr, ErrorKind, IResult, Needed, digit, sp};
+use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp, space};
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -1547,6 +1547,36 @@ named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
 /// Parse a translation unit (entry point).
 named!(pub translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
 
+/// Parse a #version number.
+named!(pub pp_version_number<&[u8], u16>,
+  map!(digit, |i| i.parse_to().unwrap())
+);
+
+/// Parse a #version profile.
+named!(pub pp_version_profile<&[u8], syntax::PreprocessorVersionProfile>,
+  alt!(
+    value!(syntax::PreprocessorVersionProfile::Core, atag!("core")) |
+    value!(syntax::PreprocessorVersionProfile::Compatibility, atag!("compatibility")) |
+    value!(syntax::PreprocessorVersionProfile::ES, atag!("es"))
+  )
+);
+
+/// Parse a #version.
+named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
+  dbg_dmp!(do_parse!(
+    ws!(char!('#')) >>
+    ws!(atag!("version")) >>
+    version: pp_version_number >>
+    profile: opt!(delimited!(space, pp_version_profile, opt!(space))) >>
+    char!('\n') >>
+
+    (syntax::PreprocessorVersion {
+      version: version as u16,
+      profile
+    })
+  ))
+);
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -2942,5 +2972,33 @@ mod tests {
     let expected = vec![block];
 
     assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_pp_version_number() {
+    assert_eq!(pp_version_number(&b"450 "[..]), IResult::Done(&b" "[..], 450));
+  }
+
+  #[test]
+  fn parse_pp_version_profile() {
+    assert_eq!(pp_version_profile(&b"core "[..]), IResult::Done(&b" "[..], syntax::PreprocessorVersionProfile::Core));
+    assert_eq!(pp_version_profile(&b"compatibility "[..]), IResult::Done(&b" "[..], syntax::PreprocessorVersionProfile::Compatibility));
+    assert_eq!(pp_version_profile(&b"es "[..]), IResult::Done(&b" "[..], syntax::PreprocessorVersionProfile::ES));
+  }
+
+  #[test]
+  fn parse_pp_version() {
+    assert_eq!(pp_version(&b"#version 450\n"[..]),
+               IResult::Done(&b""[..],
+                             syntax::PreprocessorVersion {
+                               version: 450,
+                               profile: None,
+                             }));
+    assert_eq!(pp_version(&b"#version 450 core\n"[..]),
+               IResult::Done(&b""[..],
+                             syntax::PreprocessorVersion {
+                               version: 450,
+                               profile: Some(syntax::PreprocessorVersionProfile::Core)
+                             }));
   }
 }
