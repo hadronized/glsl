@@ -571,7 +571,7 @@ named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
     ws!(do_parse!(
       i: identifier >>
       char!('=') >>
-      e: expr >>
+      e: cond_expr >>
       (syntax::LayoutQualifierSpec::Identifier(i, Some(Box::new(e))))
     )) |
     map!(identifier, |i| syntax::LayoutQualifierSpec::Identifier(i, None))
@@ -2856,6 +2856,37 @@ mod tests {
                                 Some(("main_tiles".to_owned(), None))
                                 ));
     let expected = vec![buffer_block, main_fn];
+
+    assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
+  }
+
+  #[test]
+  fn parse_layout_buffer_block_0() {
+    let src = include_bytes!("../data/tests/layout_buffer_block_0.glsl");
+    let layout = syntax::LayoutQualifier {
+      ids: vec![
+        syntax::LayoutQualifierSpec::Identifier("set".to_owned(), Some(Box::new(syntax::Expr::IntConst(0)))),
+        syntax::LayoutQualifierSpec::Identifier("binding".to_owned(), Some(Box::new(syntax::Expr::IntConst(0)))),
+      ]
+    };
+    let type_qual = syntax::TypeQualifier {
+      qualifiers: vec![
+        syntax::TypeQualifierSpec::Layout(layout),
+        syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)
+      ]
+    };
+    let block = syntax::ExternalDeclaration::Declaration(
+      syntax::Declaration::Block(type_qual,
+                                 "Foo".to_owned(),
+                                 vec![
+                                  syntax::StructFieldSpecifier {
+                                    qualifier: None,
+                                    ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                                    identifiers: vec![("a".to_owned(), None)]
+                                  }
+                                 ],
+                                 Some(("foo".to_owned(), None))));
+    let expected = vec![block];
 
     assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
   }
