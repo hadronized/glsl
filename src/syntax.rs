@@ -320,9 +320,8 @@ pub enum Initializer {
 /// Field selection.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FieldSelection {
-  pub field: Identifier,
+  pub field: Box<Expr>,
   pub array_specifier: Option<ArraySpecifier>,
-  pub next: Option<Box<FieldSelection>>
 }
 
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
