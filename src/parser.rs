@@ -1557,10 +1557,10 @@ named!(pub translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_dec
 
 /// Parse a preprocessor command.
 named!(pub preprocessor<&[u8], syntax::Preprocessor>,
-  alt!(
+  ws!(alt!(
     map!(pp_version, syntax::Preprocessor::Version) |
     map!(pp_extension, syntax::Preprocessor::Extension)
-  )
+  ))
 );
 
 /// Parse a #version number.
@@ -3066,6 +3066,22 @@ mod tests {
                                version: 450,
                                profile: Some(syntax::PreprocessorVersionProfile::Core)
                              }));
+  }
+
+  #[test]
+  fn parse_pp_version_newline() {
+    assert_eq!(preprocessor(&b"\n\t \n#version 450\n"[..]),
+               IResult::Done(&b""[..],
+                             syntax::Preprocessor::Version(syntax::PreprocessorVersion {
+                               version: 450,
+                               profile: None,
+                             })));
+    assert_eq!(preprocessor(&b"\n\t \n#version 450 core\n"[..]),
+               IResult::Done(&b""[..],
+                             syntax::Preprocessor::Version(syntax::PreprocessorVersion {
+                               version: 450,
+                               profile: Some(syntax::PreprocessorVersionProfile::Core)
+                             })));
   }
   
   #[test]
