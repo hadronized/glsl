@@ -1,4 +1,10 @@
-## 0.3.0
+## 0.3.1
+
+> Tuesday, August, 1st 2017
+
+- Fixed the `preprocessor` parser so that it eats surrounding blanks.
+
+# 0.3.0
 
 > Monday, July, 31st 2017
 
