@@ -836,7 +836,14 @@ named!(pub block_declaration<&[u8], syntax::Declaration>,
          ))
        ) >>
 
-    (syntax::Declaration::Block(qual, name, fields, a))
+    (syntax::Declaration::Block(
+      syntax::Block{ 
+                      type_qualifier: qual,
+                      name, 
+                      fields_specifier: fields,
+                      identifier: a
+                  }
+    ))
   ))
 );
 
@@ -2626,10 +2633,12 @@ mod tests {
       ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
-    let expected = syntax::Declaration::Block(qual,
-                                              "UniformBlockTest".to_owned(),
-                                              vec![f0, f1, f2],
-                                              None);
+    let expected = syntax::Declaration::Block(syntax::Block{ 
+                                                              type_qualifier: qual,
+                                                              name: "UniformBlockTest".to_owned(),
+                                                              fields_specifier: vec![f0, f1, f2],
+                                                              identifier: None
+                                                           });
 
     assert_eq!(declaration(&b"uniform UniformBlockTest { float a; vec3 b; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"\n\tuniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
@@ -2654,10 +2663,12 @@ mod tests {
       ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
-    let expected = syntax::Declaration::Block(qual,
-                                              "UniformBlockTest".to_owned(),
-                                              vec![f0, f1, f2],
-                                              None);
+    let expected = syntax::Declaration::Block(syntax::Block{ 
+                                                              type_qualifier: qual,
+                                                              name: "UniformBlockTest".to_owned(),
+                                                              fields_specifier: vec![f0, f1, f2],
+                                                              identifier: None
+                                                           });
 
     assert_eq!(declaration(&b"buffer UniformBlockTest { float a; vec3 b[]; foo c, d; };"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
@@ -2976,16 +2987,18 @@ mod tests {
       }
     });
     let buffer_block = syntax::ExternalDeclaration::Declaration(
-      syntax::Declaration::Block(syntax::TypeQualifier { qualifiers: vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)] },
-                                "Foo".to_owned(),
-                                vec![
-                                  syntax::StructFieldSpecifier {
-                                    qualifier: None,
-                                    ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
-                                    identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
-                                  }
-                                ],
-                                Some(("main_tiles".to_owned(), None))
+      syntax::Declaration::Block(syntax::Block{
+                                                 type_qualifier: syntax::TypeQualifier { qualifiers: vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)] },
+                                                 name: "Foo".to_owned(),
+                                                 fields_specifier: vec![
+                                                   syntax::StructFieldSpecifier {
+                                                     qualifier: None,
+                                                     ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                                                     identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
+                                                   }
+                                                 ],
+                                                identifier: Some(("main_tiles".to_owned(), None))
+                                              }
                                 ));
     let expected = vec![buffer_block, main_fn];
 
@@ -3008,16 +3021,20 @@ mod tests {
       ]
     };
     let block = syntax::ExternalDeclaration::Declaration(
-      syntax::Declaration::Block(type_qual,
-                                 "Foo".to_owned(),
-                                 vec![
-                                  syntax::StructFieldSpecifier {
-                                    qualifier: None,
-                                    ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
-                                    identifiers: vec![("a".to_owned(), None)]
-                                  }
-                                 ],
-                                 Some(("foo".to_owned(), None))));
+      syntax::Declaration::Block(syntax::Block{ 
+                                                 type_qualifier: type_qual,
+                                                 name: "Foo".to_owned(),
+                                                 fields_specifier: vec![
+                                                   syntax::StructFieldSpecifier {
+                                                     qualifier: None,
+                                                     ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                                                     identifiers: vec![("a".to_owned(), None)]
+                                                   }
+                                                 ],
+                                                 identifier: Some(("foo".to_owned(), None))
+                                              }
+      ));
+                                              
     let expected = vec![block];
 
     assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));

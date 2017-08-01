@@ -251,8 +251,16 @@ pub enum Declaration {
   FunctionPrototype(FunctionPrototype),
   InitDeclaratorList(InitDeclaratorList),
   Precision(PrecisionQualifier, TypeSpecifier),
-  Block(TypeQualifier, Identifier, Vec<StructFieldSpecifier>, Option<(Identifier, Option<ArraySpecifier>)>),
+  Block(Block),
   Global(TypeQualifier, Vec<Identifier>)
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Block {
+  pub type_qualifier: TypeQualifier,
+  pub name: Identifier,
+  pub fields_specifier: Vec<StructFieldSpecifier>, 
+  pub identifier: Option<(Identifier, Option<ArraySpecifier>)>
 }
 
 /// Function identifier. Constructors are recognized via type specifiers and methods (.length),
