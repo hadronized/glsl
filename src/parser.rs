@@ -721,36 +721,29 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
 // FIXME: optimize primary_expr calls here
 /// Parse a postfix expression.
 named!(pub postfix_expr<&[u8], syntax::Expr>,
-  alt!(
-    function_call |
-
-    // bracket
-    do_parse!(
-      pfe: primary_expr >>
-      a: array_specifier >>
-      (syntax::Expr::Bracket(Box::new(pfe.clone()), a))
-    ) |
-
-    // dot
-    dot_field_selection |
-
-    // inc
-    do_parse!(
-      pfe: primary_expr >>
-      tag!("++") >>
-      (syntax::Expr::PostInc(Box::new(pfe.clone())))
-    ) |
-
-    // dec
-    do_parse!(
-      pfe: primary_expr >>
-      tag!("--") >>
-      (syntax::Expr::PostDec(Box::new(pfe)))
-    ) |
-
-    primary_expr
+  do_parse!(
+    e: alt!(function_call | primary_expr) >>
+    pfe: call!(postfix_part, e) >>
+    (pfe)
   )
 );
+
+// Parse the postfix part of a primary expression. This function will just parse the until it cannot
+// find any more postfix construct.
+fn postfix_part(i: &[u8], e: syntax::Expr) -> IResult<&[u8], syntax::Expr> {
+  let r = alt!(i,
+    map!(array_specifier, |a| syntax::Expr::Bracket(Box::new(e.clone()), a)) |
+    map!(dot_field_selection, |i| syntax::Expr::Dot(Box::new(e.clone()), i)) |
+    value!(syntax::Expr::PostInc(Box::new(e.clone())), tag!("++")) |
+    value!(syntax::Expr::PostDec(Box::new(e.clone())), tag!("--"))
+  );
+
+  match r {
+    IResult::Done(i1, e1) => postfix_part(i1, e1),
+    IResult::Error(_) => IResult::Done(i, e),
+    _ => r
+  }
+}
 
 /// Parse a unary expression.
 named!(pub unary_expr<&[u8], syntax::Expr>,
@@ -768,20 +761,8 @@ named!(pub unary_expr<&[u8], syntax::Expr>,
 /// Parse an expression between parens.
 named!(pub parens_expr<&[u8], syntax::Expr>, ws!(delimited!(char!('('), ws!(expr), char!(')'))));
 
-/// Parse a dot field selection expression.
-named!(pub dot_field_selection<&[u8], syntax::Expr>,
-  do_parse!(
-    e: primary_expr >>
-    char!('.') >>
-    field: postfix_expr >>
-    a: opt!(array_specifier) >>
-
-    (syntax::Expr::Dot(Box::new(e), syntax::FieldSelection {
-      field: Box::new(field),
-      array_specifier: a,
-    }))
-  )
-);
+/// Parse a dot field selection identifier.
+named!(pub dot_field_selection<&[u8], syntax::Identifier>, preceded!(char!('.'), identifier));
 
 /// Parse a declaration.
 named!(pub declaration<&[u8], syntax::Declaration>,
@@ -835,7 +816,7 @@ named!(pub block_declaration<&[u8], syntax::Declaration>,
     (syntax::Declaration::Block(
       syntax::Block {
         qualifier: qual,
-        name, 
+        name,
         fields,
         identifier: a
       }
@@ -1052,7 +1033,7 @@ named!(function_call_header<&[u8], syntax::FunIdentifier>,
 /// Parse a function identifier.
 named!(pub function_identifier<&[u8], syntax::FunIdentifier>,
   alt!(
-    map!(type_specifier, syntax::FunIdentifier::TypeSpecifier) //|
+    map!(identifier, syntax::FunIdentifier::Identifier)
     //map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e))) // FIXME
   )
 );
@@ -2235,29 +2216,29 @@ mod tests {
   
   #[test]
   fn parse_postfix_function_call_no_args() {
-    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::Vec3);
+    let fun = syntax::FunIdentifier::Identifier("vec3".to_owned());
     let args = Vec::new();
     let expected = syntax::Expr::FunCall(fun, args);
 
-    assert_eq!(postfix_expr(&b"vec3()"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" vec3   (  ) "[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" vec3   (\nvoid\n) "[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(postfix_expr(&b"vec3();"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" vec3   (  ) ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" vec3   (\nvoid\n) ;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
   fn parse_postfix_function_call_one_arg() {
-    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
+    let fun = syntax::FunIdentifier::Identifier("foo".to_owned());
     let args = vec![syntax::Expr::IntConst(0)];
     let expected = syntax::Expr::FunCall(fun, args);
 
-    assert_eq!(postfix_expr(&b"foo(0)"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" foo   ( 0 ) "[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" foo   (\n0\t\n) "[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(postfix_expr(&b"foo(0);"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   ( 0 ) ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   (\n0\t\n) ;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
   fn parse_postfix_function_call_multi_arg() {
-    let fun = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
+    let fun = syntax::FunIdentifier::Identifier("foo".to_owned());
     let args = vec![
       syntax::Expr::IntConst(0),
       syntax::Expr::BoolConst(false),
@@ -2265,8 +2246,8 @@ mod tests {
    ];
     let expected = syntax::Expr::FunCall(fun, args);
 
-    assert_eq!(postfix_expr(&b"foo(0, false, bar)"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" foo   ( 0\t, false    ,\t\tbar) "[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(postfix_expr(&b"foo(0, false, bar);"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo   ( 0\t, false    ,\t\tbar) ;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
@@ -2275,18 +2256,14 @@ mod tests {
     let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
   
-    assert_eq!(postfix_expr(&b"foo[7354]"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(postfix_expr(&b" foo[7354]"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(postfix_expr(&b"foo[7354];"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(postfix_expr(&b" foo[7354];"[..]), IResult::Done(&b";"[..], expected));
   }
  
   #[test]
   fn parse_postfix_expr_dot() {
     let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
-    let bar = syntax::FieldSelection {
-      field: Box::new(syntax::Expr::Variable("bar".to_owned())),
-      array_specifier: None
-    };
-    let expected = syntax::Expr::Dot(foo, bar);
+    let expected = syntax::Expr::Dot(foo, "bar".to_owned());
 
     assert_eq!(postfix_expr(&b"foo.bar;"[..]), IResult::Done(&b";"[..], expected.clone()));
     assert_eq!(postfix_expr(&b"(foo).bar;"[..]), IResult::Done(&b";"[..], expected));
@@ -2295,19 +2272,11 @@ mod tests {
   #[test]
   fn parse_postfix_expr_dot_several() {
     let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
-    let zoo = syntax::FieldSelection {
-      field: Box::new(syntax::Expr::Variable("zoo".to_owned())),
-      array_specifier: None
-    };
-    let bar = syntax::FieldSelection {
-      field: Box::new(syntax::Expr::Dot(Box::new(syntax::Expr::Variable("bar".to_owned())), zoo)),
-      array_specifier: None
-    };
-    let expected = syntax::Expr::Dot(foo, bar);
+    let expected = syntax::Expr::Dot(Box::new(syntax::Expr::Dot(foo, "bar".to_owned())), "zoo".to_owned());
 
     assert_eq!(postfix_expr(&b"foo.bar.zoo;"[..]), IResult::Done(&b";"[..], expected.clone()));
     assert_eq!(postfix_expr(&b"(foo).bar.zoo;"[..]), IResult::Done(&b";"[..], expected.clone()));
-    assert_eq!(postfix_expr(&b"foo.(bar.zoo);"[..]), IResult::Done(&b";"[..], expected));
+    assert_eq!(postfix_expr(&b"(foo.bar).zoo;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
@@ -2315,7 +2284,7 @@ mod tests {
     let foo = syntax::Expr::Variable("foo".to_owned());
     let expected = syntax::Expr::PostInc(Box::new(foo));
 
-    assert_eq!(postfix_expr(&b"foo++"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b"foo++;"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
 
   #[test]
@@ -2323,7 +2292,7 @@ mod tests {
     let foo = syntax::Expr::Variable("foo".to_owned());
     let expected = syntax::Expr::PostDec(Box::new(foo));
 
-    assert_eq!(postfix_expr(&b"foo--"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(postfix_expr(&b"foo--;"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
 
   #[test]
@@ -2429,13 +2398,13 @@ mod tests {
 
   #[test]
   fn parse_function_identifier_typename() {
-    let expected = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::TypeName("foo".to_owned()));
+    let expected = syntax::FunIdentifier::Identifier("foo".to_owned());
     assert_eq!(function_identifier(&b"foo"[..]), IResult::Done(&b""[..], expected));
   }
 
   #[test]
   fn parse_function_identifier_cast() {
-    let expected = syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::Vec3);
+    let expected = syntax::FunIdentifier::Identifier("vec3".to_owned());
     assert_eq!(function_identifier(&b"vec3"[..]), IResult::Done(&b""[..], expected));
   }
 
@@ -3126,33 +3095,26 @@ mod tests {
         Box::new(syntax::Expr::Bracket(
           Box::new(syntax::Expr::Variable("a".to_owned())),
           syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(0))))),
-        syntax::FieldSelection {
-          field: Box::new(syntax::Expr::Variable("xyz".to_owned())),
-          array_specifier: None
-        }
+        "xyz".to_owned()
       );
 
-    assert_eq!(dot_field_selection(&src[..]), IResult::Done(&b";"[..], expected));
+    assert_eq!(expr(&src[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
   fn parse_dot_field_expr_statement() {
     let src = b"vec3 v = smoothstep(vec3(border_width), vec3(0.0), v_barycenter).zyx;";
-    let fun = syntax::FunIdentifier::Expr(Box::new(syntax::Expr::Variable("smoothstep".to_owned())));
+    let fun = syntax::FunIdentifier::Identifier("smoothstep".to_owned());
     let args =
       vec![
-        syntax::Expr::FunCall(syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::Vec3), vec![syntax::Expr::Variable("border_width".to_owned())]),
-        syntax::Expr::FunCall(syntax::FunIdentifier::TypeSpecifier(syntax::TypeSpecifier::Vec3), vec![syntax::Expr::DoubleConst(0.)]),
+        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".to_owned()), vec![syntax::Expr::Variable("border_width".to_owned())]),
+        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".to_owned()), vec![syntax::Expr::DoubleConst(0.)]),
         syntax::Expr::Variable("v_barycenter".to_owned())
       ];
-    let fs = syntax::FieldSelection {
-      field: Box::new(syntax::Expr::Variable("zyx".to_owned())),
-      array_specifier: None
-    };
     let ini =
       syntax::Initializer::Simple(
         Box::new(
-          syntax::Expr::Dot(Box::new(syntax::Expr::FunCall(fun, args)), fs)
+          syntax::Expr::Dot(Box::new(syntax::Expr::FunCall(fun, args)), "zyx".to_owned())
         )
       );
     let sd = syntax::SingleDeclaration {
