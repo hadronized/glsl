@@ -3088,6 +3088,23 @@ mod tests {
   }
 
   #[test]
+  fn parse_dot_field_expr_array() {
+    let src = b"a[0].xyz;";
+    let expected =
+      syntax::Expr::Dot(
+        Box::new(syntax::Expr::Bracket(
+          Box::new(syntax::Expr::Variable("a".to_owned())),
+          syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(0))))),
+        syntax::FieldSelection {
+          field: Box::new(syntax::Expr::Variable("xyz".to_owned())),
+          array_specifier: None
+        }
+      );
+
+    assert_eq!(dot_field_selection(&src[..]), IResult::Done(&b";"[..], expected));
+  }
+
+  #[test]
   fn parse_dot_field_expr_statement() {
     let src = b"vec3 v = smoothstep(vec3(border_width), vec3(0.0), v_barycenter).zyx;";
     let fun = syntax::FunIdentifier::Expr(Box::new(syntax::Expr::Variable("smoothstep".to_owned())));
