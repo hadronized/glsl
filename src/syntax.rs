@@ -255,11 +255,13 @@ pub enum Declaration {
   Global(TypeQualifier, Vec<Identifier>)
 }
 
+/// A general purpose block, containing fields and possibly a list of declared identifiers. Semantic
+/// is given with the storage qualifier.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Block {
-  pub type_qualifier: TypeQualifier,
+  pub qualifier: TypeQualifier,
   pub name: Identifier,
-  pub fields_specifier: Vec<StructFieldSpecifier>, 
+  pub fields: Vec<StructFieldSpecifier>, 
   pub identifier: Option<(Identifier, Option<ArraySpecifier>)>
 }
 
