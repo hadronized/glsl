@@ -1,3 +1,10 @@
+# 0.4.0
+
+- The `Declaration::Block` variant was refactored for a better usage.
+- Dot field selections and, in a mory general way, postfix expressions completely fixed. The
+  `syntax` module was altered to make it easier to work with dot field selection. Also related,
+  the function identifier syntax is now isomorphic to an identifier.
+
 ## 0.3.1
 
 > Tuesday, August, 1st 2017
