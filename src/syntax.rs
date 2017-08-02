@@ -265,12 +265,11 @@ pub struct Block {
   pub identifier: Option<(Identifier, Option<ArraySpecifier>)>
 }
 
-/// Function identifier. Constructors are recognized via type specifiers and methods (.length),
-/// subroutine array calls and identifiers are recognized via postfix expressions.
+/// Function identifier.
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunIdentifier {
-  TypeSpecifier(TypeSpecifier),
-  Expr(Box<Expr>)
+  Identifier(Identifier),
+  //Expr(Box<Expr>)
 }
 
 /// Function prototype.
@@ -327,13 +326,6 @@ pub enum Initializer {
   List(Vec<Initializer>)
 }
 
-/// Field selection.
-#[derive(Clone, Debug, PartialEq)]
-pub struct FieldSelection {
-  pub field: Box<Expr>,
-  pub array_specifier: Option<ArraySpecifier>,
-}
-
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
 /// assignment is an expression. This is a bit silly but think of an assignment as a statement first
 /// then an expression which evaluates to what the statement “returns”.
@@ -367,7 +359,7 @@ pub enum Expr {
   /// A functional call. It has a function identifier and a list of expressions (arguments).
   FunCall(FunIdentifier, Vec<Expr>),
   /// An expression associated with a field selection (struct).
-  Dot(Box<Expr>, FieldSelection),
+  Dot(Box<Expr>, Identifier),
   /// Post-incrementation of an expression.
   PostInc(Box<Expr>),
   /// Post-decrementation of an expression.
