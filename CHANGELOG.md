@@ -1,3 +1,7 @@
+## 0.4.1
+
+- Uni/multi-line comments are now supported.
+
 # 0.4.0
 
 - The `Declaration::Block` variant was refactored for a better usage.
