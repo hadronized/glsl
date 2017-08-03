@@ -323,7 +323,7 @@ pub struct SingleDeclarationNoType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Initializer {
   Simple(Box<Expr>),
-  List(Vec<Initializer>)
+  List(NonEmpty<Initializer>)
 }
 
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
