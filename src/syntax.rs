@@ -302,6 +302,8 @@ pub struct InitDeclaratorList {
   pub tail: Vec<SingleDeclarationNoType>
 }
 
+// FIXME: the three fields are wrong. It’s not possible to have the last two if the second one
+// is not Some(_) – see page 197 of the GLSLangSpec.4.50.pdf document.
 /// Single declaration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SingleDeclaration {
@@ -400,7 +402,7 @@ pub enum BinaryOp {
   Sub,
   Mult,
   Div,
-  Mod,
+  Mod
 }
 
 /// All possible operators for assigning expressions.
