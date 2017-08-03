@@ -161,7 +161,7 @@ pub struct StructSpecifier {
 pub struct StructFieldSpecifier {
   pub qualifier: Option<TypeQualifier>,
   pub ty: TypeSpecifier,
-  pub identifiers: Vec<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
+  pub identifiers: NonEmpty<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
 }
 
 /// Type qualifier.
