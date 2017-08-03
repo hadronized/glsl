@@ -1,8 +1,21 @@
+## 0.4.2
+
+> Friday, August, 4th 2017
+
+- A GLSL writer is now available.
+- Some parsers yield non-empty list of syntax trees. Those had the incorrect `Vec` type. They were
+  replaced by `NonEmpty`, which is an alias to `Vec`, but carry the semantic that it has at least
+  one element in it.
+
 ## 0.4.1
+
+> Thursday, August, 3rd 2017
 
 - Uni/multi-line comments are now supported.
 
 # 0.4.0
+
+> Wednesday, August, 2nd 2017
 
 - The `Declaration::Block` variant was refactored for a better usage.
 - Dot field selections and, in a mory general way, postfix expressions completely fixed. The
