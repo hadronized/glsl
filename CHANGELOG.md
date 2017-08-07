@@ -1,3 +1,10 @@
+# 0.5
+
+> Monday, August, 7th 2017
+
+- The `parse` and `parse_str` functions now take as second argument the parser to run. This enables
+  using those functions and all the neat logic the wrap in dependent projects.
+
 ## 0.4.2
 
 > Friday, August, 4th 2017

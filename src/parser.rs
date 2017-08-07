@@ -31,8 +31,9 @@ pub enum ParseResult<T> {
 /// Run a parser.
 ///
 /// This parser runs over bytes. If you need to parse a `str` instead, use `parse_str`.
-pub fn parse(source: &[u8]) -> ParseResult<syntax::TranslationUnit> {
-  match translation_unit(source) {
+pub fn parse<P, T>(source: &[u8], parser: P) -> ParseResult<T>
+    where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
+  match parser(source) {
     IResult::Done(i, x) => {
       if i.is_empty() {
         ParseResult::Ok(x)
@@ -67,8 +68,10 @@ pub fn parse(source: &[u8]) -> ParseResult<syntax::TranslationUnit> {
 }
 
 /// Run a parser over a `str`.
-pub fn parse_str<'a, I>(source: I) -> ParseResult<syntax::TranslationUnit> where I: Into<&'a str> {
-  parse(source.into().as_bytes())
+pub fn parse_str<'a, I, P, T>(source: I, parser: P) -> ParseResult<T>
+    where I: Into<&'a str>,
+          P: FnOnce(&[u8]) -> IResult<&[u8], T> {
+  parse(source.into().as_bytes(), parser)
 }
 
 /// Parse a single comment.
