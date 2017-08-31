@@ -27,123 +27,123 @@ pub fn show_type_name<F>(f: &mut F, t: &syntax::TypeName) where F: Write {
   let _ = f.write_str(t); 
 }
 
-pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier) where F: Write {
+pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonArray) where F: Write {
   match *t {
-    syntax::TypeSpecifier::Void => { let _ = f.write_str("void"); }
-    syntax::TypeSpecifier::Bool => { let _ = f.write_str("bool"); }
-    syntax::TypeSpecifier::Int => { let _ = f.write_str("int"); }
-    syntax::TypeSpecifier::UInt => { let _ = f.write_str("uint"); }
-    syntax::TypeSpecifier::Float => { let _ = f.write_str("float"); }
-    syntax::TypeSpecifier::Double => { let _ = f.write_str("double"); }
-    syntax::TypeSpecifier::Vec2 => { let _ = f.write_str("vec2"); }
-    syntax::TypeSpecifier::Vec3 => { let _ = f.write_str("vec3"); }
-    syntax::TypeSpecifier::Vec4 => { let _ = f.write_str("vec4"); }
-    syntax::TypeSpecifier::DVec2 => { let _ = f.write_str("dvec2"); }
-    syntax::TypeSpecifier::DVec3 => { let _ = f.write_str("dvec3"); }
-    syntax::TypeSpecifier::DVec4 => { let _ = f.write_str("dvec4"); }
-    syntax::TypeSpecifier::BVec2 => { let _ = f.write_str("bvec2"); }
-    syntax::TypeSpecifier::BVec3 => { let _ = f.write_str("bvec3"); }
-    syntax::TypeSpecifier::BVec4 => { let _ = f.write_str("bvec4"); }
-    syntax::TypeSpecifier::IVec2 => { let _ = f.write_str("idvec2"); }
-    syntax::TypeSpecifier::IVec3 => { let _ = f.write_str("idvec3"); }
-    syntax::TypeSpecifier::IVec4 => { let _ = f.write_str("idvec4"); }
-    syntax::TypeSpecifier::UVec2 => { let _ = f.write_str("uvec2"); }
-    syntax::TypeSpecifier::UVec3 => { let _ = f.write_str("uvec3"); }
-    syntax::TypeSpecifier::UVec4 => { let _ = f.write_str("uvec4"); }
-    syntax::TypeSpecifier::Mat2 => { let _ = f.write_str("mat2"); }
-    syntax::TypeSpecifier::Mat3 => { let _ = f.write_str("mat3"); }
-    syntax::TypeSpecifier::Mat4 => { let _ = f.write_str("mat4"); }
-    syntax::TypeSpecifier::Mat23 => { let _ = f.write_str("mat23"); }
-    syntax::TypeSpecifier::Mat24 => { let _ = f.write_str("mat24"); }
-    syntax::TypeSpecifier::Mat32 => { let _ = f.write_str("mat32"); }
-    syntax::TypeSpecifier::Mat34 => { let _ = f.write_str("mat34"); }
-    syntax::TypeSpecifier::Mat42 => { let _ = f.write_str("mat42"); }
-    syntax::TypeSpecifier::Mat43 => { let _ = f.write_str("mat43"); }
-    syntax::TypeSpecifier::DMat2 => { let _ = f.write_str("dmat2"); }
-    syntax::TypeSpecifier::DMat3 => { let _ = f.write_str("dmat3"); }
-    syntax::TypeSpecifier::DMat4 => { let _ = f.write_str("dmat4"); }
-    syntax::TypeSpecifier::DMat23 => { let _ = f.write_str("dmat23"); }
-    syntax::TypeSpecifier::DMat24 => { let _ = f.write_str("dmat24"); }
-    syntax::TypeSpecifier::DMat32 => { let _ = f.write_str("dmat32"); }
-    syntax::TypeSpecifier::DMat34 => { let _ = f.write_str("dmat34"); }
-    syntax::TypeSpecifier::DMat42 => { let _ = f.write_str("dmat42"); }
-    syntax::TypeSpecifier::DMat43 => { let _ = f.write_str("dmat43"); }
-    syntax::TypeSpecifier::Sampler1D => { let _ = f.write_str("sampler1D"); }
-    syntax::TypeSpecifier::Image1D => { let _ = f.write_str("image1D"); }
-    syntax::TypeSpecifier::Sampler2D => { let _ = f.write_str("sampler2D"); }
-    syntax::TypeSpecifier::Image2D => { let _ = f.write_str("image2D"); }
-    syntax::TypeSpecifier::Sampler3D => { let _ = f.write_str("sampler3D"); }
-    syntax::TypeSpecifier::Image3D => { let _ = f.write_str("image3D"); }
-    syntax::TypeSpecifier::SamplerCube => { let _ = f.write_str("samplerCube"); }
-    syntax::TypeSpecifier::ImageCube => { let _ = f.write_str("imageCube"); }
-    syntax::TypeSpecifier::Sampler2DRect => { let _ = f.write_str("sampler2DRect"); }
-    syntax::TypeSpecifier::Image2DRect => { let _ = f.write_str("image2DRect"); }
-    syntax::TypeSpecifier::Sampler1DArray => { let _ = f.write_str("sampler1DArray"); }
-    syntax::TypeSpecifier::Image1DArray => { let _ = f.write_str("image1DArray"); }
-    syntax::TypeSpecifier::Sampler2DArray => { let _ = f.write_str("sampler2DArray"); }
-    syntax::TypeSpecifier::Image2DArray => { let _ = f.write_str("image2DArray"); }
-    syntax::TypeSpecifier::SamplerBuffer => { let _ = f.write_str("samplerBuffer"); }
-    syntax::TypeSpecifier::ImageBuffer => { let _ = f.write_str("imageBuffer"); }
-    syntax::TypeSpecifier::Sampler2DMS => { let _ = f.write_str("sampler2DMS"); }
-    syntax::TypeSpecifier::Image2DMS => { let _ = f.write_str("image2DMS"); }
-    syntax::TypeSpecifier::Sampler2DMSArray => { let _ = f.write_str("sampler2DMSArray"); }
-    syntax::TypeSpecifier::Image2DMSArray => { let _ = f.write_str("image2DMSArray"); }
-    syntax::TypeSpecifier::SamplerCubeArray => { let _ = f.write_str("samplerCubeArray"); }
-    syntax::TypeSpecifier::ImageCubeArray => { let _ = f.write_str("imageCubeArray"); }
-    syntax::TypeSpecifier::Sampler1DShadow => { let _ = f.write_str("sampler1DShadow"); }
-    syntax::TypeSpecifier::Sampler2DShadow => { let _ = f.write_str("sampler2DShadow"); }
-    syntax::TypeSpecifier::Sampler2DRectShadow => { let _ = f.write_str("sampler2DRectShadow"); }
-    syntax::TypeSpecifier::Sampler1DArrayShadow => { let _ = f.write_str("sampler1DArrayShadow"); }
-    syntax::TypeSpecifier::Sampler2DArrayShadow => { let _ = f.write_str("sampler2DArrayShadow"); }
-    syntax::TypeSpecifier::SamplerCubeShadow => { let _ = f.write_str("samplerCubeShadow"); }
-    syntax::TypeSpecifier::SamplerCubeArrayShadow => { let _ = f.write_str("samplerCubeArrayShadow"); }
-    syntax::TypeSpecifier::ISampler1D => { let _ = f.write_str("isampler1D"); }
-    syntax::TypeSpecifier::IImage1D => { let _ = f.write_str("iimage1D"); }
-    syntax::TypeSpecifier::ISampler2D => { let _ = f.write_str("isampler2D"); }
-    syntax::TypeSpecifier::IImage2D => { let _ = f.write_str("iimage2D"); }
-    syntax::TypeSpecifier::ISampler3D => { let _ = f.write_str("isampler3D"); }
-    syntax::TypeSpecifier::IImage3D => { let _ = f.write_str("iimage3D"); }
-    syntax::TypeSpecifier::ISamplerCube => { let _ = f.write_str("isamplerCube"); }
-    syntax::TypeSpecifier::IImageCube => { let _ = f.write_str("iimageCube"); }
-    syntax::TypeSpecifier::ISampler2DRect => { let _ = f.write_str("isampler2DRect"); }
-    syntax::TypeSpecifier::IImage2DRect => { let _ = f.write_str("iimage2DRect"); }
-    syntax::TypeSpecifier::ISampler1DArray => { let _ = f.write_str("isampler1DArray"); }
-    syntax::TypeSpecifier::IImage1DArray => { let _ = f.write_str("iimage1DArray"); }
-    syntax::TypeSpecifier::ISampler2DArray => { let _ = f.write_str("isampler2DArray"); }
-    syntax::TypeSpecifier::IImage2DArray => { let _ = f.write_str("iimage2DArray"); }
-    syntax::TypeSpecifier::ISamplerBuffer => { let _ = f.write_str("isamplerBuffer"); }
-    syntax::TypeSpecifier::IImageBuffer => { let _ = f.write_str("iimageBuffer"); }
-    syntax::TypeSpecifier::ISampler2DMS => { let _ = f.write_str("isampler2MS"); }
-    syntax::TypeSpecifier::IImage2DMS => { let _ = f.write_str("iimage2DMS"); }
-    syntax::TypeSpecifier::ISampler2DMSArray => { let _ = f.write_str("isampler2DMSArray"); }
-    syntax::TypeSpecifier::IImage2DMSArray => { let _ = f.write_str("iimage2DMSArray"); }
-    syntax::TypeSpecifier::ISamplerCubeArray => { let _ = f.write_str("isamplerCubeArray"); }
-    syntax::TypeSpecifier::IImageCubeArray => { let _ = f.write_str("iimageCubeArray"); }
-    syntax::TypeSpecifier::AtomicUInt => { let _ = f.write_str("atomic_uint"); }
-    syntax::TypeSpecifier::USampler1D => { let _ = f.write_str("usampler1D"); }
-    syntax::TypeSpecifier::UImage1D => { let _ = f.write_str("uimage1D"); }
-    syntax::TypeSpecifier::USampler2D => { let _ = f.write_str("usampler2D"); }
-    syntax::TypeSpecifier::UImage2D => { let _ = f.write_str("uimage2D"); }
-    syntax::TypeSpecifier::USampler3D => { let _ = f.write_str("usampler3D"); }
-    syntax::TypeSpecifier::UImage3D => { let _ = f.write_str("uimage3D"); }
-    syntax::TypeSpecifier::USamplerCube => { let _ = f.write_str("usamplerCube"); }
-    syntax::TypeSpecifier::UImageCube => { let _ = f.write_str("uimageCube"); }
-    syntax::TypeSpecifier::USampler2DRect => { let _ = f.write_str("usampler2DRect"); }
-    syntax::TypeSpecifier::UImage2DRect => { let _ = f.write_str("uimage2DRect"); }
-    syntax::TypeSpecifier::USampler1DArray => { let _ = f.write_str("usampler1DArray"); }
-    syntax::TypeSpecifier::UImage1DArray => { let _ = f.write_str("uimage1DArray"); }
-    syntax::TypeSpecifier::USampler2DArray => { let _ = f.write_str("usampler2DArray"); }
-    syntax::TypeSpecifier::UImage2DArray => { let _ = f.write_str("uimage2DArray"); }
-    syntax::TypeSpecifier::USamplerBuffer => { let _ = f.write_str("usamplerBuffer"); }
-    syntax::TypeSpecifier::UImageBuffer => { let _ = f.write_str("uimageBuffer"); }
-    syntax::TypeSpecifier::USampler2DMS => { let _ = f.write_str("usampler2DMS"); }
-    syntax::TypeSpecifier::UImage2DMS => { let _ = f.write_str("uimage2DMS"); }
-    syntax::TypeSpecifier::USampler2DMSArray => { let _ = f.write_str("usamplerDMSArray"); }
-    syntax::TypeSpecifier::UImage2DMSArray => { let _ = f.write_str("uimage2DMSArray"); }
-    syntax::TypeSpecifier::USamplerCubeArray => { let _ = f.write_str("usamplerCubeArray"); }
-    syntax::TypeSpecifier::UImageCubeArray => { let _ = f.write_str("uimageCubeArray"); }
-    syntax::TypeSpecifier::Struct(ref s) => show_struct(f, s),
-    syntax::TypeSpecifier::TypeName(ref tn) => show_type_name(f, tn)
+    syntax::TypeSpecifierNonArray::Void => { let _ = f.write_str("void"); }
+    syntax::TypeSpecifierNonArray::Bool => { let _ = f.write_str("bool"); }
+    syntax::TypeSpecifierNonArray::Int => { let _ = f.write_str("int"); }
+    syntax::TypeSpecifierNonArray::UInt => { let _ = f.write_str("uint"); }
+    syntax::TypeSpecifierNonArray::Float => { let _ = f.write_str("float"); }
+    syntax::TypeSpecifierNonArray::Double => { let _ = f.write_str("double"); }
+    syntax::TypeSpecifierNonArray::Vec2 => { let _ = f.write_str("vec2"); }
+    syntax::TypeSpecifierNonArray::Vec3 => { let _ = f.write_str("vec3"); }
+    syntax::TypeSpecifierNonArray::Vec4 => { let _ = f.write_str("vec4"); }
+    syntax::TypeSpecifierNonArray::DVec2 => { let _ = f.write_str("dvec2"); }
+    syntax::TypeSpecifierNonArray::DVec3 => { let _ = f.write_str("dvec3"); }
+    syntax::TypeSpecifierNonArray::DVec4 => { let _ = f.write_str("dvec4"); }
+    syntax::TypeSpecifierNonArray::BVec2 => { let _ = f.write_str("bvec2"); }
+    syntax::TypeSpecifierNonArray::BVec3 => { let _ = f.write_str("bvec3"); }
+    syntax::TypeSpecifierNonArray::BVec4 => { let _ = f.write_str("bvec4"); }
+    syntax::TypeSpecifierNonArray::IVec2 => { let _ = f.write_str("idvec2"); }
+    syntax::TypeSpecifierNonArray::IVec3 => { let _ = f.write_str("idvec3"); }
+    syntax::TypeSpecifierNonArray::IVec4 => { let _ = f.write_str("idvec4"); }
+    syntax::TypeSpecifierNonArray::UVec2 => { let _ = f.write_str("uvec2"); }
+    syntax::TypeSpecifierNonArray::UVec3 => { let _ = f.write_str("uvec3"); }
+    syntax::TypeSpecifierNonArray::UVec4 => { let _ = f.write_str("uvec4"); }
+    syntax::TypeSpecifierNonArray::Mat2 => { let _ = f.write_str("mat2"); }
+    syntax::TypeSpecifierNonArray::Mat3 => { let _ = f.write_str("mat3"); }
+    syntax::TypeSpecifierNonArray::Mat4 => { let _ = f.write_str("mat4"); }
+    syntax::TypeSpecifierNonArray::Mat23 => { let _ = f.write_str("mat23"); }
+    syntax::TypeSpecifierNonArray::Mat24 => { let _ = f.write_str("mat24"); }
+    syntax::TypeSpecifierNonArray::Mat32 => { let _ = f.write_str("mat32"); }
+    syntax::TypeSpecifierNonArray::Mat34 => { let _ = f.write_str("mat34"); }
+    syntax::TypeSpecifierNonArray::Mat42 => { let _ = f.write_str("mat42"); }
+    syntax::TypeSpecifierNonArray::Mat43 => { let _ = f.write_str("mat43"); }
+    syntax::TypeSpecifierNonArray::DMat2 => { let _ = f.write_str("dmat2"); }
+    syntax::TypeSpecifierNonArray::DMat3 => { let _ = f.write_str("dmat3"); }
+    syntax::TypeSpecifierNonArray::DMat4 => { let _ = f.write_str("dmat4"); }
+    syntax::TypeSpecifierNonArray::DMat23 => { let _ = f.write_str("dmat23"); }
+    syntax::TypeSpecifierNonArray::DMat24 => { let _ = f.write_str("dmat24"); }
+    syntax::TypeSpecifierNonArray::DMat32 => { let _ = f.write_str("dmat32"); }
+    syntax::TypeSpecifierNonArray::DMat34 => { let _ = f.write_str("dmat34"); }
+    syntax::TypeSpecifierNonArray::DMat42 => { let _ = f.write_str("dmat42"); }
+    syntax::TypeSpecifierNonArray::DMat43 => { let _ = f.write_str("dmat43"); }
+    syntax::TypeSpecifierNonArray::Sampler1D => { let _ = f.write_str("sampler1D"); }
+    syntax::TypeSpecifierNonArray::Image1D => { let _ = f.write_str("image1D"); }
+    syntax::TypeSpecifierNonArray::Sampler2D => { let _ = f.write_str("sampler2D"); }
+    syntax::TypeSpecifierNonArray::Image2D => { let _ = f.write_str("image2D"); }
+    syntax::TypeSpecifierNonArray::Sampler3D => { let _ = f.write_str("sampler3D"); }
+    syntax::TypeSpecifierNonArray::Image3D => { let _ = f.write_str("image3D"); }
+    syntax::TypeSpecifierNonArray::SamplerCube => { let _ = f.write_str("samplerCube"); }
+    syntax::TypeSpecifierNonArray::ImageCube => { let _ = f.write_str("imageCube"); }
+    syntax::TypeSpecifierNonArray::Sampler2DRect => { let _ = f.write_str("sampler2DRect"); }
+    syntax::TypeSpecifierNonArray::Image2DRect => { let _ = f.write_str("image2DRect"); }
+    syntax::TypeSpecifierNonArray::Sampler1DArray => { let _ = f.write_str("sampler1DArray"); }
+    syntax::TypeSpecifierNonArray::Image1DArray => { let _ = f.write_str("image1DArray"); }
+    syntax::TypeSpecifierNonArray::Sampler2DArray => { let _ = f.write_str("sampler2DArray"); }
+    syntax::TypeSpecifierNonArray::Image2DArray => { let _ = f.write_str("image2DArray"); }
+    syntax::TypeSpecifierNonArray::SamplerBuffer => { let _ = f.write_str("samplerBuffer"); }
+    syntax::TypeSpecifierNonArray::ImageBuffer => { let _ = f.write_str("imageBuffer"); }
+    syntax::TypeSpecifierNonArray::Sampler2DMS => { let _ = f.write_str("sampler2DMS"); }
+    syntax::TypeSpecifierNonArray::Image2DMS => { let _ = f.write_str("image2DMS"); }
+    syntax::TypeSpecifierNonArray::Sampler2DMSArray => { let _ = f.write_str("sampler2DMSArray"); }
+    syntax::TypeSpecifierNonArray::Image2DMSArray => { let _ = f.write_str("image2DMSArray"); }
+    syntax::TypeSpecifierNonArray::SamplerCubeArray => { let _ = f.write_str("samplerCubeArray"); }
+    syntax::TypeSpecifierNonArray::ImageCubeArray => { let _ = f.write_str("imageCubeArray"); }
+    syntax::TypeSpecifierNonArray::Sampler1DShadow => { let _ = f.write_str("sampler1DShadow"); }
+    syntax::TypeSpecifierNonArray::Sampler2DShadow => { let _ = f.write_str("sampler2DShadow"); }
+    syntax::TypeSpecifierNonArray::Sampler2DRectShadow => { let _ = f.write_str("sampler2DRectShadow"); }
+    syntax::TypeSpecifierNonArray::Sampler1DArrayShadow => { let _ = f.write_str("sampler1DArrayShadow"); }
+    syntax::TypeSpecifierNonArray::Sampler2DArrayShadow => { let _ = f.write_str("sampler2DArrayShadow"); }
+    syntax::TypeSpecifierNonArray::SamplerCubeShadow => { let _ = f.write_str("samplerCubeShadow"); }
+    syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow => { let _ = f.write_str("samplerCubeArrayShadow"); }
+    syntax::TypeSpecifierNonArray::ISampler1D => { let _ = f.write_str("isampler1D"); }
+    syntax::TypeSpecifierNonArray::IImage1D => { let _ = f.write_str("iimage1D"); }
+    syntax::TypeSpecifierNonArray::ISampler2D => { let _ = f.write_str("isampler2D"); }
+    syntax::TypeSpecifierNonArray::IImage2D => { let _ = f.write_str("iimage2D"); }
+    syntax::TypeSpecifierNonArray::ISampler3D => { let _ = f.write_str("isampler3D"); }
+    syntax::TypeSpecifierNonArray::IImage3D => { let _ = f.write_str("iimage3D"); }
+    syntax::TypeSpecifierNonArray::ISamplerCube => { let _ = f.write_str("isamplerCube"); }
+    syntax::TypeSpecifierNonArray::IImageCube => { let _ = f.write_str("iimageCube"); }
+    syntax::TypeSpecifierNonArray::ISampler2DRect => { let _ = f.write_str("isampler2DRect"); }
+    syntax::TypeSpecifierNonArray::IImage2DRect => { let _ = f.write_str("iimage2DRect"); }
+    syntax::TypeSpecifierNonArray::ISampler1DArray => { let _ = f.write_str("isampler1DArray"); }
+    syntax::TypeSpecifierNonArray::IImage1DArray => { let _ = f.write_str("iimage1DArray"); }
+    syntax::TypeSpecifierNonArray::ISampler2DArray => { let _ = f.write_str("isampler2DArray"); }
+    syntax::TypeSpecifierNonArray::IImage2DArray => { let _ = f.write_str("iimage2DArray"); }
+    syntax::TypeSpecifierNonArray::ISamplerBuffer => { let _ = f.write_str("isamplerBuffer"); }
+    syntax::TypeSpecifierNonArray::IImageBuffer => { let _ = f.write_str("iimageBuffer"); }
+    syntax::TypeSpecifierNonArray::ISampler2DMS => { let _ = f.write_str("isampler2MS"); }
+    syntax::TypeSpecifierNonArray::IImage2DMS => { let _ = f.write_str("iimage2DMS"); }
+    syntax::TypeSpecifierNonArray::ISampler2DMSArray => { let _ = f.write_str("isampler2DMSArray"); }
+    syntax::TypeSpecifierNonArray::IImage2DMSArray => { let _ = f.write_str("iimage2DMSArray"); }
+    syntax::TypeSpecifierNonArray::ISamplerCubeArray => { let _ = f.write_str("isamplerCubeArray"); }
+    syntax::TypeSpecifierNonArray::IImageCubeArray => { let _ = f.write_str("iimageCubeArray"); }
+    syntax::TypeSpecifierNonArray::AtomicUInt => { let _ = f.write_str("atomic_uint"); }
+    syntax::TypeSpecifierNonArray::USampler1D => { let _ = f.write_str("usampler1D"); }
+    syntax::TypeSpecifierNonArray::UImage1D => { let _ = f.write_str("uimage1D"); }
+    syntax::TypeSpecifierNonArray::USampler2D => { let _ = f.write_str("usampler2D"); }
+    syntax::TypeSpecifierNonArray::UImage2D => { let _ = f.write_str("uimage2D"); }
+    syntax::TypeSpecifierNonArray::USampler3D => { let _ = f.write_str("usampler3D"); }
+    syntax::TypeSpecifierNonArray::UImage3D => { let _ = f.write_str("uimage3D"); }
+    syntax::TypeSpecifierNonArray::USamplerCube => { let _ = f.write_str("usamplerCube"); }
+    syntax::TypeSpecifierNonArray::UImageCube => { let _ = f.write_str("uimageCube"); }
+    syntax::TypeSpecifierNonArray::USampler2DRect => { let _ = f.write_str("usampler2DRect"); }
+    syntax::TypeSpecifierNonArray::UImage2DRect => { let _ = f.write_str("uimage2DRect"); }
+    syntax::TypeSpecifierNonArray::USampler1DArray => { let _ = f.write_str("usampler1DArray"); }
+    syntax::TypeSpecifierNonArray::UImage1DArray => { let _ = f.write_str("uimage1DArray"); }
+    syntax::TypeSpecifierNonArray::USampler2DArray => { let _ = f.write_str("usampler2DArray"); }
+    syntax::TypeSpecifierNonArray::UImage2DArray => { let _ = f.write_str("uimage2DArray"); }
+    syntax::TypeSpecifierNonArray::USamplerBuffer => { let _ = f.write_str("usamplerBuffer"); }
+    syntax::TypeSpecifierNonArray::UImageBuffer => { let _ = f.write_str("uimageBuffer"); }
+    syntax::TypeSpecifierNonArray::USampler2DMS => { let _ = f.write_str("usampler2DMS"); }
+    syntax::TypeSpecifierNonArray::UImage2DMS => { let _ = f.write_str("uimage2DMS"); }
+    syntax::TypeSpecifierNonArray::USampler2DMSArray => { let _ = f.write_str("usamplerDMSArray"); }
+    syntax::TypeSpecifierNonArray::UImage2DMSArray => { let _ = f.write_str("uimage2DMSArray"); }
+    syntax::TypeSpecifierNonArray::USamplerCubeArray => { let _ = f.write_str("usamplerCubeArray"); }
+    syntax::TypeSpecifierNonArray::UImageCubeArray => { let _ = f.write_str("uimageCubeArray"); }
+    syntax::TypeSpecifierNonArray::Struct(ref s) => show_struct(f, s),
+    syntax::TypeSpecifierNonArray::TypeName(ref tn) => show_type_name(f, tn)
   }
 }
 
@@ -153,7 +153,7 @@ pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) w
     let _ = f.write_str(" ");
   }
 
-  show_type_specifier(f, &t.ty);
+  show_type_specifier_non_array(f, &t.ty);
 }
 
 pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
@@ -178,7 +178,7 @@ pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) whe
     let _ = f.write_str(" ");
   }
 
-  show_type_specifier(f, &field.ty);
+  show_type_specifier_non_array(f, &field.ty);
   let _ = f.write_str(" ");
 
   // there’s at least one identifier
@@ -470,7 +470,7 @@ pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration) where F: Write {
     }
     syntax::Declaration::Precision(ref qual, ref ty) => {
       show_precision_qualifier(f, &qual);
-      show_type_specifier(f, &ty);
+      show_type_specifier_non_array(f, &ty);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::Block(ref block) => {
@@ -531,13 +531,13 @@ pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionPar
         let _ = f.write_str(" ");
       }
 
-      show_type_specifier(f, ty);
+      show_type_specifier_non_array(f, ty);
     }
   }
 }
 
 pub fn show_function_parameter_declarator<F>(f: &mut F, p: &syntax::FunctionParameterDeclarator) where F: Write {
-  show_type_specifier(f, &p.ty);
+  show_type_specifier_non_array(f, &p.ty);
   let _ = f.write_str(" ");
   show_arrayed_identifier(f, (&p.name, &p.array_spec));
 }

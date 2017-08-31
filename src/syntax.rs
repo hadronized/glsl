@@ -25,9 +25,9 @@ pub type Identifier = String;
 /// Any type name.
 pub type TypeName = String;
 
-/// Type specifier.
+/// Type specifier (non-array).
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeSpecifier {
+pub enum TypeSpecifierNonArray {
   // transparent types
   Void,
   Bool,
@@ -160,7 +160,7 @@ pub struct StructSpecifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructFieldSpecifier {
   pub qualifier: Option<TypeQualifier>,
-  pub ty: TypeSpecifier,
+  pub ty: TypeSpecifierNonArray,
   pub identifiers: NonEmpty<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
 }
 
@@ -235,7 +235,7 @@ pub enum InterpolationQualifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FullySpecifiedType {
   pub qualifier: Option<TypeQualifier>,
-  pub ty: TypeSpecifier
+  pub ty: TypeSpecifierNonArray
 }
 
 /// Dimensionality of an arary.
@@ -250,7 +250,7 @@ pub enum ArraySpecifier {
 pub enum Declaration {
   FunctionPrototype(FunctionPrototype),
   InitDeclaratorList(InitDeclaratorList),
-  Precision(PrecisionQualifier, TypeSpecifier),
+  Precision(PrecisionQualifier, TypeSpecifierNonArray),
   Block(Block),
   Global(TypeQualifier, Vec<Identifier>)
 }
@@ -284,13 +284,13 @@ pub struct FunctionPrototype {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionParameterDeclaration {
   Named(Option<TypeQualifier>, FunctionParameterDeclarator),
-  Unnamed(Option<TypeQualifier>, TypeSpecifier)
+  Unnamed(Option<TypeQualifier>, TypeSpecifierNonArray)
 }
 
 /// Function parameter declarator.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameterDeclarator {
-  pub ty: TypeSpecifier,
+  pub ty: TypeSpecifierNonArray,
   pub name: Identifier,
   pub array_spec: Option<ArraySpecifier>
 }
