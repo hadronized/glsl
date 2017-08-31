@@ -159,141 +159,146 @@ named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
 );
 
 /// Parse a type specifier non struct.
-pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifier> {
+pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifierNonArray> {
   let (i1, t) = try_parse!(i, identifier_str);
 
   match unsafe { from_utf8_unchecked(t) } {
-    "void" => IResult::Done(i1, syntax::TypeSpecifier::Void),
-    "bool" => IResult::Done(i1, syntax::TypeSpecifier::Bool),
-    "int" => IResult::Done(i1, syntax::TypeSpecifier::Int),
-    "uint" => IResult::Done(i1, syntax::TypeSpecifier::UInt),
-    "float" => IResult::Done(i1, syntax::TypeSpecifier::Float),
-    "double" => IResult::Done(i1, syntax::TypeSpecifier::Double),
-    "vec2" => IResult::Done(i1, syntax::TypeSpecifier::Vec2),
-    "vec3" => IResult::Done(i1, syntax::TypeSpecifier::Vec3),
-    "vec4" => IResult::Done(i1, syntax::TypeSpecifier::Vec4),
-    "dvec2" => IResult::Done(i1, syntax::TypeSpecifier::DVec2),
-    "dvec3" => IResult::Done(i1, syntax::TypeSpecifier::DVec3),
-    "dvec4" => IResult::Done(i1, syntax::TypeSpecifier::DVec4),
-    "bvec2" => IResult::Done(i1, syntax::TypeSpecifier::BVec2),
-    "bvec3" => IResult::Done(i1, syntax::TypeSpecifier::BVec3),
-    "bvec4" => IResult::Done(i1, syntax::TypeSpecifier::BVec4),
-    "ivec2" => IResult::Done(i1, syntax::TypeSpecifier::IVec2),
-    "ivec3" => IResult::Done(i1, syntax::TypeSpecifier::IVec3),
-    "ivec4" => IResult::Done(i1, syntax::TypeSpecifier::IVec4),
-    "uvec2" => IResult::Done(i1, syntax::TypeSpecifier::UVec2),
-    "uvec3" => IResult::Done(i1, syntax::TypeSpecifier::UVec3),
-    "uvec4" => IResult::Done(i1, syntax::TypeSpecifier::UVec4),
-    "mat2" => IResult::Done(i1, syntax::TypeSpecifier::Mat2),
-    "mat3" => IResult::Done(i1, syntax::TypeSpecifier::Mat3),
-    "mat4" => IResult::Done(i1, syntax::TypeSpecifier::Mat4),
-    "mat2x2" => IResult::Done(i1, syntax::TypeSpecifier::Mat2),
-    "mat2x3" => IResult::Done(i1, syntax::TypeSpecifier::Mat23),
-    "mat2x4" => IResult::Done(i1, syntax::TypeSpecifier::Mat24),
-    "mat3x2" => IResult::Done(i1, syntax::TypeSpecifier::Mat32),
-    "mat3x3" => IResult::Done(i1, syntax::TypeSpecifier::Mat3),
-    "mat3x4" => IResult::Done(i1, syntax::TypeSpecifier::Mat34),
-    "mat4x2" => IResult::Done(i1, syntax::TypeSpecifier::Mat42),
-    "mat4x3" => IResult::Done(i1, syntax::TypeSpecifier::Mat43),
-    "mat4x4" => IResult::Done(i1, syntax::TypeSpecifier::Mat4),
-    "dmat2" => IResult::Done(i1, syntax::TypeSpecifier::DMat2),
-    "dmat3" => IResult::Done(i1, syntax::TypeSpecifier::DMat3),
-    "dmat4" => IResult::Done(i1, syntax::TypeSpecifier::DMat4),
-    "dmat2x2" => IResult::Done(i1, syntax::TypeSpecifier::DMat2),
-    "dmat2x3" => IResult::Done(i1, syntax::TypeSpecifier::DMat23),
-    "dmat2x4" => IResult::Done(i1, syntax::TypeSpecifier::DMat24),
-    "dmat3x2" => IResult::Done(i1, syntax::TypeSpecifier::DMat32),
-    "dmat3x3" => IResult::Done(i1, syntax::TypeSpecifier::DMat3),
-    "dmat3x4" => IResult::Done(i1, syntax::TypeSpecifier::DMat34),
-    "dmat4x2" => IResult::Done(i1, syntax::TypeSpecifier::DMat42),
-    "dmat4x3" => IResult::Done(i1, syntax::TypeSpecifier::DMat43),
-    "dmat4x4" => IResult::Done(i1, syntax::TypeSpecifier::DMat4),
-    "sampler1D" => IResult::Done(i1, syntax::TypeSpecifier::Sampler1D),
-    "image1D" => IResult::Done(i1, syntax::TypeSpecifier::Image1D),
-    "sampler2D" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2D),
-    "image2D" => IResult::Done(i1, syntax::TypeSpecifier::Image2D),
-    "sampler3D" => IResult::Done(i1, syntax::TypeSpecifier::Sampler3D),
-    "image3D" => IResult::Done(i1, syntax::TypeSpecifier::Image3D),
-    "samplerCube" => IResult::Done(i1, syntax::TypeSpecifier::SamplerCube),
-    "imageCube" => IResult::Done(i1, syntax::TypeSpecifier::ImageCube),
-    "sampler2DRect" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DRect),
-    "image2DRect" => IResult::Done(i1, syntax::TypeSpecifier::Image2DRect),
-    "sampler1DArray" => IResult::Done(i1, syntax::TypeSpecifier::Sampler1DArray),
-    "image1DArray" => IResult::Done(i1, syntax::TypeSpecifier::Image1DArray),
-    "sampler2DArray" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DArray),
-    "image2DArray" => IResult::Done(i1, syntax::TypeSpecifier::Image2DArray),
-    "samplerBuffer" => IResult::Done(i1, syntax::TypeSpecifier::SamplerBuffer),
-    "imageBuffer" => IResult::Done(i1, syntax::TypeSpecifier::ImageBuffer),
-    "sampler2DMS" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DMS),
-    "image2DMS" => IResult::Done(i1, syntax::TypeSpecifier::Image2DMS),
-    "sampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DMSArray),
-    "image2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::Image2DMSArray),
-    "samplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::SamplerCubeArray),
-    "imageCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::ImageCubeArray),
-    "sampler1DShadow" => IResult::Done(i1, syntax::TypeSpecifier::Sampler1DShadow),
-    "sampler2DShadow" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DShadow),
-    "sampler2DRectShadow" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DRectShadow),
-    "sampler1DArrayShadow" => IResult::Done(i1, syntax::TypeSpecifier::Sampler1DArrayShadow),
-    "sampler2DArrayShadow" => IResult::Done(i1, syntax::TypeSpecifier::Sampler2DArrayShadow),
-    "samplerCubeShadow" => IResult::Done(i1, syntax::TypeSpecifier::SamplerCubeShadow),
-    "samplerCubeArrayShadow" => IResult::Done(i1, syntax::TypeSpecifier::SamplerCubeArrayShadow),
-    "isampler1D" => IResult::Done(i1, syntax::TypeSpecifier::ISampler1D),
-    "iimage1D" => IResult::Done(i1, syntax::TypeSpecifier::IImage1D),
-    "isampler2D" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2D),
-    "iimage2D" => IResult::Done(i1, syntax::TypeSpecifier::IImage2D),
-    "isampler3D" => IResult::Done(i1, syntax::TypeSpecifier::ISampler3D),
-    "iimage3D" => IResult::Done(i1, syntax::TypeSpecifier::IImage3D),
-    "isamplerCube" => IResult::Done(i1, syntax::TypeSpecifier::ISamplerCube),
-    "iimageCube" => IResult::Done(i1, syntax::TypeSpecifier::IImageCube),
-    "isampler2DRect" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DRect),
-    "iimage2DRect" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DRect),
-    "isampler1DArray" => IResult::Done(i1, syntax::TypeSpecifier::ISampler1DArray),
-    "iimage1DArray" => IResult::Done(i1, syntax::TypeSpecifier::IImage1DArray),
-    "isampler2DArray" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DArray),
-    "iimage2DArray" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DArray),
-    "isamplerBuffer" => IResult::Done(i1, syntax::TypeSpecifier::ISamplerBuffer),
-    "iimageBuffer" => IResult::Done(i1, syntax::TypeSpecifier::IImageBuffer),
-    "isampler2DMS" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DMS),
-    "iimage2DMS" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DMS),
-    "isampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::ISampler2DMSArray),
-    "iimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::IImage2DMSArray),
-    "isamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::ISamplerCubeArray),
-    "iimageCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::IImageCubeArray),
-    "atomic_uint" => IResult::Done(i1, syntax::TypeSpecifier::AtomicUInt),
-    "usampler1D" => IResult::Done(i1, syntax::TypeSpecifier::USampler1D),
-    "uimage1D" => IResult::Done(i1, syntax::TypeSpecifier::UImage1D),
-    "usampler2D" => IResult::Done(i1, syntax::TypeSpecifier::USampler2D),
-    "uimage2D" => IResult::Done(i1, syntax::TypeSpecifier::UImage2D),
-    "usampler3D" => IResult::Done(i1, syntax::TypeSpecifier::USampler3D),
-    "uimage3D" => IResult::Done(i1, syntax::TypeSpecifier::UImage3D),
-    "usamplerCube" => IResult::Done(i1, syntax::TypeSpecifier::USamplerCube),
-    "uimageCube" => IResult::Done(i1, syntax::TypeSpecifier::UImageCube),
-    "usampler2DRect" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DRect),
-    "uimage2DRect" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DRect),
-    "usampler1DArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler1DArray),
-    "uimage1DArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage1DArray),
-    "usampler2DArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DArray),
-    "uimage2DArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DArray),
-    "usamplerBuffer" => IResult::Done(i1, syntax::TypeSpecifier::USamplerBuffer),
-    "uimageBuffer" => IResult::Done(i1, syntax::TypeSpecifier::UImageBuffer),
-    "usampler2DMS" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DMS),
-    "uimage2DMS" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DMS),
-    "usampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::USampler2DMSArray),
-    "uimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifier::UImage2DMSArray),
-    "usamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::USamplerCubeArray),
-    "uimageCubeArray" => IResult::Done(i1, syntax::TypeSpecifier::UImageCubeArray),
+    "void" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Void),
+    "bool" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Bool),
+    "int" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Int),
+    "uint" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UInt),
+    "float" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Float),
+    "double" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Double),
+    "vec2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Vec2),
+    "vec3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Vec3),
+    "vec4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Vec4),
+    "dvec2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DVec2),
+    "dvec3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DVec3),
+    "dvec4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DVec4),
+    "bvec2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::BVec2),
+    "bvec3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::BVec3),
+    "bvec4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::BVec4),
+    "ivec2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IVec2),
+    "ivec3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IVec3),
+    "ivec4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IVec4),
+    "uvec2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UVec2),
+    "uvec3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UVec3),
+    "uvec4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UVec4),
+    "mat2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat2),
+    "mat3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat3),
+    "mat4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat4),
+    "mat2x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat2),
+    "mat2x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat23),
+    "mat2x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat24),
+    "mat3x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat32),
+    "mat3x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat3),
+    "mat3x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat34),
+    "mat4x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat42),
+    "mat4x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat43),
+    "mat4x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Mat4),
+    "dmat2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat2),
+    "dmat3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat3),
+    "dmat4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat4),
+    "dmat2x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat2),
+    "dmat2x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat23),
+    "dmat2x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat24),
+    "dmat3x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat32),
+    "dmat3x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat3),
+    "dmat3x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat34),
+    "dmat4x2" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat42),
+    "dmat4x3" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat43),
+    "dmat4x4" => IResult::Done(i1, syntax::TypeSpecifierNonArray::DMat4),
+    "sampler1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler1D),
+    "image1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image1D),
+    "sampler2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2D),
+    "image2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image2D),
+    "sampler3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler3D),
+    "image3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image3D),
+    "samplerCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::SamplerCube),
+    "imageCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ImageCube),
+    "sampler2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DRect),
+    "image2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image2DRect),
+    "sampler1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler1DArray),
+    "image1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image1DArray),
+    "sampler2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DArray),
+    "image2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image2DArray),
+    "samplerBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::SamplerBuffer),
+    "imageBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ImageBuffer),
+    "sampler2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DMS),
+    "image2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image2DMS),
+    "sampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DMSArray),
+    "image2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Image2DMSArray),
+    "samplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::SamplerCubeArray),
+    "imageCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ImageCubeArray),
+    "sampler1DShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler1DShadow),
+    "sampler2DShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DShadow),
+    "sampler2DRectShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DRectShadow),
+    "sampler1DArrayShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler1DArrayShadow),
+    "sampler2DArrayShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Sampler2DArrayShadow),
+    "samplerCubeShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::SamplerCubeShadow),
+    "samplerCubeArrayShadow" => IResult::Done(i1, syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow),
+    "isampler1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler1D),
+    "iimage1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage1D),
+    "isampler2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler2D),
+    "iimage2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage2D),
+    "isampler3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler3D),
+    "iimage3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage3D),
+    "isamplerCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISamplerCube),
+    "iimageCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImageCube),
+    "isampler2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler2DRect),
+    "iimage2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage2DRect),
+    "isampler1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler1DArray),
+    "iimage1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage1DArray),
+    "isampler2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler2DArray),
+    "iimage2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage2DArray),
+    "isamplerBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISamplerBuffer),
+    "iimageBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImageBuffer),
+    "isampler2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler2DMS),
+    "iimage2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage2DMS),
+    "isampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISampler2DMSArray),
+    "iimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImage2DMSArray),
+    "isamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::ISamplerCubeArray),
+    "iimageCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::IImageCubeArray),
+    "atomic_uint" => IResult::Done(i1, syntax::TypeSpecifierNonArray::AtomicUInt),
+    "usampler1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler1D),
+    "uimage1D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage1D),
+    "usampler2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler2D),
+    "uimage2D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage2D),
+    "usampler3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler3D),
+    "uimage3D" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage3D),
+    "usamplerCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USamplerCube),
+    "uimageCube" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImageCube),
+    "usampler2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler2DRect),
+    "uimage2DRect" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage2DRect),
+    "usampler1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler1DArray),
+    "uimage1DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage1DArray),
+    "usampler2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler2DArray),
+    "uimage2DArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage2DArray),
+    "usamplerBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USamplerBuffer),
+    "uimageBuffer" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImageBuffer),
+    "usampler2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler2DMS),
+    "uimage2DMS" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage2DMS),
+    "usampler2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USampler2DMSArray),
+    "uimage2DMSArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImage2DMSArray),
+    "usamplerCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::USamplerCubeArray),
+    "uimageCubeArray" => IResult::Done(i1, syntax::TypeSpecifierNonArray::UImageCubeArray),
     _ => IResult::Error(NomErr::Code(ErrorKind::AlphaNumeric))
   }
 }
 
-/// Parse a type specifier.
-named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
+/// Parse a type specifier (non-array version).
+named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
   alt!(
     type_specifier_non_struct |
-    map!(struct_specifier, syntax::TypeSpecifier::Struct) |
-    map!(identifier, syntax::TypeSpecifier::TypeName)
+    map!(struct_specifier, syntax::TypeSpecifierNonArray::Struct) |
+    map!(identifier, syntax::TypeSpecifierNonArray::TypeName)
   )
 );
+
+/// Parse a type specifier.
+named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
+  map!(ws!(pair!(type_specifier_non_array, opt!(array_specifier))), |(ty, array_specifier)|
+    syntax::TypeSpecifier { ty, array_specifier }));
 
 /// Parse the void type.
 named!(pub void<&[u8], ()>, value!((), atag!("void")));
@@ -1937,7 +1942,10 @@ mod tests {
   fn parse_struct_field_specifier() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
   
@@ -1949,7 +1957,10 @@ mod tests {
   fn parse_struct_field_specifier_type_name() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("x".to_owned(), None)]
     };
   
@@ -1961,7 +1972,10 @@ mod tests {
   fn parse_struct_field_specifier_several() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None), ("bar".to_owned(), None), ("zoo".to_owned(), None)]
     };
   
@@ -1973,7 +1987,10 @@ mod tests {
   fn parse_struct_specifier_one_field() {
     let field = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
     let expected = syntax::StructSpecifier {
@@ -1989,27 +2006,42 @@ mod tests {
   fn parse_struct_specifier_multi_fields() {
     let a = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
     let b = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("bar".to_owned(), None)]
     };
     let c = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::UInt,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::UInt,
+        array_specifier: None
+      },
       identifiers: vec![("zoo".to_owned(), None)]
     };
     let d = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::BVec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::BVec3,
+        array_specifier: None
+      },
       identifiers: vec![("foo_BAR_zoo3497_34".to_owned(), None)]
     };
     let e = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::TypeName("S0238_3".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("x".to_owned(), None)]
     };
     let expected = syntax::StructSpecifier {
@@ -2023,145 +2055,163 @@ mod tests {
   }
 
   #[test]
+  fn parse_type_specifier_non_array() {
+    assert_eq!(type_specifier_non_array(&b"bool"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Bool));
+    assert_eq!(type_specifier_non_array(&b"int"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Int));
+    assert_eq!(type_specifier_non_array(&b"uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UInt));
+    assert_eq!(type_specifier_non_array(&b"float"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Float));
+    assert_eq!(type_specifier_non_array(&b"double"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Double));
+    assert_eq!(type_specifier_non_array(&b"vec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Vec2));
+    assert_eq!(type_specifier_non_array(&b"vec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Vec3));
+    assert_eq!(type_specifier_non_array(&b"vec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Vec4));
+    assert_eq!(type_specifier_non_array(&b"dvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DVec2));
+    assert_eq!(type_specifier_non_array(&b"dvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DVec3));
+    assert_eq!(type_specifier_non_array(&b"dvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DVec4));
+    assert_eq!(type_specifier_non_array(&b"bvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::BVec2));
+    assert_eq!(type_specifier_non_array(&b"bvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::BVec3));
+    assert_eq!(type_specifier_non_array(&b"bvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::BVec4));
+    assert_eq!(type_specifier_non_array(&b"ivec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IVec2));
+    assert_eq!(type_specifier_non_array(&b"ivec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IVec3));
+    assert_eq!(type_specifier_non_array(&b"ivec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IVec4));
+    assert_eq!(type_specifier_non_array(&b"uvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UVec2));
+    assert_eq!(type_specifier_non_array(&b"uvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UVec3));
+    assert_eq!(type_specifier_non_array(&b"uvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UVec4));
+    assert_eq!(type_specifier_non_array(&b"mat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat2));
+    assert_eq!(type_specifier_non_array(&b"mat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat3));
+    assert_eq!(type_specifier_non_array(&b"mat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat4));
+    assert_eq!(type_specifier_non_array(&b"mat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat2));
+    assert_eq!(type_specifier_non_array(&b"mat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat23));
+    assert_eq!(type_specifier_non_array(&b"mat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat24));
+    assert_eq!(type_specifier_non_array(&b"mat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat32));
+    assert_eq!(type_specifier_non_array(&b"mat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat3));
+    assert_eq!(type_specifier_non_array(&b"mat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat34));
+    assert_eq!(type_specifier_non_array(&b"mat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat42));
+    assert_eq!(type_specifier_non_array(&b"mat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat43));
+    assert_eq!(type_specifier_non_array(&b"mat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Mat4));
+    assert_eq!(type_specifier_non_array(&b"dmat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat2));
+    assert_eq!(type_specifier_non_array(&b"dmat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat3));
+    assert_eq!(type_specifier_non_array(&b"dmat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat4));
+    assert_eq!(type_specifier_non_array(&b"dmat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat2));
+    assert_eq!(type_specifier_non_array(&b"dmat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat23));
+    assert_eq!(type_specifier_non_array(&b"dmat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat24));
+    assert_eq!(type_specifier_non_array(&b"dmat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat32));
+    assert_eq!(type_specifier_non_array(&b"dmat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat3));
+    assert_eq!(type_specifier_non_array(&b"dmat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat34));
+    assert_eq!(type_specifier_non_array(&b"dmat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat42));
+    assert_eq!(type_specifier_non_array(&b"dmat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat43));
+    assert_eq!(type_specifier_non_array(&b"dmat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::DMat4));
+    assert_eq!(type_specifier_non_array(&b"sampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler1D));
+    assert_eq!(type_specifier_non_array(&b"image1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image1D));
+    assert_eq!(type_specifier_non_array(&b"sampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2D));
+    assert_eq!(type_specifier_non_array(&b"image2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image2D));
+    assert_eq!(type_specifier_non_array(&b"sampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler3D));
+    assert_eq!(type_specifier_non_array(&b"image3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image3D));
+    assert_eq!(type_specifier_non_array(&b"samplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::SamplerCube));
+    assert_eq!(type_specifier_non_array(&b"imageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ImageCube));
+    assert_eq!(type_specifier_non_array(&b"sampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DRect));
+    assert_eq!(type_specifier_non_array(&b"image2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image2DRect));
+    assert_eq!(type_specifier_non_array(&b"sampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler1DArray));
+    assert_eq!(type_specifier_non_array(&b"image1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image1DArray));
+    assert_eq!(type_specifier_non_array(&b"sampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DArray));
+    assert_eq!(type_specifier_non_array(&b"image2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image2DArray));
+    assert_eq!(type_specifier_non_array(&b"samplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::SamplerBuffer));
+    assert_eq!(type_specifier_non_array(&b"imageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ImageBuffer));
+    assert_eq!(type_specifier_non_array(&b"sampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DMS));
+    assert_eq!(type_specifier_non_array(&b"image2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image2DMS));
+    assert_eq!(type_specifier_non_array(&b"sampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"image2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Image2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"samplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::SamplerCubeArray));
+    assert_eq!(type_specifier_non_array(&b"imageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ImageCubeArray));
+    assert_eq!(type_specifier_non_array(&b"sampler1DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler1DShadow));
+    assert_eq!(type_specifier_non_array(&b"sampler2DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DShadow));
+    assert_eq!(type_specifier_non_array(&b"sampler2DRectShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DRectShadow));
+    assert_eq!(type_specifier_non_array(&b"sampler1DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler1DArrayShadow));
+    assert_eq!(type_specifier_non_array(&b"sampler2DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::Sampler2DArrayShadow));
+    assert_eq!(type_specifier_non_array(&b"samplerCubeShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::SamplerCubeShadow));
+    assert_eq!(type_specifier_non_array(&b"samplerCubeArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow));
+    assert_eq!(type_specifier_non_array(&b"isampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler1D));
+    assert_eq!(type_specifier_non_array(&b"iimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage1D));
+    assert_eq!(type_specifier_non_array(&b"isampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler2D));
+    assert_eq!(type_specifier_non_array(&b"iimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage2D));
+    assert_eq!(type_specifier_non_array(&b"isampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler3D));
+    assert_eq!(type_specifier_non_array(&b"iimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage3D));
+    assert_eq!(type_specifier_non_array(&b"isamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISamplerCube));
+    assert_eq!(type_specifier_non_array(&b"iimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImageCube));
+    assert_eq!(type_specifier_non_array(&b"isampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler2DRect));
+    assert_eq!(type_specifier_non_array(&b"iimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage2DRect));
+    assert_eq!(type_specifier_non_array(&b"isampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler1DArray));
+    assert_eq!(type_specifier_non_array(&b"iimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage1DArray));
+    assert_eq!(type_specifier_non_array(&b"isampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler2DArray));
+    assert_eq!(type_specifier_non_array(&b"iimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage2DArray));
+    assert_eq!(type_specifier_non_array(&b"isamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISamplerBuffer));
+    assert_eq!(type_specifier_non_array(&b"iimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImageBuffer));
+    assert_eq!(type_specifier_non_array(&b"isampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler2DMS));
+    assert_eq!(type_specifier_non_array(&b"iimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage2DMS));
+    assert_eq!(type_specifier_non_array(&b"isampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISampler2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImage2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"isamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::ISamplerCubeArray));
+    assert_eq!(type_specifier_non_array(&b"iimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::IImageCubeArray));
+    assert_eq!(type_specifier_non_array(&b"atomic_uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::AtomicUInt));
+    assert_eq!(type_specifier_non_array(&b"usampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler1D));
+    assert_eq!(type_specifier_non_array(&b"uimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage1D));
+    assert_eq!(type_specifier_non_array(&b"usampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler2D));
+    assert_eq!(type_specifier_non_array(&b"uimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2D));
+    assert_eq!(type_specifier_non_array(&b"usampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler3D));
+    assert_eq!(type_specifier_non_array(&b"uimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage3D));
+    assert_eq!(type_specifier_non_array(&b"usamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USamplerCube));
+    assert_eq!(type_specifier_non_array(&b"uimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImageCube));
+    assert_eq!(type_specifier_non_array(&b"usampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler2DRect));
+    assert_eq!(type_specifier_non_array(&b"uimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DRect));
+    assert_eq!(type_specifier_non_array(&b"usampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler1DArray));
+    assert_eq!(type_specifier_non_array(&b"uimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage1DArray));
+    assert_eq!(type_specifier_non_array(&b"usampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler2DArray));
+    assert_eq!(type_specifier_non_array(&b"uimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DArray));
+    assert_eq!(type_specifier_non_array(&b"usamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USamplerBuffer));
+    assert_eq!(type_specifier_non_array(&b"uimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImageBuffer));
+    assert_eq!(type_specifier_non_array(&b"usampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler2DMS));
+    assert_eq!(type_specifier_non_array(&b"uimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DMS));
+    assert_eq!(type_specifier_non_array(&b"usampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USampler2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"uimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DMSArray));
+    assert_eq!(type_specifier_non_array(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USamplerCubeArray));
+    assert_eq!(type_specifier_non_array(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImageCubeArray));
+  }
+
+  #[test]
   fn parse_type_specifier() {
-    assert_eq!(type_specifier(&b"bool"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Bool));
-    assert_eq!(type_specifier(&b"int"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Int));
-    assert_eq!(type_specifier(&b"uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UInt));
-    assert_eq!(type_specifier(&b"float"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Float));
-    assert_eq!(type_specifier(&b"double"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Double));
-    assert_eq!(type_specifier(&b"vec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec2));
-    assert_eq!(type_specifier(&b"vec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec3));
-    assert_eq!(type_specifier(&b"vec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Vec4));
-    assert_eq!(type_specifier(&b"dvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec2));
-    assert_eq!(type_specifier(&b"dvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec3));
-    assert_eq!(type_specifier(&b"dvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DVec4));
-    assert_eq!(type_specifier(&b"bvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec2));
-    assert_eq!(type_specifier(&b"bvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec3));
-    assert_eq!(type_specifier(&b"bvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::BVec4));
-    assert_eq!(type_specifier(&b"ivec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec2));
-    assert_eq!(type_specifier(&b"ivec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec3));
-    assert_eq!(type_specifier(&b"ivec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IVec4));
-    assert_eq!(type_specifier(&b"uvec2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec2));
-    assert_eq!(type_specifier(&b"uvec3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec3));
-    assert_eq!(type_specifier(&b"uvec4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UVec4));
-    assert_eq!(type_specifier(&b"mat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat2));
-    assert_eq!(type_specifier(&b"mat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat3));
-    assert_eq!(type_specifier(&b"mat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat4));
-    assert_eq!(type_specifier(&b"mat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat2));
-    assert_eq!(type_specifier(&b"mat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat23));
-    assert_eq!(type_specifier(&b"mat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat24));
-    assert_eq!(type_specifier(&b"mat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat32));
-    assert_eq!(type_specifier(&b"mat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat3));
-    assert_eq!(type_specifier(&b"mat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat34));
-    assert_eq!(type_specifier(&b"mat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat42));
-    assert_eq!(type_specifier(&b"mat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat43));
-    assert_eq!(type_specifier(&b"mat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Mat4));
-    assert_eq!(type_specifier(&b"dmat2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat2));
-    assert_eq!(type_specifier(&b"dmat3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat3));
-    assert_eq!(type_specifier(&b"dmat4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat4));
-    assert_eq!(type_specifier(&b"dmat2x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat2));
-    assert_eq!(type_specifier(&b"dmat2x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat23));
-    assert_eq!(type_specifier(&b"dmat2x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat24));
-    assert_eq!(type_specifier(&b"dmat3x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat32));
-    assert_eq!(type_specifier(&b"dmat3x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat3));
-    assert_eq!(type_specifier(&b"dmat3x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat34));
-    assert_eq!(type_specifier(&b"dmat4x2"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat42));
-    assert_eq!(type_specifier(&b"dmat4x3"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat43));
-    assert_eq!(type_specifier(&b"dmat4x4"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::DMat4));
-    assert_eq!(type_specifier(&b"sampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1D));
-    assert_eq!(type_specifier(&b"image1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image1D));
-    assert_eq!(type_specifier(&b"sampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2D));
-    assert_eq!(type_specifier(&b"image2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2D));
-    assert_eq!(type_specifier(&b"sampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler3D));
-    assert_eq!(type_specifier(&b"image3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image3D));
-    assert_eq!(type_specifier(&b"samplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCube));
-    assert_eq!(type_specifier(&b"imageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageCube));
-    assert_eq!(type_specifier(&b"sampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DRect));
-    assert_eq!(type_specifier(&b"image2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DRect));
-    assert_eq!(type_specifier(&b"sampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DArray));
-    assert_eq!(type_specifier(&b"image1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image1DArray));
-    assert_eq!(type_specifier(&b"sampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DArray));
-    assert_eq!(type_specifier(&b"image2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DArray));
-    assert_eq!(type_specifier(&b"samplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerBuffer));
-    assert_eq!(type_specifier(&b"imageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageBuffer));
-    assert_eq!(type_specifier(&b"sampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DMS));
-    assert_eq!(type_specifier(&b"image2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DMS));
-    assert_eq!(type_specifier(&b"sampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DMSArray));
-    assert_eq!(type_specifier(&b"image2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Image2DMSArray));
-    assert_eq!(type_specifier(&b"samplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeArray));
-    assert_eq!(type_specifier(&b"imageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ImageCubeArray));
-    assert_eq!(type_specifier(&b"sampler1DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DShadow));
-    assert_eq!(type_specifier(&b"sampler2DShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DShadow));
-    assert_eq!(type_specifier(&b"sampler2DRectShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DRectShadow));
-    assert_eq!(type_specifier(&b"sampler1DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler1DArrayShadow));
-    assert_eq!(type_specifier(&b"sampler2DArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::Sampler2DArrayShadow));
-    assert_eq!(type_specifier(&b"samplerCubeShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeShadow));
-    assert_eq!(type_specifier(&b"samplerCubeArrayShadow"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::SamplerCubeArrayShadow));
-    assert_eq!(type_specifier(&b"isampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler1D));
-    assert_eq!(type_specifier(&b"iimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage1D));
-    assert_eq!(type_specifier(&b"isampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2D));
-    assert_eq!(type_specifier(&b"iimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2D));
-    assert_eq!(type_specifier(&b"isampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler3D));
-    assert_eq!(type_specifier(&b"iimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage3D));
-    assert_eq!(type_specifier(&b"isamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerCube));
-    assert_eq!(type_specifier(&b"iimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageCube));
-    assert_eq!(type_specifier(&b"isampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DRect));
-    assert_eq!(type_specifier(&b"iimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DRect));
-    assert_eq!(type_specifier(&b"isampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler1DArray));
-    assert_eq!(type_specifier(&b"iimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage1DArray));
-    assert_eq!(type_specifier(&b"isampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DArray));
-    assert_eq!(type_specifier(&b"iimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DArray));
-    assert_eq!(type_specifier(&b"isamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerBuffer));
-    assert_eq!(type_specifier(&b"iimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageBuffer));
-    assert_eq!(type_specifier(&b"isampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DMS));
-    assert_eq!(type_specifier(&b"iimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DMS));
-    assert_eq!(type_specifier(&b"isampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISampler2DMSArray));
-    assert_eq!(type_specifier(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImage2DMSArray));
-    assert_eq!(type_specifier(&b"isamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::ISamplerCubeArray));
-    assert_eq!(type_specifier(&b"iimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::IImageCubeArray));
-    assert_eq!(type_specifier(&b"atomic_uint"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::AtomicUInt));
-    assert_eq!(type_specifier(&b"usampler1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler1D));
-    assert_eq!(type_specifier(&b"uimage1D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage1D));
-    assert_eq!(type_specifier(&b"usampler2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2D));
-    assert_eq!(type_specifier(&b"uimage2D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2D));
-    assert_eq!(type_specifier(&b"usampler3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler3D));
-    assert_eq!(type_specifier(&b"uimage3D"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage3D));
-    assert_eq!(type_specifier(&b"usamplerCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerCube));
-    assert_eq!(type_specifier(&b"uimageCube"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageCube));
-    assert_eq!(type_specifier(&b"usampler2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DRect));
-    assert_eq!(type_specifier(&b"uimage2DRect"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DRect));
-    assert_eq!(type_specifier(&b"usampler1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler1DArray));
-    assert_eq!(type_specifier(&b"uimage1DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage1DArray));
-    assert_eq!(type_specifier(&b"usampler2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DArray));
-    assert_eq!(type_specifier(&b"uimage2DArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DArray));
-    assert_eq!(type_specifier(&b"usamplerBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerBuffer));
-    assert_eq!(type_specifier(&b"uimageBuffer"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageBuffer));
-    assert_eq!(type_specifier(&b"usampler2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DMS));
-    assert_eq!(type_specifier(&b"uimage2DMS"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DMS));
-    assert_eq!(type_specifier(&b"usampler2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USampler2DMSArray));
-    assert_eq!(type_specifier(&b"uimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImage2DMSArray));
-    assert_eq!(type_specifier(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::USamplerCubeArray));
-    assert_eq!(type_specifier(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifier::UImageCubeArray));
+    assert_eq!(type_specifier(&b"uint;"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::UInt,
+      array_specifier: None
+    }));
+    assert_eq!(type_specifier(&b"iimage2DMSArray[35];"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: Some(syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(35))))
+    }));
   }
   
   #[test]
   fn parse_fully_specified_type() {
-    let ty = syntax::TypeSpecifier::IImage2DMSArray;
-    let expected = syntax::FullySpecifiedType { qualifier: None, ty: ty };
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: None
+    };
+    let expected = syntax::FullySpecifiedType { qualifier: None, ty };
   
-    assert_eq!(fully_specified_type(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
   
   #[test]
   fn parse_fully_specified_type_with_qualifier() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".to_owned(), "S032_29k".to_owned()]));
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
-    let ty = syntax::TypeSpecifier::IImage2DMSArray;
-    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty: ty };
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: None
+    };
+    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty };
   
-    assert_eq!(fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray "[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
@@ -2478,13 +2528,23 @@ mod tests {
   fn parse_declaration_function_prototype() {
     let rt = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec3
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      }
     };
-    let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, syntax::TypeSpecifier::Vec2);
+    let arg0_ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Vec2,
+      array_specifier: None
+    };
+    let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, arg0_ty);
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Out);
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let arg1 = syntax::FunctionParameterDeclaration::Named(Some(qual), syntax::FunctionParameterDeclarator {
-      ty: syntax::TypeSpecifier::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       name: "the_arg".to_owned(),
       array_spec: None
     });
@@ -2504,10 +2564,13 @@ mod tests {
   fn parse_declaration_init_declarator_list_single() {
     let ty = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Int
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Int,
+        array_specifier: None
+      }
     };
     let sd = syntax::SingleDeclaration {
-      ty: ty,
+      ty,
       name: Some("foo".to_owned()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
@@ -2524,10 +2587,13 @@ mod tests {
   fn parse_declaration_init_declarator_list_complex() {
     let ty = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Int
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Int,
+        array_specifier: None
+      }
     };
     let sd = syntax::SingleDeclaration {
-      ty: ty,
+      ty,
       name: Some("foo".to_owned()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
@@ -2550,7 +2616,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_low() {
     let qual = syntax::PrecisionQualifier::Low;
-    let ty = syntax::TypeSpecifier::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision lowp float;"[..]), IResult::Done(&b""[..], expected));
@@ -2559,7 +2628,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_medium() {
     let qual = syntax::PrecisionQualifier::Medium;
-    let ty = syntax::TypeSpecifier::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision mediump float;"[..]), IResult::Done(&b""[..], expected));
@@ -2568,7 +2640,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_high() {
     let qual = syntax::PrecisionQualifier::High;
-    let ty = syntax::TypeSpecifier::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision highp float;"[..]), IResult::Done(&b""[..], expected));
@@ -2580,17 +2655,26 @@ mod tests {
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      },
       identifiers: vec![("b".to_owned(), None)]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected =
@@ -2613,17 +2697,26 @@ mod tests {
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::Vec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      },
       identifiers: vec![("b".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifier::TypeName("foo".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected =
@@ -2788,7 +2881,13 @@ mod tests {
                    syntax::Declaration::InitDeclaratorList(
                      syntax::InitDeclaratorList {
                        head: syntax::SingleDeclaration {
-                               ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::Float },
+                               ty: syntax::FullySpecifiedType {
+                                 qualifier: None,
+                                 ty: syntax::TypeSpecifier {
+                                   ty: syntax::TypeSpecifierNonArray::Float,
+                                   array_specifier: None
+                                 }
+                               },
                                name: Some("i".to_owned()),
                                array_specifier: None,
                                initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
@@ -2872,7 +2971,13 @@ mod tests {
                     syntax::Declaration::InitDeclaratorList(
                       syntax::InitDeclaratorList {
                         head: syntax::SingleDeclaration {
-                          ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::ISampler3D },
+                          ty: syntax::FullySpecifiedType {
+                            qualifier: None,
+                            ty: syntax::TypeSpecifier {
+                              ty: syntax::TypeSpecifierNonArray::ISampler3D,
+                              array_specifier: None
+                            }
+                          },
                           name: Some("x".to_owned()),
                           array_specifier: None,
                           initializer: None
@@ -2906,7 +3011,10 @@ mod tests {
   fn parse_function_definition() {
     let rt = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifier::IImage2DArray
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::IImage2DArray,
+        array_specifier: None
+      }
     };
     let fp = syntax::FunctionPrototype {
       ty: rt,
@@ -2943,7 +3051,10 @@ mod tests {
       prototype: syntax::FunctionPrototype {
         ty: syntax::FullySpecifiedType {
           qualifier: None,
-          ty: syntax::TypeSpecifier::Void
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::Void,
+            array_specifier: None
+          }
         },
         name: "main".to_owned(),
         parameters: Vec::new(),
@@ -2963,7 +3074,10 @@ mod tests {
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
-                ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                ty: syntax::TypeSpecifier {
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  array_specifier: None
+                },
                 identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
               }
             ],
@@ -3000,7 +3114,10 @@ mod tests {
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
-                ty: syntax::TypeSpecifier::TypeName("char".to_owned()),
+                ty: syntax::TypeSpecifier {
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  array_specifier: None
+                },
                 identifiers: vec![("a".to_owned(), None)]
               }
             ],
@@ -3113,7 +3230,13 @@ mod tests {
         )
       );
     let sd = syntax::SingleDeclaration {
-      ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifier::Vec3 },
+      ty: syntax::FullySpecifiedType {
+          qualifier: None,
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::Vec3,
+            array_specifier: None
+          }
+      },
       name: Some("v".to_owned()),
       array_specifier: None,
       initializer: Some(ini)

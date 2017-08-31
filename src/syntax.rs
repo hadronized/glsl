@@ -25,9 +25,9 @@ pub type Identifier = String;
 /// Any type name.
 pub type TypeName = String;
 
-/// Type specifier.
+/// Type specifier (non-array).
 #[derive(Clone, Debug, PartialEq)]
-pub enum TypeSpecifier {
+pub enum TypeSpecifierNonArray {
   // transparent types
   Void,
   Bool,
@@ -147,6 +147,13 @@ pub enum TypeSpecifier {
   UImageCubeArray,
   Struct(StructSpecifier),
   TypeName(TypeName)
+}
+
+/// Type specifier.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeSpecifier {
+  pub ty: TypeSpecifierNonArray,
+  pub array_specifier: Option<ArraySpecifier>
 }
 
 /// Struct specifier. Used to create new, user-defined types.
