@@ -286,7 +286,7 @@ pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifi
   }
 }
 
-/// Parse a type specifier.
+/// Parse a type specifier (non-array version).
 named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
   alt!(
     type_specifier_non_struct |
@@ -294,6 +294,11 @@ named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
     map!(identifier, syntax::TypeSpecifierNonArray::TypeName)
   )
 );
+
+/// Parse a type specifier.
+named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
+  map!(ws!(pair!(type_specifier_non_struct, opt!(array_specifier))), |(ty, array_specifier)|
+    syntax::TypeSpecifier { ty, array_specifier }));
 
 /// Parse the void type.
 named!(pub void<&[u8], ()>, value!((), atag!("void")));
@@ -2142,6 +2147,18 @@ mod tests {
     assert_eq!(type_specifier_non_array(&b"uimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DMSArray));
     assert_eq!(type_specifier_non_array(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USamplerCubeArray));
     assert_eq!(type_specifier_non_array(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImageCubeArray));
+  }
+
+  #[test]
+  fn parse_type_specifier() {
+    assert_eq!(type_specifier(&b"uint;"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::UInt,
+      array_specifier: None
+    }));
+    assert_eq!(type_specifier(&b"iimage2MSArray[35];"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: Some(syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(35))))
+    }));
   }
   
   #[test]

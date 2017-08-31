@@ -149,6 +149,13 @@ pub enum TypeSpecifierNonArray {
   TypeName(TypeName)
 }
 
+/// Type specifier.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeSpecifier {
+  pub ty: TypeSpecifierNonArray,
+  pub array_specifier: Option<ArraySpecifier>
+}
+
 /// Struct specifier. Used to create new, user-defined types.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructSpecifier {
