@@ -167,7 +167,7 @@ pub struct StructSpecifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructFieldSpecifier {
   pub qualifier: Option<TypeQualifier>,
-  pub ty: TypeSpecifierNonArray,
+  pub ty: TypeSpecifier,
   pub identifiers: NonEmpty<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
 }
 
@@ -242,7 +242,7 @@ pub enum InterpolationQualifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FullySpecifiedType {
   pub qualifier: Option<TypeQualifier>,
-  pub ty: TypeSpecifierNonArray
+  pub ty: TypeSpecifier
 }
 
 /// Dimensionality of an arary.
@@ -257,7 +257,7 @@ pub enum ArraySpecifier {
 pub enum Declaration {
   FunctionPrototype(FunctionPrototype),
   InitDeclaratorList(InitDeclaratorList),
-  Precision(PrecisionQualifier, TypeSpecifierNonArray),
+  Precision(PrecisionQualifier, TypeSpecifier),
   Block(Block),
   Global(TypeQualifier, Vec<Identifier>)
 }
@@ -291,13 +291,13 @@ pub struct FunctionPrototype {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionParameterDeclaration {
   Named(Option<TypeQualifier>, FunctionParameterDeclarator),
-  Unnamed(Option<TypeQualifier>, TypeSpecifierNonArray)
+  Unnamed(Option<TypeQualifier>, TypeSpecifier)
 }
 
 /// Function parameter declarator.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameterDeclarator {
-  pub ty: TypeSpecifierNonArray,
+  pub ty: TypeSpecifier,
   pub name: Identifier,
   pub array_spec: Option<ArraySpecifier>
 }

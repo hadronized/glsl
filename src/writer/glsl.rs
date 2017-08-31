@@ -147,13 +147,21 @@ pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonA
   }
 }
 
+pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier) where F: Write {
+  show_type_specifier_non_array(f, &t.ty);
+
+  if let Some(ref arr_spec) = t.array_specifier {
+    show_array_spec(f, arr_spec);
+  }
+}
+
 pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) where F: Write {
   if let Some(ref qual) = t.qualifier {
     show_type_qualifier(f, &qual);
     let _ = f.write_str(" ");
   }
 
-  show_type_specifier_non_array(f, &t.ty);
+  show_type_specifier(f, &t.ty);
 }
 
 pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
@@ -178,7 +186,7 @@ pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) whe
     let _ = f.write_str(" ");
   }
 
-  show_type_specifier_non_array(f, &field.ty);
+  show_type_specifier(f, &field.ty);
   let _ = f.write_str(" ");
 
   // there’s at least one identifier
@@ -470,7 +478,7 @@ pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration) where F: Write {
     }
     syntax::Declaration::Precision(ref qual, ref ty) => {
       show_precision_qualifier(f, &qual);
-      show_type_specifier_non_array(f, &ty);
+      show_type_specifier(f, &ty);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::Block(ref block) => {
@@ -531,13 +539,13 @@ pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionPar
         let _ = f.write_str(" ");
       }
 
-      show_type_specifier_non_array(f, ty);
+      show_type_specifier(f, ty);
     }
   }
 }
 
 pub fn show_function_parameter_declarator<F>(f: &mut F, p: &syntax::FunctionParameterDeclarator) where F: Write {
-  show_type_specifier_non_array(f, &p.ty);
+  show_type_specifier(f, &p.ty);
   let _ = f.write_str(" ");
   show_arrayed_identifier(f, (&p.name, &p.array_spec));
 }

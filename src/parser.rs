@@ -297,7 +297,7 @@ named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
 
 /// Parse a type specifier.
 named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
-  map!(ws!(pair!(type_specifier_non_struct, opt!(array_specifier))), |(ty, array_specifier)|
+  map!(ws!(pair!(type_specifier_non_array, opt!(array_specifier))), |(ty, array_specifier)|
     syntax::TypeSpecifier { ty, array_specifier }));
 
 /// Parse the void type.
@@ -543,7 +543,7 @@ named!(identifier_array_spec<&[u8], (syntax::Identifier, Option<syntax::ArraySpe
 named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
   bl!(do_parse!(
     qual: opt!(type_qualifier) >>
-    ty: type_specifier_non_array >>
+    ty: type_specifier >>
     identifiers: bl!(do_parse!(
                    first: identifier_array_spec >>
                    rest: many0!(do_parse!(char!(',') >> i: bl!(identifier_array_spec) >> (i))) >>
@@ -701,7 +701,7 @@ named!(pub type_qualifier_spec<&[u8], syntax::TypeQualifierSpec>,
 named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
   bl!(do_parse!(
     qualifier: opt!(type_qualifier) >>
-    ty: type_specifier_non_array >>
+    ty: type_specifier >>
 
     (syntax::FullySpecifiedType { qualifier: qualifier, ty: ty })
   ))
@@ -790,7 +790,7 @@ named!(pub precision_declaration<&[u8], syntax::Declaration>,
   bl!(do_parse!(
     atag!("precision") >>
     qual: precision_qualifier >>
-    ty: type_specifier_non_array >>
+    ty: type_specifier >>
     char!(';') >>
 
     (syntax::Declaration::Precision(qual, ty))
@@ -981,14 +981,14 @@ named!(function_parameter_declaration_named<&[u8], syntax::FunctionParameterDecl
 named!(function_parameter_declaration_unnamed<&[u8], syntax::FunctionParameterDeclaration>,
   bl!(do_parse!(
     ty_qual: opt!(type_qualifier) >>
-    ty_spec: type_specifier_non_array >>
+    ty_spec: type_specifier >>
     (syntax::FunctionParameterDeclaration::Unnamed(ty_qual, ty_spec))
   ))
 );
 
 named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>,
   bl!(do_parse!(
-    ty: type_specifier_non_array >>
+    ty: type_specifier >>
     name: identifier >>
     a: opt!(array_specifier) >>
     (syntax::FunctionParameterDeclarator {
@@ -1942,7 +1942,10 @@ mod tests {
   fn parse_struct_field_specifier() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
   
@@ -1954,7 +1957,10 @@ mod tests {
   fn parse_struct_field_specifier_type_name() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("x".to_owned(), None)]
     };
   
@@ -1966,7 +1972,10 @@ mod tests {
   fn parse_struct_field_specifier_several() {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None), ("bar".to_owned(), None), ("zoo".to_owned(), None)]
     };
   
@@ -1978,7 +1987,10 @@ mod tests {
   fn parse_struct_specifier_one_field() {
     let field = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
     let expected = syntax::StructSpecifier {
@@ -1994,27 +2006,42 @@ mod tests {
   fn parse_struct_specifier_multi_fields() {
     let a = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec4,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec4,
+        array_specifier: None
+      },
       identifiers: vec![("foo".to_owned(), None)]
     };
     let b = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("bar".to_owned(), None)]
     };
     let c = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::UInt,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::UInt,
+        array_specifier: None
+      },
       identifiers: vec![("zoo".to_owned(), None)]
     };
     let d = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::BVec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::BVec3,
+        array_specifier: None
+      },
       identifiers: vec![("foo_BAR_zoo3497_34".to_owned(), None)]
     };
     let e = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("x".to_owned(), None)]
     };
     let expected = syntax::StructSpecifier {
@@ -2155,7 +2182,7 @@ mod tests {
       ty: syntax::TypeSpecifierNonArray::UInt,
       array_specifier: None
     }));
-    assert_eq!(type_specifier(&b"iimage2MSArray[35];"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
+    assert_eq!(type_specifier(&b"iimage2DMSArray[35];"[..]), IResult::Done(&b";"[..], syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
       array_specifier: Some(syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(35))))
     }));
@@ -2163,22 +2190,28 @@ mod tests {
   
   #[test]
   fn parse_fully_specified_type() {
-    let ty = syntax::TypeSpecifierNonArray::IImage2DMSArray;
-    let expected = syntax::FullySpecifiedType { qualifier: None, ty: ty };
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: None
+    };
+    let expected = syntax::FullySpecifiedType { qualifier: None, ty };
   
-    assert_eq!(fully_specified_type(&b"iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected.clone()));
   }
   
   #[test]
   fn parse_fully_specified_type_with_qualifier() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".to_owned(), "S032_29k".to_owned()]));
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
-    let ty = syntax::TypeSpecifierNonArray::IImage2DMSArray;
-    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty: ty };
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+      array_specifier: None
+    };
+    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty };
   
-    assert_eq!(fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray"[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray "[..]), IResult::Done(&b""[..], expected.clone()));
-    assert_eq!(fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(fully_specified_type(&b"subroutine (vec2, S032_29k) iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"[..]), IResult::Done(&b";"[..], expected.clone()));
+    assert_eq!(fully_specified_type(&b"subroutine(vec2,S032_29k)iimage2DMSArray;"[..]), IResult::Done(&b";"[..], expected));
   }
 
   #[test]
@@ -2495,13 +2528,23 @@ mod tests {
   fn parse_declaration_function_prototype() {
     let rt = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec3
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      }
     };
-    let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, syntax::TypeSpecifierNonArray::Vec2);
+    let arg0_ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Vec2,
+      array_specifier: None
+    };
+    let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, arg0_ty);
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Out);
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let arg1 = syntax::FunctionParameterDeclaration::Named(Some(qual), syntax::FunctionParameterDeclarator {
-      ty: syntax::TypeSpecifierNonArray::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       name: "the_arg".to_owned(),
       array_spec: None
     });
@@ -2521,10 +2564,13 @@ mod tests {
   fn parse_declaration_init_declarator_list_single() {
     let ty = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Int
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Int,
+        array_specifier: None
+      }
     };
     let sd = syntax::SingleDeclaration {
-      ty: ty,
+      ty,
       name: Some("foo".to_owned()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
@@ -2541,10 +2587,13 @@ mod tests {
   fn parse_declaration_init_declarator_list_complex() {
     let ty = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Int
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Int,
+        array_specifier: None
+      }
     };
     let sd = syntax::SingleDeclaration {
-      ty: ty,
+      ty,
       name: Some("foo".to_owned()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
@@ -2567,7 +2616,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_low() {
     let qual = syntax::PrecisionQualifier::Low;
-    let ty = syntax::TypeSpecifierNonArray::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision lowp float;"[..]), IResult::Done(&b""[..], expected));
@@ -2576,7 +2628,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_medium() {
     let qual = syntax::PrecisionQualifier::Medium;
-    let ty = syntax::TypeSpecifierNonArray::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision mediump float;"[..]), IResult::Done(&b""[..], expected));
@@ -2585,7 +2640,10 @@ mod tests {
   #[test]
   fn parse_declaration_precision_high() {
     let qual = syntax::PrecisionQualifier::High;
-    let ty = syntax::TypeSpecifierNonArray::Float;
+    let ty = syntax::TypeSpecifier {
+      ty: syntax::TypeSpecifierNonArray::Float,
+      array_specifier: None
+    };
     let expected = syntax::Declaration::Precision(qual, ty);
 
     assert_eq!(declaration(&b"precision highp float;"[..]), IResult::Done(&b""[..], expected));
@@ -2597,17 +2655,26 @@ mod tests {
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      },
       identifiers: vec![("b".to_owned(), None)]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected =
@@ -2630,17 +2697,26 @@ mod tests {
     let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Float,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Float,
+        array_specifier: None
+      },
       identifiers: vec![("a".to_owned(), None)]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::Vec3,
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::Vec3,
+        array_specifier: None
+      },
       identifiers: vec![("b".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        array_specifier: None
+      },
       identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
     };
     let expected =
@@ -2805,7 +2881,13 @@ mod tests {
                    syntax::Declaration::InitDeclaratorList(
                      syntax::InitDeclaratorList {
                        head: syntax::SingleDeclaration {
-                               ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifierNonArray::Float },
+                               ty: syntax::FullySpecifiedType {
+                                 qualifier: None,
+                                 ty: syntax::TypeSpecifier {
+                                   ty: syntax::TypeSpecifierNonArray::Float,
+                                   array_specifier: None
+                                 }
+                               },
                                name: Some("i".to_owned()),
                                array_specifier: None,
                                initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
@@ -2889,7 +2971,13 @@ mod tests {
                     syntax::Declaration::InitDeclaratorList(
                       syntax::InitDeclaratorList {
                         head: syntax::SingleDeclaration {
-                          ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifierNonArray::ISampler3D },
+                          ty: syntax::FullySpecifiedType {
+                            qualifier: None,
+                            ty: syntax::TypeSpecifier {
+                              ty: syntax::TypeSpecifierNonArray::ISampler3D,
+                              array_specifier: None
+                            }
+                          },
                           name: Some("x".to_owned()),
                           array_specifier: None,
                           initializer: None
@@ -2923,7 +3011,10 @@ mod tests {
   fn parse_function_definition() {
     let rt = syntax::FullySpecifiedType {
       qualifier: None,
-      ty: syntax::TypeSpecifierNonArray::IImage2DArray
+      ty: syntax::TypeSpecifier {
+        ty: syntax::TypeSpecifierNonArray::IImage2DArray,
+        array_specifier: None
+      }
     };
     let fp = syntax::FunctionPrototype {
       ty: rt,
@@ -2960,7 +3051,10 @@ mod tests {
       prototype: syntax::FunctionPrototype {
         ty: syntax::FullySpecifiedType {
           qualifier: None,
-          ty: syntax::TypeSpecifierNonArray::Void
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::Void,
+            array_specifier: None
+          }
         },
         name: "main".to_owned(),
         parameters: Vec::new(),
@@ -2980,7 +3074,10 @@ mod tests {
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
-                ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                ty: syntax::TypeSpecifier {
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  array_specifier: None
+                },
                 identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
               }
             ],
@@ -3017,7 +3114,10 @@ mod tests {
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
-                ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                ty: syntax::TypeSpecifier {
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  array_specifier: None
+                },
                 identifiers: vec![("a".to_owned(), None)]
               }
             ],
@@ -3130,7 +3230,13 @@ mod tests {
         )
       );
     let sd = syntax::SingleDeclaration {
-      ty: syntax::FullySpecifiedType { qualifier: None, ty: syntax::TypeSpecifierNonArray::Vec3 },
+      ty: syntax::FullySpecifiedType {
+          qualifier: None,
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::Vec3,
+            array_specifier: None
+          }
+      },
       name: Some("v".to_owned()),
       array_specifier: None,
       initializer: Some(ini)
