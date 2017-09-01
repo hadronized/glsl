@@ -1,4 +1,11 @@
-# 0.5
+# 0.6.0
+
+> Friday, September, 1st 2017
+
+- The `TypeSpecifier` type was wrong as it didn’t carry any `ArraySpecifier` information while the
+  GLSL specification’s grammar about type specifiers states they should. Fixed.
+
+# 0.5.0
 
 > Monday, August, 7th 2017
 
