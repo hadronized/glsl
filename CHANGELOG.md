@@ -1,3 +1,9 @@
+## 0.6.1
+
+> Monday, September, 4th 2017
+
+- Fixed `show_struct_specifier`.
+
 # 0.6.0
 
 > Friday, September, 1st 2017

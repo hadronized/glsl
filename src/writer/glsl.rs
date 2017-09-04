@@ -142,7 +142,7 @@ pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonA
     syntax::TypeSpecifierNonArray::UImage2DMSArray => { let _ = f.write_str("uimage2DMSArray"); }
     syntax::TypeSpecifierNonArray::USamplerCubeArray => { let _ = f.write_str("usamplerCubeArray"); }
     syntax::TypeSpecifierNonArray::UImageCubeArray => { let _ = f.write_str("uimageCubeArray"); }
-    syntax::TypeSpecifierNonArray::Struct(ref s) => show_struct(f, s),
+    syntax::TypeSpecifierNonArray::Struct(ref s) => show_struct_non_declaration(f, s),
     syntax::TypeSpecifierNonArray::TypeName(ref tn) => show_type_name(f, tn)
   }
 }
@@ -164,7 +164,7 @@ pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) w
   show_type_specifier(f, &t.ty);
 }
 
-pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
+pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
   let _ = f.write_str("struct ");
 
   if let Some(ref name) = s.name {
@@ -178,6 +178,11 @@ pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
   }
 
   let _ = f.write_str("}\n");
+}
+
+pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
+  show_struct_non_declaration(f, s);
+  f.write_str(";\n");
 }
 
 pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) where F: Write {
