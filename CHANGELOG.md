@@ -1,3 +1,9 @@
+## 0.6.5
+
+> Monday, September, 4th 2017
+
+- Fixed the formatting of floating values when the fractional part is `0`.
+
 ## 0.6.4
 
 > Monday, September, 4th 2017

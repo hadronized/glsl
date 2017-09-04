@@ -334,6 +334,22 @@ pub fn show_interpolation_qualifier<F>(f: &mut F, i: &syntax::InterpolationQuali
   }
 }
 
+pub fn show_float<F>(f: &mut F, x: f32) where F: Write {
+  if x.fract() == 0. {
+    let _ = write!(f, "{}.", x);
+  } else {
+    let _ = write!(f, "{}", x);
+  }
+}
+
+pub fn show_double<F>(f: &mut F, x: f64) where F: Write {
+  if x.fract() == 0. {
+    let _ = write!(f, "{}.", x);
+  } else {
+    let _ = write!(f, "{}", x);
+  }
+}
+
 // FIXME: better parens scheme, maybe?
 pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
   match *expr {
@@ -341,8 +357,8 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
     syntax::Expr::IntConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::UIntConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::BoolConst(ref x) => { let _ = write!(f, "{}", x); }
-    syntax::Expr::FloatConst(ref x) => { let _ = write!(f, "{}", x); }
-    syntax::Expr::DoubleConst(ref x) => { let _ = write!(f, "{}", x); }
+    syntax::Expr::FloatConst(ref x) => show_float(f, *x),
+    syntax::Expr::DoubleConst(ref x) => show_double(f, *x),
     syntax::Expr::Unary(ref op, ref e) => {
       show_unary_op(f, &op);
       let _ = f.write_str("(");
