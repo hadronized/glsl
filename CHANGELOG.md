@@ -1,3 +1,9 @@
+## 0.6.3
+
+> Monday, September, 4th 2017
+
+- Fixed the output for `show_struct_specifier`.
+
 ## 0.6.2
 
 > Monday, September, 4th 2017
