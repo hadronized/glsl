@@ -1,3 +1,9 @@
+## 0.6.2
+
+> Monday, September, 4th 2017
+
+- Removed a warning.
+
 ## 0.6.1
 
 > Monday, September, 4th 2017

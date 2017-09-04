@@ -182,7 +182,7 @@ pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier) wh
 
 pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
   show_struct_non_declaration(f, s);
-  f.write_str(";\n");
+  let _ = f.write_str(";\n");
 }
 
 pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) where F: Write {
