@@ -1040,11 +1040,20 @@ named!(function_call_header<&[u8], syntax::FunIdentifier>,
   ))
 );
 
-/// Parse a function identifier.
+/// Parse a function identifier just behind a function list argument.
 named!(pub function_identifier<&[u8], syntax::FunIdentifier>,
   alt!(
-    map!(identifier, syntax::FunIdentifier::Identifier)
-    //map!(postfix_expr, |e| syntax::FunIdentifier::Expr(Box::new(e))) // FIXME
+    do_parse!(
+      i: identifier >>
+      peek!(char!('(')) >>
+      (syntax::FunIdentifier::Identifier(i))
+    ) |
+
+    do_parse!(
+      e: primary_expr >>
+      pfe: call!(postfix_part, e) >>
+      (syntax::FunIdentifier::Expr(Box::new(pfe)))
+    )
   )
 );
 
@@ -2444,13 +2453,51 @@ mod tests {
   #[test]
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::Identifier("foo".to_owned());
-    assert_eq!(function_identifier(&b"foo"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(function_identifier(&b"foo("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b"  foo\n\t("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b" \tfoo\n ("[..]), IResult::Done(&b"("[..], expected));
   }
 
   #[test]
   fn parse_function_identifier_cast() {
     let expected = syntax::FunIdentifier::Identifier("vec3".to_owned());
-    assert_eq!(function_identifier(&b"vec3"[..]), IResult::Done(&b""[..], expected));
+    assert_eq!(function_identifier(&b"vec3("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b"  vec3 ("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b" \t\n vec3\t\n\n \t ("[..]), IResult::Done(&b"("[..], expected));
+  }
+
+  #[test]
+  fn parse_function_identifier_cast_array_unsized() {
+    let expected =
+      syntax::FunIdentifier::Expr(
+        Box::new(
+          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".to_owned())),
+                                syntax::ArraySpecifier::Unsized
+          )
+        )
+      );
+
+    assert_eq!(function_identifier(&b"vec3[]("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b"\n\tvec3  [\t\n]("[..]), IResult::Done(&b"("[..], expected));
+  }
+
+  #[test]
+  fn parse_function_identifier_cast_array_sized() {
+    let expected =
+      syntax::FunIdentifier::Expr(
+        Box::new(
+          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".to_owned())),
+                                syntax::ArraySpecifier::ExplicitlySized(
+                                  Box::new(
+                                    syntax::Expr::IntConst(12)
+                                  )
+                                )
+          )
+        )
+      );
+
+    assert_eq!(function_identifier(&b"vec3[12]("[..]), IResult::Done(&b"("[..], expected.clone()));
+    assert_eq!(function_identifier(&b"\n\tvec3  [\t 12\n]("[..]), IResult::Done(&b"("[..], expected));
   }
 
   #[test]

@@ -276,7 +276,7 @@ pub struct Block {
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunIdentifier {
   Identifier(Identifier),
-  //Expr(Box<Expr>)
+  Expr(Box<Expr>)
 }
 
 /// Function prototype.
