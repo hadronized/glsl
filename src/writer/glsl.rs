@@ -483,7 +483,8 @@ pub fn show_assignment_op<F>(f: &mut F, op: &syntax::AssignmentOp) where F: Writ
 
 pub fn show_function_identifier<F>(f: &mut F, i: &syntax::FunIdentifier) where F: Write {
   match *i {
-    syntax::FunIdentifier::Identifier(ref n) => show_identifier(f, &n)
+    syntax::FunIdentifier::Identifier(ref n) => show_identifier(f, &n),
+    syntax::FunIdentifier::Expr(ref e) => show_expr(f, &*e)
   }
 }
 
