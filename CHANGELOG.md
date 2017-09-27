@@ -1,3 +1,9 @@
+# 0.7.0
+
+> Wednesday, September, 27th 2017
+
+- Added support for postfix expressions as function identifiers.
+
 ## 0.6.5
 
 > Monday, September, 4th 2017
