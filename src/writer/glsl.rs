@@ -157,7 +157,7 @@ pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier) where F: Wri
 
 pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) where F: Write {
   if let Some(ref qual) = t.qualifier {
-    show_type_qualifier(f, &qual);
+    show_type_qualifier(f, qual);
     let _ = f.write_str(" ");
   }
 
@@ -187,7 +187,7 @@ pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
 
 pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) where F: Write {
   if let Some(ref qual) = field.qualifier {
-    show_type_qualifier(f, &qual);
+    show_type_qualifier(f, qual);
     let _ = f.write_str(" ");
   }
 
@@ -214,7 +214,7 @@ pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier) where F: Write 
     syntax::ArraySpecifier::Unsized => { let _ = f.write_str("[]"); }
     syntax::ArraySpecifier::ExplicitlySized(ref e) => {
       let _ = f.write_str("[");
-      show_expr(f, &e);
+      show_expr(f, e);
       let _ = f.write_str("]");
     }
   }
@@ -242,10 +242,10 @@ pub fn show_type_qualifier<F>(f: &mut F, q: &syntax::TypeQualifier) where F: Wri
 
 pub fn show_type_qualifier_spec<F>(f: &mut F, q: &syntax::TypeQualifierSpec) where F: Write {
   match *q {
-    syntax::TypeQualifierSpec::Storage(ref s) => show_storage_qualifier(f, &s),
-    syntax::TypeQualifierSpec::Layout(ref l) => show_layout_qualifier(f, &l),
-    syntax::TypeQualifierSpec::Precision(ref p) => show_precision_qualifier(f, &p),
-    syntax::TypeQualifierSpec::Interpolation(ref i) => show_interpolation_qualifier(f, &i),
+    syntax::TypeQualifierSpec::Storage(ref s) => show_storage_qualifier(f, s),
+    syntax::TypeQualifierSpec::Layout(ref l) => show_layout_qualifier(f, l),
+    syntax::TypeQualifierSpec::Precision(ref p) => show_precision_qualifier(f, p),
+    syntax::TypeQualifierSpec::Interpolation(ref i) => show_interpolation_qualifier(f, i),
     syntax::TypeQualifierSpec::Invariant => { let _ = f.write_str("invariant"); },
     syntax::TypeQualifierSpec::Precise => { let _ = f.write_str("precise"); }
   }
@@ -268,11 +268,11 @@ pub fn show_storage_qualifier<F>(f: &mut F, q: &syntax::StorageQualifier) where 
     syntax::StorageQualifier::Restrict => { let _ = f.write_str("restrict"); }
     syntax::StorageQualifier::ReadOnly => { let _ = f.write_str("readonly"); }
     syntax::StorageQualifier::WriteOnly => { let _ = f.write_str("writeonly"); }
-    syntax::StorageQualifier::Subroutine(ref n) => show_subroutine(f, &n)
+    syntax::StorageQualifier::Subroutine(ref n) => show_subroutine(f, n)
   }
 }
 
-pub fn show_subroutine<F>(f: &mut F, types: &Vec<syntax::TypeName>) where F: Write {
+pub fn show_subroutine<F>(f: &mut F, types: &[syntax::TypeName]) where F: Write {
   let _ = f.write_str("subroutine");
 
   if !types.is_empty() {
@@ -311,9 +311,9 @@ pub fn show_layout_qualifier_spec<F>(f: &mut F, l: &syntax::LayoutQualifierSpec)
   match *l {
     syntax::LayoutQualifierSpec::Identifier(ref i, Some(ref e)) => {
       let _ = write!(f, "{} = ", i);
-      show_expr(f, &e);
+      show_expr(f, e);
     }
-    syntax::LayoutQualifierSpec::Identifier(ref i, None) => show_identifier(f, &i),
+    syntax::LayoutQualifierSpec::Identifier(ref i, None) => show_identifier(f, i),
     syntax::LayoutQualifierSpec::Shared => { let _ = f.write_str("shared"); }
   }
 }
@@ -353,47 +353,47 @@ pub fn show_double<F>(f: &mut F, x: f64) where F: Write {
 // FIXME: better parens scheme, maybe?
 pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
   match *expr {
-    syntax::Expr::Variable(ref i) => show_identifier(f, &i),
+    syntax::Expr::Variable(ref i) => show_identifier(f, i),
     syntax::Expr::IntConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::UIntConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::BoolConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::FloatConst(ref x) => show_float(f, *x),
     syntax::Expr::DoubleConst(ref x) => show_double(f, *x),
     syntax::Expr::Unary(ref op, ref e) => {
-      show_unary_op(f, &op);
+      show_unary_op(f, op);
       let _ = f.write_str("(");
-      show_expr(f, &e);
+      show_expr(f, e);
       let _ = f.write_str(")");
     }
     syntax::Expr::Binary(ref op, ref l, ref r) => {
       let _ = f.write_str("(");
-      show_expr(f, &l);
+      show_expr(f, l);
       let _ = f.write_str(")");
-      show_binary_op(f, &op);
+      show_binary_op(f, op);
       let _ = f.write_str("(");
-      show_expr(f, &r);
+      show_expr(f, r);
       let _ = f.write_str(")");
     }
     syntax::Expr::Ternary(ref c, ref s, ref e) => {
-      show_expr(f, &c);
+      show_expr(f, c);
       let _ = f.write_str(" ? ");
-      show_expr(f, &s);
+      show_expr(f, s);
       let _ = f.write_str(" : ");
-      show_expr(f, &e);
+      show_expr(f, e);
     }
     syntax::Expr::Assignment(ref v, ref op, ref e) => {
-      show_expr(f, &v);
+      show_expr(f, v);
       let _ = f.write_str(" ");
-      show_assignment_op(f, &op);
+      show_assignment_op(f, op);
       let _ = f.write_str(" ");
-      show_expr(f, &e);
+      show_expr(f, e);
     }
     syntax::Expr::Bracket(ref e, ref a) => {
-      show_expr(f, &e);
-      show_array_spec(f, &a);
+      show_expr(f, e);
+      show_array_spec(f, a);
     }
     syntax::Expr::FunCall(ref fun, ref args) => {
-      show_function_identifier(f, &fun);
+      show_function_identifier(f, fun);
       let _ = f.write_str("(");
       
       if !args.is_empty() {
@@ -410,22 +410,22 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
       let _ = f.write_str(")");
     }
     syntax::Expr::Dot(ref e, ref i) => {
-      show_expr(f, &e);
+      show_expr(f, e);
       let _ = f.write_str(".");
-      show_identifier(f, &i);
+      show_identifier(f, i);
     }
     syntax::Expr::PostInc(ref e) => {
-      show_expr(f, &e);
+      show_expr(f, e);
       let _ = f.write_str("++");
     }
     syntax::Expr::PostDec(ref e) => {
-      show_expr(f, &e);
+      show_expr(f, e);
       let _ = f.write_str("--");
     }
     syntax::Expr::Comma(ref a, ref b) => {
-      show_expr(f, &a);
+      show_expr(f, a);
       let _ = f.write_str(", ");
-      show_expr(f, &b);
+      show_expr(f, b);
     }
   }
 }
@@ -483,7 +483,7 @@ pub fn show_assignment_op<F>(f: &mut F, op: &syntax::AssignmentOp) where F: Writ
 
 pub fn show_function_identifier<F>(f: &mut F, i: &syntax::FunIdentifier) where F: Write {
   match *i {
-    syntax::FunIdentifier::Identifier(ref n) => show_identifier(f, &n),
+    syntax::FunIdentifier::Identifier(ref n) => show_identifier(f, n),
     syntax::FunIdentifier::Expr(ref e) => show_expr(f, &*e)
   }
 }
@@ -491,24 +491,24 @@ pub fn show_function_identifier<F>(f: &mut F, i: &syntax::FunIdentifier) where F
 pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration) where F: Write {
   match *d {
     syntax::Declaration::FunctionPrototype(ref proto) => {
-      show_function_prototype(f, &proto);
+      show_function_prototype(f, proto);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::InitDeclaratorList(ref list) => {
-      show_init_declarator_list(f, &list);
+      show_init_declarator_list(f, list);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::Precision(ref qual, ref ty) => {
-      show_precision_qualifier(f, &qual);
-      show_type_specifier(f, &ty);
+      show_precision_qualifier(f, qual);
+      show_type_specifier(f, ty);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::Block(ref block) => {
-      show_block(f, &block);
+      show_block(f, block);
       let _ = f.write_str(";\n");
     }
     syntax::Declaration::Global(ref qual, ref identifiers) => {
-      show_type_qualifier(f, &qual);
+      show_type_qualifier(f, qual);
 
       if !identifiers.is_empty() {
         let mut iter = identifiers.iter();
@@ -741,7 +741,7 @@ pub fn show_iteration_statement<F>(f: &mut F, ist: &syntax::IterationStatement) 
       let _ = f.write_str("do ");
       show_statement(f, body);
       let _ = f.write_str(" while (");
-      show_expr(f, cond);
+      show_condition(f, cond);
       let _ = f.write_str(")\n");
     }
     syntax::IterationStatement::For(ref init, ref rest, ref body) => {
