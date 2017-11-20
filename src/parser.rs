@@ -5,6 +5,8 @@
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
 use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp};
+use std::error::Error;
+use std::fmt;
 use std::str::{from_utf8_unchecked};
 
 use syntax;
@@ -15,6 +17,18 @@ use syntax;
 pub struct ParseError {
   kind: ErrorKind,
   info: String
+}
+
+impl fmt::Display for ParseError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    f.write_str(self.description())
+  }
+}
+
+impl Error for ParseError {
+  fn description(&self) -> &str {
+    &self.info
+  }
 }
 
 /// Parse result. It can either be parsed, incomplete or errored.

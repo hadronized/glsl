@@ -1,3 +1,9 @@
+## 0.7.1
+
+> Monday, November, 20th 2017
+
+- `std::error::Error` is now implemented for `ParseError`.
+
 # 0.7.0
 
 > Wednesday, September, 27th 2017
