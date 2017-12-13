@@ -355,7 +355,7 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
   match *expr {
     syntax::Expr::Variable(ref i) => show_identifier(f, &i),
     syntax::Expr::IntConst(ref x) => { let _ = write!(f, "{}", x); }
-    syntax::Expr::UIntConst(ref x) => { let _ = write!(f, "{}", x); }
+    syntax::Expr::UIntConst(ref x) => { let _ = write!(f, "{}u", x); }
     syntax::Expr::BoolConst(ref x) => { let _ = write!(f, "{}", x); }
     syntax::Expr::FloatConst(ref x) => show_float(f, *x),
     syntax::Expr::DoubleConst(ref x) => show_double(f, *x),

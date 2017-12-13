@@ -1,3 +1,9 @@
+## 0.7.2
+
+> Wednesday, December, 13th 2017
+
+- Fix the `show_expr` when the `Expr` is a `Expr::UIntConst`.
+
 ## 0.7.1
 
 > Monday, November, 20th 2017
