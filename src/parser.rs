@@ -2465,6 +2465,24 @@ mod tests {
   }
 
   #[test]
+  fn parse_complex_expr() {
+    let one = Box::new(syntax::Expr::DoubleConst(1.));
+    let three = Box::new(syntax::Expr::DoubleConst(3.));
+    let x = Box::new(syntax::Expr::Variable("x".to_owned()));
+    let y = Box::new(syntax::Expr::Variable("y".to_owned()));
+    let three_plus_y = syntax::Expr::Binary(syntax::BinaryOp::Add, three.clone(), y);
+    let sin_ = Box::new(syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("sin".to_owned()), vec![three_plus_y]));
+    let one_minus_sin = Box::new(syntax::Expr::Binary(syntax::BinaryOp::Sub, one, sin_));
+    let x_times_one_minus_sin = syntax::Expr::Binary(syntax::BinaryOp::Mult, x, one_minus_sin);
+    let cos_ = Box::new(syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("cos".to_owned()), vec![x_times_one_minus_sin]));
+    let xyz = syntax::Expr::Dot(cos_, "xyz".to_owned());
+    let normalize = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".to_owned()), vec![xyz]);
+    let expected = normalize;
+
+    assert_eq!(expr(&b"normalize(cos(x * (1. - sin(3. + y))).xyz);"[..]), IResult::Done(&b";"[..], expected));
+  }
+
+  #[test]
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::Identifier("foo".to_owned());
     assert_eq!(function_identifier(&b"foo("[..]), IResult::Done(&b"("[..], expected.clone()));
