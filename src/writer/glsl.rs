@@ -857,3 +857,33 @@ pub fn show_translation_unit<F>(f: &mut F, tu: &syntax::TranslationUnit) where F
     show_external_declaration(f, ed);
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn idempotent_glsl_complex_expr() {
+    use nom::IResult;
+
+    use parser::expr;
+
+    let zero = syntax::Expr::DoubleConst(0.);
+    let ray = syntax::Expr::Variable("ray".to_owned());
+    let raydir = syntax::Expr::Dot(Box::new(ray), "dir".to_owned());
+    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".to_owned()), vec![raydir, zero]);
+    let view = syntax::Expr::Variable("view".to_owned());
+    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".to_owned()), vec![view]);
+    let mul = syntax::Expr::Binary(syntax::BinaryOp::Mult, Box::new(iview), Box::new(vec4));
+    let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".to_owned());
+    let input = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".to_owned()), vec![xyz]);
+
+    let mut output = String::new();
+    show_expr(&mut output, &input);
+    let _ = output.write_str(";");
+
+    let back = expr(output.as_bytes());
+
+    assert_eq!(back, IResult::Done(&b";"[..], input));
+  }
+}
