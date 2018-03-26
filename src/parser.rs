@@ -176,6 +176,7 @@ named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
 pub fn type_specifier_non_struct(i: &[u8]) -> IResult<&[u8], syntax::TypeSpecifierNonArray> {
   let (i1, t) = try_parse!(i, identifier_str);
 
+  #[cfg_attr(feature = "cargo-clippy", allow(match_same_arms))]
   match unsafe { from_utf8_unchecked(t) } {
     "void" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Void),
     "bool" => IResult::Done(i1, syntax::TypeSpecifierNonArray::Bool),
@@ -325,7 +326,7 @@ named!(decimal_lit_<&[u8], ()>,
   do_parse!(
     bl!(opt!(char!('-'))) >>
     nonzero_digit >>
-    (())
+    ()
   )
 );
 
@@ -342,7 +343,7 @@ named!(octal_lit_<&[u8], ()>,
   do_parse!(
     bl!(opt!(char!('-'))) >>
     verify!(digit, is_octal) >>
-    (())
+    ()
   )
 );
 
@@ -365,7 +366,7 @@ named!(hexadecimal_lit_<&[u8], ()>,
     bl!(opt!(char!('-'))) >>
     alt!(tag!("0x") | tag!("0X")) >>
     verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
-    (())
+    ()
   )
 );
 
@@ -459,16 +460,16 @@ named!(floating_exponent<&[u8], ()>,
     alt!(char!('e') | char!('E')) >>
     opt!(alt!(char!('+') | char!('-'))) >>
     digit >>
-    (())
+    ()
   )
 );
 
 /// Parse the fractional constant part of a floating point literal.
 named!(floating_frac<&[u8], ()>,
   alt!(
-    do_parse!(char!('.') >> digit >> (())) |
-    do_parse!(digit >> tag!(".") >> digit >> (())) |
-    do_parse!(digit >> tag!(".") >> (()))
+    do_parse!(char!('.') >> digit >> ()) |
+    do_parse!(digit >> tag!(".") >> digit >> ()) |
+    do_parse!(digit >> tag!(".") >> ())
   )
 );
 
@@ -1432,7 +1433,7 @@ named!(pub iteration_statement_while<&[u8], syntax::IterationStatement>,
     cond: condition >>
     char!(')') >>
     st: statement >>
-    (syntax::IterationStatement::While(cond, Box::new(st)))
+    (syntax::IterationStatement::While(Box::new(cond), Box::new(st)))
   ))
 );
 
@@ -1442,10 +1443,10 @@ named!(pub iteration_statement_do_while<&[u8], syntax::IterationStatement>,
     st: statement >>
     atag!("while") >>
     char!('(') >>
-    e: expr >>
+    cond: condition >>
     char!(')') >>
     char!(';') >>
-    (syntax::IterationStatement::DoWhile(Box::new(st), Box::new(e)))
+    (syntax::IterationStatement::DoWhile(Box::new(st), Box::new(cond)))
   ))
 );
 
@@ -1457,7 +1458,7 @@ named!(pub iteration_statement_for<&[u8], syntax::IterationStatement>,
     rest: iteration_statement_for_rest_statement >>
     char!(')') >>
     body: statement >>
-    (syntax::IterationStatement::For(head, rest, Box::new(body)))
+    (syntax::IterationStatement::For(Box::new(head), Box::new(rest), Box::new(body)))
   ))
 );
 
@@ -2930,7 +2931,7 @@ mod tests {
                  )
                );
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
-    let expected = syntax::IterationStatement::While(cond, Box::new(st));
+    let expected = syntax::IterationStatement::While(Box::new(cond), Box::new(st));
 
     assert_eq!(iteration_statement(&b"while (a >= b) {}"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"while(a>=b){}"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2940,12 +2941,14 @@ mod tests {
   #[test]
   fn parse_iteration_statement_do_while_empty() {
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
-    let cond = Box::new(
-                 syntax::Expr::Binary(syntax::BinaryOp::GTE,
-                                      Box::new(syntax::Expr::Variable("a".to_owned())),
-                                      Box::new(syntax::Expr::Variable("b".to_owned())))
-               );
-    let expected = syntax::IterationStatement::DoWhile(Box::new(st), cond);
+    let cond = syntax::Condition::Expr(
+                Box::new(
+                    syntax::Expr::Binary(syntax::BinaryOp::GTE,
+                    Box::new(syntax::Expr::Variable("a".to_owned())),
+                    Box::new(syntax::Expr::Variable("b".to_owned())))
+                )
+              );
+    let expected = syntax::IterationStatement::DoWhile(Box::new(st), Box::new(cond));
 
     assert_eq!(iteration_statement(&b"do {} while (a >= b);"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"do{}while(a>=b);"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2982,7 +2985,7 @@ mod tests {
       post_expr: Some(Box::new(syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(syntax::Expr::Variable("i".to_owned())))))
     };
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
-    let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
+    let expected = syntax::IterationStatement::For(Box::new(init), Box::new(rest), Box::new(st));
 
     assert_eq!(iteration_statement(&b"for (float i = 0.f; i <= 10.f; ++i) {}"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(iteration_statement(&b"for(float i=0.f;i<=10.f;++i){}"[..]), IResult::Done(&b""[..], expected.clone()));

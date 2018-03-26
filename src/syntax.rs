@@ -160,7 +160,7 @@ pub struct TypeSpecifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructSpecifier {
   pub name: Option<String>,
-  pub fields: Vec<StructFieldSpecifier>,
+  pub fields: NonEmpty<StructFieldSpecifier>,
 }
 
 /// Struct field specifier. Used to add fields to struct specifiers.
@@ -512,9 +512,9 @@ pub enum CaseLabel {
 /// Iteration statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum IterationStatement {
-  While(Condition, Box<Statement>),
-  DoWhile(Box<Statement>, Box<Expr>),
-  For(ForInitStatement, ForRestStatement, Box<Statement>)
+  While(Box<Condition>, Box<Statement>),
+  DoWhile(Box<Statement>, Box<Condition>),
+  For(Box<ForInitStatement>, Box<ForRestStatement>, Box<Statement>)
 }
 
 /// For init statement.
