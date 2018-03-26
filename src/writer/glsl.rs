@@ -638,8 +638,15 @@ pub fn show_block<F>(f: &mut F, b: &syntax::Block) where F: Write {
     show_struct_field(f, field);
     let _ = f.write_str("\n");
   }
-
   let _ = f.write_str("}");
+
+  if let Some((ref identifier, ref array_spec)) = b.identifier {
+    show_identifier(f, &identifier);
+
+    if let &Some(ref array_spec) = array_spec {
+      show_array_spec(f, array_spec)
+    }
+  }
 }
 
 pub fn show_function_definition<F>(f: &mut F, fd: &syntax::FunctionDefinition) where F: Write {
