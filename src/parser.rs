@@ -323,7 +323,7 @@ named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
 /// Parse a decimal literal string.
 named!(decimal_lit_<&[u8], ()>,
   do_parse!(
-    bl!(opt!(char!('-'))) >>
+    opt!(char!('-')) >>
     nonzero_digit >>
     (())
   )
@@ -340,7 +340,7 @@ fn is_octal(s: &[u8]) -> bool {
 /// Parse an octal literal string.
 named!(octal_lit_<&[u8], ()>,
   do_parse!(
-    bl!(opt!(char!('-'))) >>
+    opt!(char!('-')) >>
     verify!(digit, is_octal) >>
     (())
   )
@@ -362,7 +362,7 @@ fn alphanumeric_no_u(c: u8) -> bool {
 /// Parse an hexadecimal literal string.
 named!(hexadecimal_lit_<&[u8], ()>,
   do_parse!(
-    bl!(opt!(char!('-'))) >>
+    opt!(char!('-')) >>
     alt!(tag!("0x") | tag!("0X")) >>
     verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
     (())
@@ -1699,6 +1699,9 @@ mod tests {
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
+    integral_lit(&b"\n1"[..]);
+    integral_lit(&b"\n0x1"[..]);
+    integral_lit(&b"\n01"[..]);
   }
   
   #[test]
