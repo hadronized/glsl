@@ -8,6 +8,7 @@ use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp};
 use std::error::Error;
 use std::fmt;
 use std::str::{from_utf8_unchecked};
+use std::num::ParseIntError;
 
 use syntax;
 
@@ -399,31 +400,38 @@ named!(integral_lit_,
 ///     bit pattern cannot fit in 32 bits. The bit pattern of the
 ///     literal is always used unmodified. So a signed literal whose
 ///     bit pattern includes a set sign bit creates a negative value."
-
-named!(pub integral_lit<&[u8], i32>,
+named!(pub integral_lit_try<Result<u32,ParseIntError>>,
   do_parse!(
+    sign: opt!(char!('-')) >>
     i: integral_lit_ >>
     ({
-      if i.len() > 2 {
-        if i[0] == b'-' {
-          let i_ = &i[1..];
-
-          if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
-            -i32::from_str_radix(bytes_to_str(&i_[2..]), 16).unwrap()
-          } else {
-            bytes_to_str(i).parse::<i32>().unwrap()
-          }
-        } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
-          i32::from_str_radix(bytes_to_str(&i[2..]), 16).unwrap()
-        } else {
-          bytes_to_str(i).parse::<i32>().unwrap()
-        }
+      let value = if i.starts_with(b"0x") | i.starts_with(b"0X") {
+        u32::from_str_radix(bytes_to_str(&i[2..]), 16)
       } else {
-        bytes_to_str(i).parse::<i32>().unwrap()
+        bytes_to_str(i).parse::<u32>()
+      };
+
+      if sign.is_some() {
+        value.map(|v| -(v as i32) as u32)
+      } else {
+        value
       }
     })
   )
 );
+
+pub fn integral_lit(i: &[u8]) -> IResult<&[u8], i32> {
+  match integral_lit_try(i) {
+    IResult::Done(i, v) => {
+      match v {
+        Ok(v) => IResult::Done(i, v as i32),
+        _ => IResult::Error(NomErr::Code(ErrorKind::AlphaNumeric)),
+      }
+    },
+    IResult::Error(x) => IResult::Error(x),
+    IResult::Incomplete(n) => IResult::Incomplete(n),
+  }
+}
 
 /// Parse the unsigned suffix.
 named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
@@ -1718,9 +1726,11 @@ mod tests {
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), IResult::Done(&b""[..], 0x9abcdef));
-    integral_lit(&b"\n1"[..]);
-    integral_lit(&b"\n0x1"[..]);
-    integral_lit(&b"\n01"[..]);
+    assert!(integral_lit(&b"\n1"[..]).is_err());
+    assert!(integral_lit(&b"\n0x1"[..]).is_err());
+    assert!(integral_lit(&b"\n01"[..]).is_err());
+    assert!(integral_lit(&b"0xfffffffff"[..]).is_err());
+    assert_eq!(integral_lit(&b"0xffffffff"[..]), IResult::Done(&b""[..], 0xffffffffu32 as i32));
   }
   
   #[test]
