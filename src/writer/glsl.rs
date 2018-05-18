@@ -410,7 +410,9 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
       let _ = f.write_str(")");
     }
     syntax::Expr::Dot(ref e, ref i) => {
+      let _ = f.write_str("(");
       show_expr(f, &e);
+      let _ = f.write_str(")");
       let _ = f.write_str(".");
       show_identifier(f, &i);
     }
