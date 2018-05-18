@@ -381,6 +381,25 @@ named!(integral_lit_,
 );
 
 /// Parse a literal integral string.
+///
+/// From the GLSL 4.30 spec:
+///
+///    "No white space is allowed between the digits of an integer
+///     constant, including after the leading 0 or after the leading
+///     0x or 0X of a constant, or before the suffix u or U. When
+///     tokenizing, the maximal token matching the above will be
+///     recognized before a new token is started. When the suffix u or
+///     U is present, the literal has type uint, otherwise the type is
+///     int. A leading unary minus sign (-) is interpreted as an
+///     arithmetic unary negation, not as part of the constant. Hence,
+///     literals themselves are always expressed with non-negative
+///     syntax, though they could result in a negative value.
+///
+///     It is a compile-time error to provide a literal integer whose
+///     bit pattern cannot fit in 32 bits. The bit pattern of the
+///     literal is always used unmodified. So a signed literal whose
+///     bit pattern includes a set sign bit creates a negative value."
+
 named!(pub integral_lit<&[u8], i32>,
   do_parse!(
     i: integral_lit_ >>
