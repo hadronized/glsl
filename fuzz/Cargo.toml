@@ -13,6 +13,11 @@ path = ".."
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 
+[dependencies.nom]
+version = "3.2"
+default-features = true
+features = ["verbose-errors"]
+
 # Prevent this from interfering with workspaces
 [workspace]
 members = ["."]
@@ -24,3 +29,7 @@ path = "fuzz_targets/parse_expr.rs"
 [[bin]]
 name = "parse_integral_lit"
 path = "fuzz_targets/parse_integral_lit.rs"
+
+[[bin]]
+name = "write_expr"
+path = "fuzz_targets/write_expr.rs"
