@@ -891,6 +891,7 @@ mod tests {
 
     let back = expr(output.as_bytes());
 
-    assert_eq!(back, IResult::Done(&b";"[..], input));
+    assert_eq!(back, IResult::Done(&b";"[..], input),
+               "intermediate source '{}'", output);
   }
 }
