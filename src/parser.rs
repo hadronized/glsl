@@ -4,7 +4,7 @@
 //! GLSL source (a shader, basically).
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
-use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, sp};
+use nom::{Err as NomErr, ErrorKind, IResult, Needed, ParseTo, digit, is_hex_digit, is_oct_digit, sp};
 use std::error::Error;
 use std::fmt;
 use std::str::{from_utf8_unchecked};
@@ -323,12 +323,12 @@ named!(nonzero_digits, verify!(digit, |s:&[u8]| s[0] != b'0'));
 
 #[inline]
 fn is_octal(s: &[u8]) -> bool {
-  s[0] == b'0' && s.iter().all(|&c| c >= b'0' && c <= b'7')
+  s[0] == b'0' && s.iter().all(|&c| is_oct_digit(c))
 }
 
 #[inline]
 fn all_hexa(s: &[u8]) -> bool {
-  s.iter().all(|&c| c >= b'0' && c <= b'9' || c >= b'a' && c <= b'f' || c >= b'A' && c <= b'F')
+  s.iter().all(|&c| is_hex_digit(c))
 }
 
 #[inline]
