@@ -319,36 +319,12 @@ named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
 named!(pub void<&[u8], ()>, value!((), atag!("void")));
 
 /// Parse a digit that precludes a leading 0.
-named!(nonzero_digit, verify!(digit, |s:&[u8]| s[0] != b'0'));
-
-/// Parse a decimal literal string.
-named!(decimal_lit_<&[u8], ()>,
-  do_parse!(
-    opt!(char!('-')) >>
-    nonzero_digit >>
-    (())
-  )
-);
-
-/// Parse a decimal literal.
-named!(decimal_lit, recognize!(decimal_lit_));
+named!(nonzero_digits, verify!(digit, |s:&[u8]| s[0] != b'0'));
 
 #[inline]
 fn is_octal(s: &[u8]) -> bool {
   s[0] == b'0' && s.iter().all(|&c| c >= b'0' && c <= b'7')
 }
-
-/// Parse an octal literal string.
-named!(octal_lit_<&[u8], ()>,
-  do_parse!(
-    opt!(char!('-')) >>
-    verify!(digit, is_octal) >>
-    (())
-  )
-);
-
-/// Parse an octal literal.
-named!(octal_lit, recognize!(octal_lit_));
 
 #[inline]
 fn all_hexa(s: &[u8]) -> bool {
@@ -360,24 +336,27 @@ fn alphanumeric_no_u(c: u8) -> bool {
   char::from(c).is_alphanumeric() && c != b'u' && c != b'U'
 }
 
-/// Parse an hexadecimal literal string.
-named!(hexadecimal_lit_<&[u8], ()>,
+/// Parse an hexadecimal literal.
+named!(hexadecimal_lit<Result<u32,ParseIntError>>,
   do_parse!(
-    opt!(char!('-')) >>
     alt!(tag!("0x") | tag!("0X")) >>
-    verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
-    (())
+    i: verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
+    (u32::from_str_radix(bytes_to_str(i), 16))
   )
 );
 
-/// Parse an hexadecimal literal.
-named!(hexadecimal_lit, recognize!(hexadecimal_lit_));
+/// Parse an octal literal.
+named!(octal_lit<Result<u32,ParseIntError>>,
+  do_parse!(
+    i: verify!(take_while1!(alphanumeric_no_u), is_octal) >>
+    (u32::from_str_radix(bytes_to_str(i), 8))
+  )
+);
 
-named!(integral_lit_,
-  alt!(
-    hexadecimal_lit |
-    octal_lit |
-    decimal_lit
+named!(decimal_lit<Result<u32,ParseIntError>>,
+  do_parse!(
+    i: nonzero_digits >>
+    (bytes_to_str(i).parse::<u32>())
   )
 );
 
@@ -403,18 +382,18 @@ named!(integral_lit_,
 named!(pub integral_lit_try<Result<u32,ParseIntError>>,
   do_parse!(
     sign: opt!(char!('-')) >>
-    i: integral_lit_ >>
+    i: alt!(
+      // Match octal first, so that hexadecimal doesn't throw
+      // Incomplete on '0'.
+      octal_lit |
+      hexadecimal_lit |
+      decimal_lit
+    ) >>
     ({
-      let value = if i.starts_with(b"0x") | i.starts_with(b"0X") {
-        u32::from_str_radix(bytes_to_str(&i[2..]), 16)
-      } else {
-        bytes_to_str(i).parse::<u32>()
-      };
-
       if sign.is_some() {
-        value.map(|v| -(v as i32) as u32)
+        i.map(|v| -(v as i32) as u32)
       } else {
-        value
+        i
       }
     })
   )
@@ -439,27 +418,9 @@ named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
 /// Parse a literal unsigned string.
 named!(pub unsigned_lit<&[u8], u32>,
   do_parse!(
-    i: integral_lit_ >>
+    i: integral_lit >>
     unsigned_suffix >>
-    ({
-      if i.len() > 2 {
-        if i[0] == b'-' {
-          let i_ = &i[1..];
-
-          if i_.starts_with(b"0x") | i_.starts_with(b"0X") {
-            u32::wrapping_sub(0, u32::from_str_radix(bytes_to_str(&i_[2..]), 16).unwrap())
-          } else {
-            bytes_to_str(i).parse::<u32>().unwrap()
-          }
-        } else if i.starts_with(b"0x") | i.starts_with(b"0X") {
-          u32::from_str_radix(bytes_to_str(&i[2..]), 16).unwrap()
-        } else {
-          bytes_to_str(i).parse::<u32>().unwrap()
-        }
-      } else {
-        bytes_to_str(i).parse::<u32>().unwrap()
-      }
-    })
+    (i as u32)
   )
 );
 
@@ -1691,36 +1652,18 @@ mod tests {
   }
   
   #[test]
-  fn parse_nonzero_digit() {
-    assert_eq!(nonzero_digit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
-    assert_eq!(nonzero_digit(&b"12345953"[..]), IResult::Done(&b""[..], &b"12345953"[..]));
-  }
-  
-  #[test]
-  fn parse_decimal_lit() {
-    assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
-    assert_eq!(decimal_lit(&b"3 "[..]), IResult::Done(&b" "[..], &b"3"[..]));
-  }
-  
-  #[test]
-  fn parse_octal_lit() {
-    assert_eq!(octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], &b"03"[..]));
-    assert_eq!(octal_lit(&b"07654321234567 "[..]), IResult::Done(&b" "[..], &b"07654321234567"[..]));
-  }
-  
-  #[test]
-  fn parse_hexadecimal_lit() {
-    assert_eq!(hexadecimal_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], &b"0x3"[..]));
-    assert_eq!(hexadecimal_lit(&b"0x0123456789ABCDEF"[..]), IResult::Done(&b""[..], &b"0x0123456789ABCDEF"[..]));
-    assert_eq!(hexadecimal_lit(&b"0x0123456789abcdef"[..]), IResult::Done(&b""[..], &b"0x0123456789abcdef"[..]));
+  fn parse_nonzero_digits() {
+    assert_eq!(nonzero_digits(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
+    assert_eq!(nonzero_digits(&b"12345953"[..]), IResult::Done(&b""[..], &b"12345953"[..]));
   }
   
   #[test]
   fn parse_integral_lit() {
+    assert_eq!(integral_lit(&b"0"[..]), IResult::Done(&b""[..], 0));
     assert_eq!(integral_lit(&b"3"[..]), IResult::Done(&b""[..], 3));
     assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], 3));
     assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], 3));
-    assert_eq!(integral_lit(&b"076556 "[..]), IResult::Done(&b" "[..], 76556));
+    assert_eq!(integral_lit(&b"012 "[..]), IResult::Done(&b" "[..], 10));
     assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], 0x3));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
@@ -1738,12 +1681,19 @@ mod tests {
     assert_eq!(integral_lit(&b"-3"[..]), IResult::Done(&b""[..], -3));
     assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], -3));
     assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], -3));
-    assert_eq!(integral_lit(&b"-076556 "[..]), IResult::Done(&b" "[..], -76556));
+    assert_eq!(integral_lit(&b"-012 "[..]), IResult::Done(&b" "[..], -10));
     assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], -0x3));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
     assert_eq!(integral_lit(&b"-0x9abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
     assert_eq!(integral_lit(&b"-0x9abcdef"[..]), IResult::Done(&b""[..], -0x9abcdef));
+  }
+  
+  #[test]
+  fn parse_unsigned_lit() {
+    assert_eq!(unsigned_lit(&b"0xffffffffU"[..]), IResult::Done(&b""[..], 0xffffffff as u32));
+    assert_eq!(unsigned_lit(&b"-1u"[..]), IResult::Done(&b""[..], 0xffffffff as u32));
+    assert!(unsigned_lit(&b"0xfffffffffU"[..]).is_err());
   }
   
   #[test]
