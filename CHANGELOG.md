@@ -1,3 +1,17 @@
+# 0.8
+
+> Sunday, June, 17th 2018
+
+This version introduces breaking changes because public types used in return positions have changed.
+These concern only intermediate `nom` functions, so if you do not make a fancy use of this crate,
+you souldn’t have to worry too much when migrating.
+
+- Fix the roundtrip issue with the GLSL writer (precedence wasn’t correctly respected).
+- Simplify internal code.
+- Error instead of panicking when parsing overflowing integer literals.
+- Fix panic trying to parse literals starting with whitespace.
+- Add fuzzing to find out panics.
+
 ## 0.7.2
 
 > Wednesday, December, 13th 2017
@@ -10,50 +24,50 @@
 
 - `std::error::Error` is now implemented for `ParseError`.
 
-# 0.7.0
+# 0.7
 
 > Wednesday, September, 27th 2017
 
-- Added support for postfix expressions as function identifiers.
+- Add support for postfix expressions as function identifiers.
 
 ## 0.6.5
 
 > Monday, September, 4th 2017
 
-- Fixed the formatting of floating values when the fractional part is `0`.
+- Fix the formatting of floating values when the fractional part is `0`.
 
 ## 0.6.4
 
 > Monday, September, 4th 2017
 
-- Fixed the output for `show_struct_specifier`.
+- Fix the output for `show_struct_specifier`.
 
 ## 0.6.3
 
 > Monday, September, 4th 2017
 
-- Fixed the output for `show_struct_specifier`.
+- Fix the output for `show_struct_specifier`.
 
 ## 0.6.2
 
 > Monday, September, 4th 2017
 
-- Removed a warning.
+- Remove a warning.
 
 ## 0.6.1
 
 > Monday, September, 4th 2017
 
-- Fixed `show_struct_specifier`.
+- Fix `show_struct_specifier`.
 
-# 0.6.0
+# 0.6
 
 > Friday, September, 1st 2017
 
 - The `TypeSpecifier` type was wrong as it didn’t carry any `ArraySpecifier` information while the
   GLSL specification’s grammar about type specifiers states they should. Fixed.
 
-# 0.5.0
+# 0.5
 
 > Monday, August, 7th 2017
 
@@ -75,7 +89,7 @@
 
 - Uni/multi-line comments are now supported.
 
-# 0.4.0
+# 0.4
 
 > Wednesday, August, 2nd 2017
 
@@ -88,13 +102,13 @@
 
 > Tuesday, August, 1st 2017
 
-- Fixed the `preprocessor` parser so that it eats surrounding blanks.
+- Fix the `preprocessor` parser so that it eats surrounding blanks.
 
-# 0.3.0
+# 0.3
 
 > Monday, July, 31st 2017
 
-- Added a very minimalistic yet working preprocessor. It parses `#version` and `#extension`
+- Add a very minimalistic yet working preprocessor. It parses `#version` and `#extension`
   commands. Those have to be declared at the top of your file, even though this implementation
   accepts them at any place an external declaration could be defined. Feel free to submit a PR
   if you want to change that behavior, I don’t really mind.
@@ -120,12 +134,12 @@
 
 - More documentation to help people to get their feet wet.
 
-# 0.2.0
+# 0.2
 
 > Saturday, July, 29th 2017
 
 - The whole parsing API is public.
 
-# 0.1.0
+# 0.1
 
 - Initial revision.
