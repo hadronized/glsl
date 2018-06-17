@@ -1656,14 +1656,40 @@ mod tests {
     assert_eq!(nonzero_digits(&b"3"[..]), IResult::Done(&b""[..], &b"3"[..]));
     assert_eq!(nonzero_digits(&b"12345953"[..]), IResult::Done(&b""[..], &b"12345953"[..]));
   }
-  
+
+  #[test]
+  fn parse_decimal_lit() {
+    assert_eq!(decimal_lit(&b"3"[..]), IResult::Done(&b""[..], Ok(3)));
+    assert_eq!(decimal_lit(&b"3 "[..]), IResult::Done(&b" "[..], Ok(3)));
+    assert_eq!(decimal_lit(&b"13 "[..]), IResult::Done(&b" "[..], Ok(13)));
+    assert_eq!(decimal_lit(&b"42 "[..]), IResult::Done(&b" "[..], Ok(42)));
+    assert_eq!(decimal_lit(&b"123456 "[..]), IResult::Done(&b" "[..], Ok(123456)));
+  }
+
+  #[test]
+  fn parse_octal_lit() {
+    assert_eq!(octal_lit(&b"0 "[..]), IResult::Done(&b" "[..], Ok(0o0)));
+    assert_eq!(octal_lit(&b"03 "[..]), IResult::Done(&b" "[..], Ok(0o3)));
+    assert_eq!(octal_lit(&b"012 "[..]), IResult::Done(&b" "[..], Ok(0o12)));
+    assert_eq!(octal_lit(&b"07654321 "[..]), IResult::Done(&b" "[..], Ok(0o7654321)));
+  }
+
+  #[test]
+  fn parse_hexadecimal_lit() {
+    assert_eq!(hexadecimal_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], Ok(0x3)));
+    assert_eq!(hexadecimal_lit(&b"0x0123789"[..]), IResult::Done(&b""[..], Ok(0x0123789)));
+    assert_eq!(hexadecimal_lit(&b"0xABCDEF"[..]), IResult::Done(&b""[..], Ok(0xabcdef)));
+    assert_eq!(hexadecimal_lit(&b"0xabcdef"[..]), IResult::Done(&b""[..], Ok(0xabcdef)));
+  }
+
   #[test]
   fn parse_integral_lit() {
     assert_eq!(integral_lit(&b"0"[..]), IResult::Done(&b""[..], 0));
     assert_eq!(integral_lit(&b"3"[..]), IResult::Done(&b""[..], 3));
     assert_eq!(integral_lit(&b"3 "[..]), IResult::Done(&b" "[..], 3));
     assert_eq!(integral_lit(&b"03 "[..]), IResult::Done(&b" "[..], 3));
-    assert_eq!(integral_lit(&b"012 "[..]), IResult::Done(&b" "[..], 10));
+    assert_eq!(integral_lit(&b"076556 "[..]), IResult::Done(&b" "[..], 0o76556)); 
+    assert_eq!(integral_lit(&b"012 "[..]), IResult::Done(&b" "[..], 0o12));
     assert_eq!(integral_lit(&b"0x3 "[..]), IResult::Done(&b" "[..], 0x3));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), IResult::Done(&b""[..], 0x9ABCDEF));
@@ -1681,7 +1707,8 @@ mod tests {
     assert_eq!(integral_lit(&b"-3"[..]), IResult::Done(&b""[..], -3));
     assert_eq!(integral_lit(&b"-3 "[..]), IResult::Done(&b" "[..], -3));
     assert_eq!(integral_lit(&b"-03 "[..]), IResult::Done(&b" "[..], -3));
-    assert_eq!(integral_lit(&b"-012 "[..]), IResult::Done(&b" "[..], -10));
+    assert_eq!(integral_lit(&b"-076556 "[..]), IResult::Done(&b" "[..], -0o76556)); 
+    assert_eq!(integral_lit(&b"-012 "[..]), IResult::Done(&b" "[..], -0o12));
     assert_eq!(integral_lit(&b"-0x3 "[..]), IResult::Done(&b" "[..], -0x3));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
     assert_eq!(integral_lit(&b"-0x9ABCDEF"[..]), IResult::Done(&b""[..], -0x9ABCDEF));
