@@ -337,7 +337,7 @@ fn alphanumeric_no_u(c: u8) -> bool {
 }
 
 /// Parse an hexadecimal literal.
-named!(hexadecimal_lit<Result<u32,ParseIntError>>,
+named!(hexadecimal_lit<Result<u32, ParseIntError>>,
   do_parse!(
     alt!(tag!("0x") | tag!("0X")) >>
     i: verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
@@ -346,14 +346,14 @@ named!(hexadecimal_lit<Result<u32,ParseIntError>>,
 );
 
 /// Parse an octal literal.
-named!(octal_lit<Result<u32,ParseIntError>>,
+named!(octal_lit<Result<u32, ParseIntError>>,
   do_parse!(
     i: verify!(take_while1!(alphanumeric_no_u), is_octal) >>
     (u32::from_str_radix(bytes_to_str(i), 8))
   )
 );
 
-named!(decimal_lit<Result<u32,ParseIntError>>,
+named!(decimal_lit<Result<u32, ParseIntError>>,
   do_parse!(
     i: nonzero_digits >>
     (bytes_to_str(i).parse::<u32>())
@@ -379,7 +379,7 @@ named!(decimal_lit<Result<u32,ParseIntError>>,
 ///     bit pattern cannot fit in 32 bits. The bit pattern of the
 ///     literal is always used unmodified. So a signed literal whose
 ///     bit pattern includes a set sign bit creates a negative value."
-named!(pub integral_lit_try<Result<u32,ParseIntError>>,
+named!(pub integral_lit_try<Result<u32, ParseIntError>>,
   do_parse!(
     sign: opt!(char!('-')) >>
     i: alt!(
