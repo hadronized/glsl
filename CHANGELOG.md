@@ -1,3 +1,9 @@
+## 0.8
+
+> Sunday, June, 17th 2018
+
+- Add the `README.md` path to the `Cargo.toml` manifest.
+
 # 0.8
 
 > Sunday, June, 17th 2018
