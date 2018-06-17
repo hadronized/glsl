@@ -872,7 +872,7 @@ mod tests {
   use super::*;
 
   #[test]
-  fn idempotent_glsl_complex_expr() {
+  fn roundtrip_glsl_complex_expr() {
     use nom::IResult;
 
     use parser::expr;
