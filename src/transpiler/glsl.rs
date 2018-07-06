@@ -883,7 +883,7 @@ mod tests {
   fn roundtrip_glsl_complex_expr() {
     use nom::IResult;
 
-    use parser::expr;
+    use parsers::expr;
 
     let zero = syntax::Expr::DoubleConst(0.);
     let ray = syntax::Expr::Variable("ray".to_owned());

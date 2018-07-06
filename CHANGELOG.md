@@ -1,3 +1,9 @@
+## 0.9.1
+
+> Saturday, July, 7th 2018
+
+  - Fix unit testing in transpilers.
+
 # 0.9
 
 > Saturday, July, 7th 2018
