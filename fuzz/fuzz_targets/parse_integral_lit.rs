@@ -3,5 +3,5 @@
 extern crate glsl;
 
 fuzz_target!(|data: &[u8]| {
-    glsl::parser::integral_lit(data);
+    glsl::parsers::integral_lit(data);
 });

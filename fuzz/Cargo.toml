@@ -31,8 +31,8 @@ name = "parse_integral_lit"
 path = "fuzz_targets/parse_integral_lit.rs"
 
 [[bin]]
-name = "write_expr"
-path = "fuzz_targets/write_expr.rs"
+name = "transpile_expr"
+path = "fuzz_targets/transpile_expr.rs"
 
 [[bin]]
 name = "parse_translation_unit"
