@@ -4,11 +4,11 @@
 //! representing your GLSL source.
 //!
 //! The most external form of a GLSL parsed AST is `TranslationUnit` (a shader). Some part of the
-//! tree are *boxed*. This is due to the two facts
+//! tree are *boxed*. This is due to two facts
 //!
-//! - recursion is used, hence we need a way to give our types a static size
-//! - because of some very deep variants, runtime size would explode if no indirection weren’t
-//!   in place
+//! - Recursion is used, hence we need a way to give our types a static size.
+//! - Because of some very deep variants, runtime size would explode if no indirection weren’t
+//!   in place.
 //!
 //! The types are commented so feel free to inspect each of theme. As a starter, you should read
 //! the documentation of `Expr`, `FunctionDefinition`, `Statement` and `TranslationUnit`.
