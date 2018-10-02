@@ -52,9 +52,9 @@ pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonA
     syntax::TypeSpecifierNonArray::BVec2 => { let _ = f.write_str("bvec2"); }
     syntax::TypeSpecifierNonArray::BVec3 => { let _ = f.write_str("bvec3"); }
     syntax::TypeSpecifierNonArray::BVec4 => { let _ = f.write_str("bvec4"); }
-    syntax::TypeSpecifierNonArray::IVec2 => { let _ = f.write_str("idvec2"); }
-    syntax::TypeSpecifierNonArray::IVec3 => { let _ = f.write_str("idvec3"); }
-    syntax::TypeSpecifierNonArray::IVec4 => { let _ = f.write_str("idvec4"); }
+    syntax::TypeSpecifierNonArray::IVec2 => { let _ = f.write_str("ivec2"); }
+    syntax::TypeSpecifierNonArray::IVec3 => { let _ = f.write_str("ivec3"); }
+    syntax::TypeSpecifierNonArray::IVec4 => { let _ = f.write_str("ivec4"); }
     syntax::TypeSpecifierNonArray::UVec2 => { let _ = f.write_str("uvec2"); }
     syntax::TypeSpecifierNonArray::UVec3 => { let _ = f.write_str("uvec3"); }
     syntax::TypeSpecifierNonArray::UVec4 => { let _ = f.write_str("uvec4"); }
