@@ -1,25 +1,31 @@
+## 0.9.2
+
+> Wed 3rd of October 2018
+
+  - Fix GLSL transpiled representation of `IVec*`. It was plain wrong.
+
 ## 0.9.1
 
-> Saturday, July, 7th 2018
+> Sat 7th of July 2018
 
   - Fix unit testing in transpilers.
 
 # 0.9
 
-> Saturday, July, 7th 2018
+> Sat 7th of July 2018
 
   - Big cleanup of the module hierarchy.
   - Enhanced the documentation.
 
 ## 0.8.1
 
-> Sunday, June, 17th 2018
+> Sun, 17th of June 2018
 
   - Add the `README.md` path to the `Cargo.toml` manifest.
 
 # 0.8
 
-> Sunday, June, 17th 2018
+> Sun 17th of June 2018
 
 This version introduces breaking changes because public types used in return positions have changed.
 These concern only intermediate `nom` functions, so if you do not make a fancy use of this crate,
@@ -33,69 +39,69 @@ you souldn’t have to worry too much when migrating.
 
 ## 0.7.2
 
-> Wednesday, December, 13th 2017
+> Wed 13th of December 2017
 
   - Fix the `show_expr` when the `Expr` is a `Expr::UIntConst`.
 
 ## 0.7.1
 
-> Monday, November, 20th 2017
+> Mon 20th of November 2017
 
   - `std::error::Error` is now implemented for `ParseError`.
 
 # 0.7
 
-> Wednesday, September, 27th 2017
+> Wed 27th of September 2017
 
   - Add support for postfix expressions as function identifiers.
 
 ## 0.6.5
 
-> Monday, September, 4th 2017
+> Mon 4th of September 2017
 
   - Fix the formatting of floating values when the fractional part is `0`.
 
 ## 0.6.4
 
-> Monday, September, 4th 2017
+> Mon 4th of September 2017
 
   - Fix the output for `show_struct_specifier`.
 
 ## 0.6.3
 
-> Monday, September, 4th 2017
+> Mon 4th of September 2017
 
   - Fix the output for `show_struct_specifier`.
 
 ## 0.6.2
 
-> Monday, September, 4th 2017
+> Mon 4th of September 2017
 
   - Remove a warning.
 
 ## 0.6.1
 
-> Monday, September, 4th 2017
+> Mon 4th of September 2017
 
   - Fix `show_struct_specifier`.
 
 # 0.6
 
-> Friday, September, 1st 2017
+> Fri 1st of September 2017
 
   - The `TypeSpecifier` type was wrong as it didn’t carry any `ArraySpecifier` information while the
     GLSL specification’s grammar about type specifiers states they should. Fixed.
 
 # 0.5
 
-> Monday, August, 7th 2017
+> Mon 7th of August 2017
 
   - The `parse` and `parse_str` functions now take as second argument the parser to run. This enables
     using those functions and all the neat logic the wrap in dependent projects.
 
 ## 0.4.2
 
-> Friday, August, 4th 2017
+> Fri 4th of August 2017
 
   - A GLSL writer is now available.
   - Some parsers yield non-empty list of syntax trees. Those had the incorrect `Vec` type. They were
@@ -104,13 +110,13 @@ you souldn’t have to worry too much when migrating.
 
 ## 0.4.1
 
-> Thursday, August, 3rd 2017
+> Thu 3rd of August 2017
 
   - Uni/multi-line comments are now supported.
 
 # 0.4
 
-> Wednesday, August, 2nd 2017
+> Wed 2nd of August 2017
 
   - The `Declaration::Block` variant was refactored for a better usage.
   - Dot field selections and, in a mory general way, postfix expressions completely fixed. The
@@ -119,13 +125,13 @@ you souldn’t have to worry too much when migrating.
 
 ## 0.3.1
 
-> Tuesday, August, 1st 2017
+> Tue 1st of August 2017
 
   - Fix the `preprocessor` parser so that it eats surrounding blanks.
 
 # 0.3
 
-> Monday, July, 31st 2017
+> Mon 31st of July 2017
 
   - Add a very minimalistic yet working preprocessor. It parses `#version` and `#extension`
     commands. Those have to be declared at the top of your file, even though this implementation
@@ -137,7 +143,7 @@ you souldn’t have to worry too much when migrating.
 
 ## 0.2.2
 
-> Monday, July, 31st 2017
+> Mon 31st of July 2017
 
   - The `layout` parser had a nasty bug that would treat a list of key-value pairs as an expression
     assignment. This was fixed and it now treats it as a list of pairs of identifier associated with a
@@ -149,13 +155,13 @@ you souldn’t have to worry too much when migrating.
 
 ## 0.2.1
 
-> Sunday, July, 30th 2017
+> Sun 30th of July 2017
 
   - More documentation to help people to get their feet wet.
 
 # 0.2
 
-> Saturday, July, 29th 2017
+> Sat 29th of July 2017
 
   - The whole parsing API is public.
 
