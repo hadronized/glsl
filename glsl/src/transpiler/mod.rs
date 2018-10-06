@@ -4,3 +4,4 @@
 //! representation you aim.
 
 pub mod glsl;
+#[cfg(feature = "spirv")] pub mod spirv;

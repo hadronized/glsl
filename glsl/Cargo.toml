@@ -17,7 +17,14 @@ is-it-maintained-issue-resolution = { repository = "phaazon/glsl" }
 is-it-maintained-open-issues = { repository = "phaazon/glsl" }
 maintenance = { status = "passively-maintained" }
 
+[features]
+spirv = ["shaderc"]
+
 [dependencies.nom]
 version = "3.2"
 default-features = true
 features = ["verbose-errors"]
+
+[dependencies.shaderc]
+version = "0.3"
+optional = true
