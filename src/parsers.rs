@@ -1,7 +1,7 @@
 //! GLSL parsers.
 //!
-//! The more general parser is `translation_unit`, that recognize the most external form of a
-//! GLSL source (a shader, basically).
+//! The more general parser is `translation_unit`, that recognizes the most external form of a GLSL
+//! source (a shader, basically).
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
 
@@ -40,7 +40,6 @@ macro_rules! atag {
 named!(pub comments, recognize!(many0!(comment)));
 
 /// Parser rewriter, discarding whitespaces and comments.
-#[macro_export]
 macro_rules! bl {
   ($i:expr, $($args:tt)*) => {{
     sep!($i, comment, $($args)*)
