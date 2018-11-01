@@ -14,9 +14,9 @@
 //! - For each elements in the AST, return a `String` or `Cow<str>`.
 //! - Insert the string representation via a formatter.
 //!
-//! The second solution is better because it let the user handles the memory the way they want: they
-//! might just use a dynamic buffer that implements `Write` or simply pass a `&mut String`. It’s up
-//! to you.
+//! The second solution is better because it lets the user handle the memory the way they want:
+//! they might just use a dynamic buffer that implements `Write` or simply pass a `&mut String`.
+//! It’s up to you.
 //!
 //! # How to use this module
 //!

@@ -3,13 +3,14 @@
 //! This module gives you several functions and types to deal with GLSL parsing, transforming an
 //! input source into an AST. The AST is defined in the `syntax` module.
 //!
-//! You want to use the `parse` or `parse_str` functions along with parsers defined in
-//! the `parsers` module.
+//! You want to use the [`Parse`]’s methods to get starting with parsing and pattern match on
+//! [`ParseResult`].
 
 use nom::{Err as NomErr, ErrorKind, IResult, Needed};
-use std::error::Error;
 use std::fmt;
 use std::str::{from_utf8_unchecked};
+
+use syntax;
 
 /// A parse error. It contains an `ErrorKind` along with a `String` giving information on the reason
 /// why the parser failed.
@@ -25,8 +26,6 @@ impl fmt::Display for ParseError {
   }
 }
 
-impl Error for ParseError {}
-
 /// Parse result. It can either be parsed, incomplete or errored.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseResult<T> {
@@ -38,10 +37,8 @@ pub enum ParseResult<T> {
   Incomplete(Needed)
 }
 
-/// Run a parser.
-///
-/// This parser runs over bytes. If you need to parse a `str` instead, use `parse_str`.
-pub fn parse<P, T>(source: &[u8], parser: P) -> ParseResult<T>
+/// Run a parser over a byte slice.
+fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
     where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
   match parser(source) {
     IResult::Done(i, x) => {
@@ -77,10 +74,71 @@ pub fn parse<P, T>(source: &[u8], parser: P) -> ParseResult<T>
   }
 }
 
-/// Run a parser over a `str`.
-pub fn parse_str<'a, I, P, T>(source: I, parser: P) -> ParseResult<T>
-    where I: Into<&'a str>,
-          P: FnOnce(&[u8]) -> IResult<&[u8], T> {
-  parse(source.into().as_bytes(), parser)
+/// Class of types that can be parsed.
+///
+/// This trait exposes two methods:
+/// 
+///   - `Parse::parse`, that runs on bytes.
+///   - `Parse::parse_str`, a convenient function that runs on strings.
+///
+/// If you want to implement [`Parse`], only `Parse::parse` is mandatory – `Parse::parse_str` has
+/// a default implementation using `Parse::parse`.
+///
+/// The methods from this trait are the standard way to parse data into GLSL ASTs.
+pub trait Parse: Sized {
+  /// Parse from a byte slice.
+  fn parse<B>(source: B) -> ParseResult<Self> where B: AsRef<[u8]>;
+
+  /// Parse from a string.
+  fn parse_str<S>(source: S) -> ParseResult<Self> where S: AsRef<str> {
+    let s = source.as_ref().as_bytes();
+    Self::parse(s)
+  }
 }
 
+/// Macro to implement Parse for a given type.
+macro_rules! impl_parse {
+  ($type_name:ty, $parser_name:ident) => {
+    impl Parse for $type_name {
+      fn parse<B>(source: B) -> ParseResult<Self> where B: AsRef<[u8]> {
+        run_parser(source.as_ref(), $crate::parsers::$parser_name)
+      }
+    }
+  }
+}
+
+impl_parse!(syntax::Identifier, identifier);
+impl_parse!(syntax::TypeSpecifierNonArray, type_specifier_non_array);
+impl_parse!(syntax::TypeSpecifier, type_specifier);
+impl_parse!(syntax::UnaryOp, unary_op);
+impl_parse!(syntax::StructFieldSpecifier, struct_field_specifier);
+impl_parse!(syntax::StructSpecifier, struct_specifier);
+impl_parse!(syntax::StorageQualifier, storage_qualifier);
+impl_parse!(syntax::LayoutQualifier, layout_qualifier);
+impl_parse!(syntax::PrecisionQualifier, precision_qualifier);
+impl_parse!(syntax::InterpolationQualifier, interpolation_qualifier);
+impl_parse!(syntax::TypeQualifier, type_qualifier);
+impl_parse!(syntax::TypeQualifierSpec, type_qualifier_spec);
+impl_parse!(syntax::FullySpecifiedType, fully_specified_type);
+impl_parse!(syntax::ArraySpecifier, array_specifier);
+impl_parse!(syntax::Expr, expr);
+impl_parse!(syntax::Declaration, declaration);
+impl_parse!(syntax::FunctionPrototype, function_prototype);
+impl_parse!(syntax::InitDeclaratorList, init_declarator_list);
+impl_parse!(syntax::SingleDeclaration, single_declaration);
+impl_parse!(syntax::Initializer, initializer);
+impl_parse!(syntax::FunIdentifier, function_identifier);
+impl_parse!(syntax::AssignmentOp, assignment_op);
+impl_parse!(syntax::SimpleStatement, simple_statement);
+impl_parse!(syntax::ExprStatement, expr_statement);
+impl_parse!(syntax::SelectionStatement, selection_statement);
+impl_parse!(syntax::SwitchStatement, switch_statement);
+impl_parse!(syntax::CaseLabel, case_label);
+impl_parse!(syntax::IterationStatement, iteration_statement);
+impl_parse!(syntax::JumpStatement, jump_statement);
+impl_parse!(syntax::Condition, condition);
+impl_parse!(syntax::Statement, statement);
+impl_parse!(syntax::CompoundStatement, compound_statement);
+impl_parse!(syntax::FunctionDefinition, function_definition);
+impl_parse!(syntax::ExternalDeclaration, external_declaration);
+impl_parse!(syntax::TranslationUnit, translation_unit);
