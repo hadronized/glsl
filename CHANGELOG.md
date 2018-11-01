@@ -1,3 +1,16 @@
+# 0.10
+
+> Fri 2nd of November 2018
+
+  - Hide the `parsers` module. It’s not exposed anymore as it was mostly
+    [nom](https://crates.io/crates/nom) parsers and we don’t like leaking internals.
+  - Introduce the `Parser` trait, acting as an abstraction over the internal parsers. Implementors
+    provide a type-driven parsing experience that is very similar to the one as
+    [FromStr](https://doc.rust-lang.org/std/str/trait.FromStr.html). This change is actually
+    mandatory for the [glsl-quasiquote](https://crates.io/crates/glsl-quasiquote) crate’s `glsl!`
+    proc-macro to allow people use it for any GLSL item (and not only `TranslationUnit`).
+  - Enhance the overall documentation.
+
 ## 0.9.2
 
 > Wed 3rd of October 2018
