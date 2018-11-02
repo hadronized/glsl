@@ -1,3 +1,9 @@
+## 0.10.1
+
+> Fri 2nd of November 2018
+
+  - Add some missing implementors of `Parse` for types from `glsl::syntax`.
+
 # 0.10
 
 > Fri 2nd of November 2018
