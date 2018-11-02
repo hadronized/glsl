@@ -142,3 +142,10 @@ impl_parse!(syntax::CompoundStatement, compound_statement);
 impl_parse!(syntax::FunctionDefinition, function_definition);
 impl_parse!(syntax::ExternalDeclaration, external_declaration);
 impl_parse!(syntax::TranslationUnit, translation_unit);
+impl_parse!(syntax::Preprocessor, preprocessor);
+impl_parse!(syntax::PreprocessorVersion, pp_version);
+impl_parse!(syntax::PreprocessorVersionProfile, pp_version_profile);
+impl_parse!(syntax::PreprocessorExtensionName, pp_extension_name);
+impl_parse!(syntax::PreprocessorExtensionBehavior, pp_extension_behavior);
+impl_parse!(syntax::PreprocessorExtension, pp_extension);
+
