@@ -546,13 +546,8 @@ pub enum JumpStatement {
 /// preprocessor (they’re used by GPU’s compilers), those preprocessor commands are available for
 /// inspection.
 ///
-/// > Important note: others preprocessor commands can be used in your source. However, they’ll get
-/// > substituted upfront. For instance, if you use have `#define foo 42` defined in your file, 
-/// > every occurrence to `foo` will get replaced by `42` and then treated as a normal GLSL
-/// > expression (in that case, ending as an `Expr::IntConst(42)` value). This might be unfortunate
-/// > for people seeking minimal size. However, you’re free to use a minifier aftewards to re-enable
-/// >_that kind of feature. To be honest, it’s not worth it to interleave the AST with preprocessor
-/// > command annotations just so that the resulting code size is minimal. Just use a minifier.
+/// > Important note: so far, only `#version` and `#extension` are supported. Other pragmas will be 
+/// > added in the future. Stay tuned.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Preprocessor {
   Version(PreprocessorVersion),
