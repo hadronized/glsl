@@ -204,14 +204,14 @@ pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) whe
 
   // there’s at least one identifier
   let mut identifiers = field.identifiers.iter();
-  let &(ref first_identifier, ref first_array_spec) = identifiers.next().unwrap();
+  let identifier = identifiers.next().unwrap();
 
-  show_arrayed_identifier(f, (first_identifier, first_array_spec));
+  show_arrayed_identifier(f, identifier);
 
   // write the rest of the identifiers
-  for &(ref identifier, ref array_spec) in identifiers {
+  for identifier in identifiers {
     let _ = f.write_str(", ");
-    show_arrayed_identifier(f, (identifier, array_spec));
+    show_arrayed_identifier(f, identifier);
   }
 
   let _ = f.write_str(";\n");
@@ -228,10 +228,10 @@ pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier) where F: Write 
   }
 }
 
-pub fn show_arrayed_identifier<F>(f: &mut F, a: (&syntax::Identifier, &Option<syntax::ArraySpecifier>)) where F: Write {
-  let _ = write!(f, "{}", a.0);
+pub fn show_arrayed_identifier<F>(f: &mut F, a: &syntax::ArrayedIdentifier) where F: Write {
+  let _ = write!(f, "{}", a.ident);
 
-  if let Some(ref arr_spec) = *a.1 {
+  if let Some(ref arr_spec) = a.array_spec {
     show_array_spec(f, arr_spec);
   }
 }
@@ -579,7 +579,7 @@ pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionPar
 pub fn show_function_parameter_declarator<F>(f: &mut F, p: &syntax::FunctionParameterDeclarator) where F: Write {
   show_type_specifier(f, &p.ty);
   let _ = f.write_str(" ");
-  show_arrayed_identifier(f, (&p.name, &p.array_spec));
+  show_arrayed_identifier(f, &p.ident);
 }
 
 pub fn show_init_declarator_list<F>(f: &mut F, i: &syntax::InitDeclaratorList) where F: Write {
@@ -610,7 +610,7 @@ pub fn show_single_declaration<F>(f: &mut F, d: &syntax::SingleDeclaration) wher
 }
 
 pub fn show_single_declaration_no_type<F>(f: &mut F, d: &syntax::SingleDeclarationNoType) where F: Write {
-  show_arrayed_identifier(f, (&d.name, &d.array_specifier));
+  show_arrayed_identifier(f, &d.ident);
 
   if let Some(ref initializer) = d.initializer {
     let _ = f.write_str(" = ");
