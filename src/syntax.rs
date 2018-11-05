@@ -168,7 +168,41 @@ pub struct StructSpecifier {
 pub struct StructFieldSpecifier {
   pub qualifier: Option<TypeQualifier>,
   pub ty: TypeSpecifier,
-  pub identifiers: NonEmpty<(Identifier, Option<ArraySpecifier>)> // several identifiers of the same type
+  pub identifiers: NonEmpty<ArrayedIdentifier> // several identifiers of the same type
+}
+
+/// An identifier with an optional array specifier.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ArrayedIdentifier {
+  pub ident: Identifier,
+  pub array_spec: Option<ArraySpecifier>
+}
+
+impl ArrayedIdentifier {
+  pub fn new<I>(ident: I, array_spec: Option<ArraySpecifier>) -> Self where I: Into<Identifier> {
+    ArrayedIdentifier {
+      ident: ident.into(),
+      array_spec
+    }
+  }
+}
+
+impl<'a> From<&'a str> for ArrayedIdentifier {
+  fn from(ident: &str) -> Self {
+    ArrayedIdentifier {
+      ident: ident.to_owned(),
+      array_spec: None
+    }
+  }
+}
+
+impl From<Identifier> for ArrayedIdentifier {
+  fn from(ident: String) -> Self {
+    ArrayedIdentifier {
+      ident,
+      array_spec: None
+    }
+  }
 }
 
 /// Type qualifier.
@@ -298,8 +332,7 @@ pub enum FunctionParameterDeclaration {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameterDeclarator {
   pub ty: TypeSpecifier,
-  pub name: Identifier,
-  pub array_spec: Option<ArraySpecifier>
+  pub ident: ArrayedIdentifier
 }
 
 /// Init declarator list.
@@ -323,8 +356,7 @@ pub struct SingleDeclaration {
 /// A single declaration with implicit, already-defined type.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SingleDeclarationNoType {
-  pub name: Identifier,
-  pub array_specifier: Option<ArraySpecifier>,
+  pub ident: ArrayedIdentifier,
   pub initializer: Option<Initializer>
 }
 
@@ -592,4 +624,59 @@ pub enum PreprocessorExtensionBehavior {
   Enable,
   Warn,
   Disable
+}
+
+/// Create a new struct declaration.
+pub fn declare_struct<N, F>(name: N, fields: F) -> ExternalDeclaration
+where N: Into<String>,
+      F: IntoIterator<Item = StructFieldSpecifier> {
+  ExternalDeclaration::Declaration(
+    Declaration::InitDeclaratorList(
+      InitDeclaratorList {
+        head: SingleDeclaration {
+          ty: FullySpecifiedType {
+            qualifier: None,
+            ty: TypeSpecifier {
+              ty: TypeSpecifierNonArray::Struct(
+                    StructSpecifier {
+                      name: Some(name.into()),
+                      fields: fields.into_iter().collect()
+                    }
+              ),
+              array_specifier: None
+            }
+          },
+          name: None,
+          array_specifier: None,
+          initializer: None
+        },
+        tail: vec![]
+      }
+    )
+  )
+}
+
+/// Declare a struct field.
+pub fn declare_field(
+  identifier: ArrayedIdentifier,
+  ty: TypeSpecifier
+) -> StructFieldSpecifier {
+  StructFieldSpecifier {
+    qualifier: None,
+    ty,
+    identifiers: vec![identifier]
+  }
+}
+
+/// Declare a struct fields that all have the same type.
+pub fn declare_fields<I>(
+  identifiers: I,
+  ty: TypeSpecifier
+) -> StructFieldSpecifier
+where I: IntoIterator<Item = ArrayedIdentifier> {
+  StructFieldSpecifier {
+    qualifier: None,
+    ty,
+    identifiers: identifiers.into_iter().collect()
+  }
 }

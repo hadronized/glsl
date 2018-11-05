@@ -454,11 +454,11 @@ named!(pub unary_op<&[u8], syntax::UnaryOp>,
 );
 
 /// Parse an identifier with an optional array specifier.
-named!(identifier_array_spec<&[u8], (syntax::Identifier, Option<syntax::ArraySpecifier>)>,
+named!(arrayed_identifier<&[u8], syntax::ArrayedIdentifier>,
   do_parse!(
-    ty: identifier >>
+    i: identifier >>
     a: opt!(array_specifier) >>
-    (ty, a)
+    (syntax::ArrayedIdentifier::new(i, a))
   )
 );
 
@@ -468,8 +468,8 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
     qual: opt!(type_qualifier) >>
     ty: type_specifier >>
     identifiers: bl!(do_parse!(
-                   first: identifier_array_spec >>
-                   rest: many0!(do_parse!(char!(',') >> i: bl!(identifier_array_spec) >> (i))) >>
+                   first: arrayed_identifier >>
+                   rest: many0!(do_parse!(char!(',') >> i: bl!(arrayed_identifier) >> (i))) >>
 
                    ({
                      let mut identifiers = rest.clone();
@@ -786,8 +786,7 @@ named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList>,
             arr_spec: opt!(array_specifier) >>
             init: opt!(preceded!(char!('='), initializer)) >>
             (syntax::SingleDeclarationNoType {
-              name: name,
-              array_specifier: arr_spec,
+              ident: syntax::ArrayedIdentifier::new(name, arr_spec),
               initializer: init
             })
           ))) >>
@@ -915,9 +914,8 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
     name: identifier >>
     a: opt!(array_specifier) >>
     (syntax::FunctionParameterDeclarator {
-      ty: ty,
-      name: name,
-      array_spec: a
+      ty,
+      ident: syntax::ArrayedIdentifier::new(name, a)
     })
   ))
 );
@@ -1899,7 +1897,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec![("foo".to_owned(), None)]
+      identifiers: vec!["foo".into()]
     };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1914,7 +1912,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
         array_specifier: None
       },
-      identifiers: vec![("x".to_owned(), None)]
+      identifiers: vec!["x".into()]
     };
   
     assert_eq!(struct_field_specifier(&b"S0238_3 x;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1929,7 +1927,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec![("foo".to_owned(), None), ("bar".to_owned(), None), ("zoo".to_owned(), None)]
+      identifiers: vec!["foo".into(), "bar".into(), "zoo".into()]
     };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo, bar, zoo;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1944,7 +1942,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec![("foo".to_owned(), None)]
+      identifiers: vec!["foo".into()]
     };
     let expected = syntax::StructSpecifier {
       name: Some("TestStruct".to_owned()),
@@ -1963,7 +1961,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec![("foo".to_owned(), None)]
+      identifiers: vec!["foo".into()]
     };
     let b = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1971,7 +1969,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec![("bar".to_owned(), None)]
+      identifiers: vec!["bar".into()]
     };
     let c = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1979,7 +1977,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::UInt,
         array_specifier: None
       },
-      identifiers: vec![("zoo".to_owned(), None)]
+      identifiers: vec!["zoo".into()]
     };
     let d = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1987,7 +1985,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::BVec3,
         array_specifier: None
       },
-      identifiers: vec![("foo_BAR_zoo3497_34".to_owned(), None)]
+      identifiers: vec!["foo_BAR_zoo3497_34".into()]
     };
     let e = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1995,7 +1993,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
         array_specifier: None
       },
-      identifiers: vec![("x".to_owned(), None)]
+      identifiers: vec!["x".into()]
     };
     let expected = syntax::StructSpecifier {
       name: Some("_TestStruct_934i".to_owned()),
@@ -2553,8 +2551,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      name: "the_arg".to_owned(),
-      array_spec: None
+      ident: "the_arg".into(),
     });
     let fp = syntax::FunctionPrototype {
       ty: rt,
@@ -2607,8 +2604,7 @@ mod tests {
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
     let sdnt = syntax::SingleDeclarationNoType {
-      name: "bar".to_owned(),
-      array_specifier: None,
+      ident: "bar".into(),
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12))))
     };
     let expected = syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
@@ -2667,7 +2663,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec![("a".to_owned(), None)]
+      identifiers: vec!["a".into()]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2675,7 +2671,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec3,
         array_specifier: None
       },
-      identifiers: vec![("b".to_owned(), None)]
+      identifiers: vec!["b".into()]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2683,7 +2679,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
         array_specifier: None
       },
-      identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
+      identifiers: vec!["c".into(), "d".into()]
     };
     let expected =
       syntax::Declaration::Block(
@@ -2709,7 +2705,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec![("a".to_owned(), None)]
+      identifiers: vec!["a".into()]
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2717,7 +2713,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec3,
         array_specifier: None
       },
-      identifiers: vec![("b".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
+      identifiers: vec![syntax::ArrayedIdentifier::new("b", Some(syntax::ArraySpecifier::Unsized))]
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2725,7 +2721,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
         array_specifier: None
       },
-      identifiers: vec![("c".to_owned(), None), ("d".to_owned(), None)]
+      identifiers: vec!["c".into(), "d".into()]
     };
     let expected =
       syntax::Declaration::Block(
@@ -3086,7 +3082,7 @@ mod tests {
                   ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
                   array_specifier: None
                 },
-                identifiers: vec![("tiles".to_owned(), Some(syntax::ArraySpecifier::Unsized))]
+                identifiers: vec![syntax::ArrayedIdentifier::new("tiles", Some(syntax::ArraySpecifier::Unsized))]
               }
             ],
             identifier: Some(("main_tiles".to_owned(), None))
@@ -3126,7 +3122,7 @@ mod tests {
                   ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
                   array_specifier: None
                 },
-                identifiers: vec![("a".to_owned(), None)]
+                identifiers: vec!["a".into()]
               }
             ],
             identifier: Some(("foo".to_owned(), None))
