@@ -1,3 +1,11 @@
+# 0.11
+
+> Sun 10th of November 2018
+
+  - Add helper functions to build objects form the `syntax` module. Those are intended to be a
+    simple way to build ASTs out of Rust code instead of parsing.
+  - Enhance the documentation of the `Preprocessor` type.
+
 ## 0.10.1
 
 > Fri 2nd of November 2018
