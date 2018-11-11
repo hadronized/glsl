@@ -1,6 +1,14 @@
+# 0.12
+
+> Sun 11th of November 2018
+
+  - Fix the type of identifier stored in `Block`: it now uses the new encoding for arrayed
+    identifiers.
+  - `Block` parsers update for the arrayd identifier change.
+
 # 0.11
 
-> Sun 10th of November 2018
+> Sat 10th of November 2018
 
   - Add helper functions to build objects form the `syntax` module. Those are intended to be a
     simple way to build ASTs out of Rust code instead of parsing.
