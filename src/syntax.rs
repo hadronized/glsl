@@ -367,7 +367,7 @@ pub struct Block {
   pub qualifier: TypeQualifier,
   pub name: Identifier,
   pub fields: Vec<StructFieldSpecifier>,
-  pub identifier: Option<(Identifier, Option<ArraySpecifier>)>
+  pub identifier: Option<ArrayedIdentifier>
 }
 
 /// Function identifier.
