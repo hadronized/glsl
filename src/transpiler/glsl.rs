@@ -650,12 +650,8 @@ pub fn show_block<F>(f: &mut F, b: &syntax::Block) where F: Write {
   }
   let _ = f.write_str("}");
 
-  if let Some((ref identifier, ref array_spec)) = b.identifier {
-    show_identifier(f, &identifier);
-
-    if let &Some(ref array_spec) = array_spec {
-      show_array_spec(f, array_spec)
-    }
+  if let Some(ref ident) = b.identifier {
+    show_arrayed_identifier(f, ident);
   }
 }
 

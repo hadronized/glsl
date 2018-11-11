@@ -731,17 +731,8 @@ named!(pub block_declaration<&[u8], syntax::Declaration>,
     a: alt!(
          value!(None, char!(';')) |
          bl!(do_parse!(
-           a: alt!(
-                map!(identifier, |i| Some((i, None))) |
-                bl!(do_parse!(
-                  i: identifier >>
-                  arr_spec: array_specifier >>
-
-                  (Some((i, Some(arr_spec))))
-                ))
-              ) >>
+           a: opt!(arrayed_identifier) >>
            char!(';') >>
-
            (a)
          ))
        ) >>
@@ -3085,7 +3076,7 @@ mod tests {
                 identifiers: vec![syntax::ArrayedIdentifier::new("tiles", Some(syntax::ArraySpecifier::Unsized))]
               }
             ],
-            identifier: Some(("main_tiles".to_owned(), None))
+            identifier: Some("main_tiles".into())
           }
         )
       );
@@ -3125,7 +3116,7 @@ mod tests {
                 identifiers: vec!["a".into()]
               }
             ],
-            identifier: Some(("foo".to_owned(), None))
+            identifier: Some("foo".into())
           }
         )
       );
