@@ -1,0 +1,408 @@
+// The GLSL PEG grammar.
+//
+// Written mostly by extracting and optimising the output of the lexical analysis from the
+// GLSLangSpec4.40 PDF document available from Khronos.
+
+// whitespace & comment
+WHITESPACE = _{ " " | NEWLINE }
+
+COMMENT = _{
+  "//" ~ ANY* ~ NEWLINE |
+  "/*" ~ ANY* ~ "*/"
+}
+
+// operators and primary building blocks
+LEFT_PARENS = _{ "(" }
+RIGHT_PARENS = _{ ")" }
+LEFT_BRACKET = _{ "[" }
+RIGHT_BRACKET = _{ "]" }
+LEFT_BRACE = _{ "{" }
+RIGHT_BRACE = _{ "}" }
+DOT = _{ "." }
+INC_OP = _{ "++" }
+DEC_OP = _{ "--" }
+COMMA = _{ "," }
+SEMICOLON = _{ ";" }
+COLON = _{ ":" }
+EQUAL = _{ "=" }
+
+identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+variable_identifier = { identifier }
+
+primary_expression = {
+  variable_identifier |
+  int_constant |
+  uint_constant |
+  float_constant |
+  bool_constant |
+  double_constant |
+  LEFT_PARENS ~ expression ~ RIGHT_PARENS
+}
+
+int_constant = @{
+  decimal_constant INTEGER_SUFFIX? |
+  octal_constant INTEGER_SUFFIX? |
+  hexadecimal_constant INTEGER_SUFFIX?
+}
+
+INTEGER_SUFFIX = _{ "u" | "U" }
+
+decimal_constant = @{ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+
+octal_constant = @{ "0" ~ ("0" .. "7")* }
+
+hexadecimal_constant = @{ HEXADECIMAL_PREFIX ~ hexadecimal_digit+ }
+HEXADECIMAL_PREFIX = _{ "0x" | "0X" }
+hexadecimal_digit = { "0" .. "9" | "a" .. "f" | "A" .. "F" }
+
+float_constant = @{
+  fractional_constant ~ exponent_part? ~ FLOATING_SUFFIX? |
+  ASCII_DIGIT+ ~ exponent_part ~ FLOATING_SUFFIX?
+}
+
+fractional_constant = @{ ASCII_DIGIT+ ~ "." ASCII_DIGIT* | "." ~ ASCII_DIGIT+ }
+
+exponent_part = @{ ("e" | "E") ~ sign? ~ ASCII_DIGIT+ }
+
+sign = { "+" | "-" }
+
+FLOATING_SUFFIX = _{ "f" | "F" | "lf" | "LF" }
+
+bool_constant = @{ "true" | "false" }
+
+postfix_expression = {
+  primary_expression |
+  postfix_expression ~ LEFT_BRACKET ~ integer_expression ~ RIGHT_BRACKET |
+  function_call |
+  postfix_expression ~ DOT ~ field_selection |
+  postfix_expression ~ INC_OP |
+  postfix_expression ~ DEC_OP
+}
+
+integer_expression = { expression }
+
+function_call = { function_call_or_method }
+
+function_call_or_method = { function_call_generic }
+
+function_call_generic = {
+  (function_call_header_with_parameters | function_call_header_no_parameters) ~ RIGHT_PARENS
+}
+
+function_call_header_no_parameters = { function_call_header ~ "void"? }
+
+function_call_header_with_parameters = {
+  function_call_header ~ assignment_expression |
+  function_call_header_with_parameters ~ COMMA ~ assignment_expression
+}
+
+function_call_header = { function_identifier ~ LEFT_PARENS }
+
+function_identifier = { type_specifier | postfix_expression }
+
+unary_expression = {
+  postfix_expression |
+    INC_OP ~  unary_expression |
+    DEC_OP ~ unary_expression |
+    unary_operator ~ unary_expression
+}
+
+unary_operator = { "+" | "-" | "!" | "~" }
+
+multiplicative_expression = {
+  unary_expression |
+    multiplicative_expression ~ ("*" | "/" | "%") ~ unary_expression
+}
+
+additive_expression = {
+  multiplicative_expression |
+    additive_expression ~ ("+" | "-") ~ multiplicative_expression
+}
+
+shift_expression = {
+  additive_expression |
+    shift_expression ~ ("<<" | ">>") ~ additive_expression
+}
+
+relational_expression = {
+  shift_expression |
+    relational_expression ~ ("<" | ">" | "<=" | ">=") ~ shift_expression
+}
+
+equality_expression = {
+  relational_expression |
+    equality_expression ~ ("==" | "!=") ~ relational_expression 
+}
+
+and_expression = {
+  equality_expression |
+    and_expression ~ "&" ~ equality_expression
+}
+
+exclusive_or_expression = {
+  and_expression |
+    exclusive_or_expression ~ "^" ~ and_expression
+}
+
+inclusive_or_expression = {
+  exclusive_or_expression |
+    inclusive_or_expression ~ "|" ~ exclusive_or_expression
+}
+
+logical_and_expression = {
+  inclusive_or_expression |
+    logical_and_expression ~ "&&" ~ inclusive_or_expression
+}
+
+logical_xor_expression = {
+  logical_and_expression |
+    logical_xor_expression ~ "^^" ~ logical_and_expression
+}
+
+logical_or_expression = {
+  logical_xor_expression |
+    logical_or_expression ~ "||" ~ logical_xor_expression
+}
+
+conditional_expression = {
+  logical_or_expression ~ ("?" ~ expression ~ ":" ~ assignment_expression)?
+}
+
+assignment_expression = {
+  conditional_expression |
+    unary_expression ~ assignment_operator ~ assignment_expression
+}
+
+assignment_operator = {
+  "=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+}
+
+expression = {
+  assignment_expression ~ ("," ~ assignment_expression)*
+}
+
+constant_expression = {
+  conditional_expression
+}
+
+declaration = {
+  function_prototype ~ SEMICOLON |
+  init_declarator_list ~ SEMICOLON |
+  PRECISION ~ precision_qualifier ~ type_specifier ~ SEMICOLON |
+  type_qualifier ~ identifier ~ LEFT_BRACE ~ struct_declaration_list ~ RIGHT_BRACE ~ (identifier ~ array_specifier?)? ~ SEMICOLON |
+  type_qualifier ~ (identifier ~ (COMMA ~ identifier)*)? ~ SEMICOLON |
+}
+
+PRECISION = _{ "precision" }
+
+function_prototype = { function_declarator ~ RIGHT_PARENS }
+
+function_declarator = { function_header | function_header_with_parameters }
+
+function_header_with_parameters = {
+  function_header ~ parameter_declaration ~ (COMMA ~ parameter_declaration)*
+}
+
+function_header = { fully_specified_type ~ identifier ~ LEFT_PARENS }
+
+parameter_declarator = { type_specifier ~ identifier ~ array_specifier? }
+
+parameter_declaration = { type_qualifier? ~ (parameter_declarator | parameter_type_specifier) }
+
+parameter_type_specifier = {
+  type_specifier
+}
+
+init_declarator_list = {
+  single_declaration |
+    init_declarator_list ~ COMMA ~ identifier ~ (array_specifier ~ (EQUAL ~ initializer)? | EQUAL ~ initializer)?
+}
+
+single_declaration = {
+  fully_specified_type ~ (identifier ~ (array_specifier ~ (EQUAL ~ initializer)? | EQUAL ~ initializer)?)?
+}
+
+fully_specified_type = { type_qualifier? ~ type_specifier }
+
+INVARIANT_QUALIFIER = _{ "invariant" }
+
+interpolation_qualifier = { "smooth" | "flat" | "noperspective" }
+
+layout_qualifier = { LAYOUT ~ LEFT_PARENS ~ layout_qualifier_id_list ~ RIGHT_PARENS }
+
+LAYOUT = _{ "layout" }
+
+layout_qualifier_id_list = { layout_qualifier_id ~ (COMMA ~ layout_qualifier_id)* }
+
+layout_qualifier_id = { identifier ~ (EQUAL ~ constant_expression)? | "shared" }
+
+PRECISE_QUALIFIER = _{ "precise" }
+
+type_qualifier = { single_type_qualifier+ }
+
+single_type_qualifier = {
+  storage_qualifier |
+    layout_qualifier |
+    precision_qualifier |
+    interpolation_qualifier |
+    INVARIANT_QUALIFIER |
+    PRECISE_QUALIFIER
+}
+
+storage_qualifier = {
+  "const" | "inout" | "in" | "out" | "centroid" | "patch" | "sample" | "uniform" | "buffer" |
+    "shared" | "coherent" | "volatile" | "restrict" | "readonly" | "writeonly" |
+    "subroutine" ~ (LEFT_PARENS ~ identifier ~ (COMMA ~ identifier)* ~ RIGHT_PARENS)?
+}
+
+type_specifier = { type_specifier_nonarray ~ array_specifier? }
+
+array_specifier = { (LEFT_BRACKET ~ constant_expression? ~ RIGHT_BRACKET)+ }
+
+type_specifier_nonarray = @{
+  "void" |
+  "float" | "double" |
+  "int" | "uint" |
+  "bool" |
+  "vec2" | vec3 | vec4 |
+  "dvec2" | dvec3 | dvec4 |
+  "bvec2" | bvec3 | bvec4 |
+  "ivec2" | "ivec3" | "ivec4" |
+  "uvec2" | "uvec3" | "uvec4"
+  "mat2" | "mat3" | "mat4" |
+  "mat2x2" | "mat2x3" | "mat2x4" | "mat3x2" | "mat3x3" | "mat3x4" | "mat4x2" | "mat4x3" | "mat4x4" |
+  "dmat2" | "dmat3" | "dmat4" |
+  "dmat2x2" | "dmat2x3" | "dmat2x4" | "dmat3x2" | "dmat3x3" | "dmat3x4" | "dmat4x2" | "dmat4x3" | "dmat4x4" |
+  "atomic_uint" |
+  "sampler1d" | "sampler2d" | "sampler3d" |
+  "samplercube" |
+  "sampler1dshadow" | "sampler2dshadow" |
+  "samplercubeshadow" |
+  "sampler1darray" | "sampler2darray" |
+  "sampler1darrayshadow" | "sampler2darrayshadow" |
+  "samplercubearray" | "samplercubearrayshadow" |
+  "isampler1d" | "isampler2d" | "isampler3d" |
+  "isamplercube" |
+  "isampler1darray" | "isampler2darray" |
+  "isamplercubearray" |
+  "usampler1d" | "usampler2d" | "usampler3d" |
+  "usamplercube" |
+  "usampler1darray" | "usampler2darray" |
+  "usamplercubearray" |
+  "sampler2drect" | "sampler2drectshadow" | "isampler2drect" | "usampler2drect" |
+  "samplerbuffer" | "isamplerbuffer" | "usamplerbuffer" |
+  "sampler2dms" | "isampler2dms" | "usampler2dms" |
+  "sampler2dmsarray" | "isampler2dmsarray" |
+  "usampler2dmsarray" |
+  "image1d" | "iimage1d" | "uimage1d" |
+  "image2d" | "iimage2d" | "uimage2d" |
+  "image3d" | "iimage3d" | "uimage3d" |
+  "image2drect" | "iimage2drect" | "uimage2drect" |
+  "imagecube" | "iimagecube" | "uimagecube" |
+  "imagebuffer" | "iimagebuffer" | "uimagebuffer" |
+  "image1darray" | "iimage1darray" | "uimage1darray" |
+  "image2darray" | "iimage2darray" | "uimage2darray" |
+  "imagecubearray" | "iimagecubearray" | "uimagecubearray" |
+  "image2dms" | "iimage2dms" |"uimage2dms" |
+  "image2dmsarray" | "iimage2dmsarray" | "uimage2dmsarray" |
+  struct_specifier | identifier
+}
+
+precision_qualifier = { "high" | "medium" | "low" }
+
+struct_specifier = { STRUCT ~ identifier? ~ LEFT_BRACE ~ struct_declaration_list ~ RIGHT_BRACE }
+
+STRUCT = _{ "struct" }
+
+struct_declaration_list = { struct_declaration+ }
+
+struct_declaration = {
+  type_qualifier? ~ type_specifier ~ struct_declarator_list ~ SEMICOLON
+}
+
+struct_declarator_list = { struct_declarator ~ (COMMA ~ struct_declarator*) }
+
+struct_declarator = { identifier ~ array_specifier? }
+
+initializer = {
+  assignment_expression |
+  LEFT_BRACE ~ initializer_list ~ COMMA? ~ RIGHT_BRACE
+}
+
+initializer_list = { initializer ~ (COMMA ~ initializer)? }
+
+declaratiorn_statement = { declaration }
+
+statement = { compound_statement | simple_statement }
+
+simple_statement = {
+  declaration_statement | expression_statement | selection_statement |
+  switch_statement | case_label | iteration_statement | jump_statement
+}
+
+compound_statement = {
+  LEFT_BRACE ~ statement* ~ RIGHT_BRACE
+}
+
+statement_no_new_scope = { compound_statement | simple_statement }
+
+expression_statement = { expression? ~ SEMICOLON }
+
+selection_statement = {
+  IF ~ LEFT_PARENS ~ expression ~ RIGHT_PARENS ~ selection_rest_statement
+}
+
+IF = _{ "if" }
+
+selection_rest_statement = { statement ~ (ELSE ~ statement)? }
+
+ELSE = _{ "else" }
+
+condition = { expression | fully_specified_type ~ identifier ~ EQUAL ~ initializer }
+
+switch_statement = {
+  SWITCH ~ LEFT_PARENS ~ expression ~ RIGHT_PARENS ~ LEFT_BRACE ~ statement* ~ RIGHT_BRACE
+}
+
+SWITCH = _{ "switch" }
+
+case_label = {
+  CASE ~ expression ~ COLON |
+  DEFAULT ~ COLON
+}
+
+CASE = _{ "case" }
+DEFAULT = _{ "default" }
+
+iteration_statement = {
+  WHILE ~ LEFT_PARENS ~ condition ~ RIGHT_PARENS ~ statement |
+  DO ~ statement ~ WHILE ~ LEFT_PARENS ~ expression ~ RIGHT_PARENS ~ SEMICOLON |
+  FOR ~ LEFT_PARENS ~ for_init_statement ~ for_rest_statement ~ RIGHT_PARENS ~ statement
+}
+
+WHILE = _{ "while" }
+DO = _{ "do" }
+FOR = _{ "for" }
+
+for_it_statement = { expression_statement | declaration_statement }
+
+for_rest_statement = { condition? ~ SEMICOLON ~ expression? }
+
+jump_statement = {
+  CONTINUE ~ SEMICOLON |
+  BREAK ~ SEMICOLON |
+  RETURN ~ expression? ~ SEMICOLON |
+  DISCARD ~ SEMICOLON 
+}
+
+CONTINUE = _{ "continue" }
+BREAK = _{ "break" }
+RETURN = _{ "return" }
+DISCARD = _{ "discard" }
+
+translation_unit = { external_declaration+ }
+
+external_declaration = { function_definition | declaration }
+
+function_definition = { function_prototype ~ compound_statement }
