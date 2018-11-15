@@ -70,12 +70,11 @@ FLOATING_SUFFIX = _{ "f" | "F" | "lf" | "LF" }
 bool_constant = @{ "true" | "false" }
 
 postfix_expression = {
-  primary_expression |
-  postfix_expression ~ LEFT_BRACKET ~ integer_expression ~ RIGHT_BRACKET |
-  function_call |
-  postfix_expression ~ DOT ~ identifier |
-  postfix_expression ~ INC_OP |
-  postfix_expression ~ DEC_OP
+  primary_expression ~ (
+    LEFT_BRACKET ~ integer_expression ~ RIGHT_BRACKET |
+    DOT ~ identifier |
+    INC_OP | DEC_OP
+  )*
 }
 
 integer_expression = { expression }
@@ -91,8 +90,7 @@ function_call_generic = {
 function_call_header_no_parameters = { function_call_header ~ "void"? }
 
 function_call_header_with_parameters = {
-  function_call_header ~ assignment_expression |
-  function_call_header_with_parameters ~ COMMA ~ assignment_expression
+  function_call_header ~ assignment_expression ~ (COMMA ~ assignment_expression)*
 }
 
 function_call_header = { function_identifier ~ LEFT_PARENS }
@@ -108,60 +106,27 @@ unary_expression = {
 
 unary_operator = { "+" | "-" | "!" | "~" }
 
-multiplicative_expression = {
-  unary_expression |
-    multiplicative_expression ~ ("*" | "/" | "%") ~ unary_expression
-}
+multiplicative_expression = { unary_expression ~ (("*" | "/" | "%") ~ unary_expression)* }
 
-additive_expression = {
-  multiplicative_expression |
-    additive_expression ~ ("+" | "-") ~ multiplicative_expression
-}
+additive_expression = { multiplicative_expression ~ (("+" | "-") ~ multiplicative_expression)* }
 
-shift_expression = {
-  additive_expression |
-    shift_expression ~ ("<<" | ">>") ~ additive_expression
-}
+shift_expression = { additive_expression ~ (("<<" | ">>") ~ additive_expression)* }
 
-relational_expression = {
-  shift_expression |
-    relational_expression ~ ("<" | ">" | "<=" | ">=") ~ shift_expression
-}
+relational_expression = { shift_expression ~ (("<" | ">" | "<=" | ">=") ~ shift_expression)* }
 
-equality_expression = {
-  relational_expression |
-    equality_expression ~ ("==" | "!=") ~ relational_expression 
-}
+equality_expression = { relational_expression ~ (("==" | "!=") ~ relational_expression)* }
 
-and_expression = {
-  equality_expression |
-    and_expression ~ "&" ~ equality_expression
-}
+and_expression = { equality_expression ~ ("&" ~ equality_expression)* }
 
-exclusive_or_expression = {
-  and_expression |
-    exclusive_or_expression ~ "^" ~ and_expression
-}
+exclusive_or_expression = { and_expression ~ ("^" ~ and_expression)* }
 
-inclusive_or_expression = {
-  exclusive_or_expression |
-    inclusive_or_expression ~ "|" ~ exclusive_or_expression
-}
+inclusive_or_expression = { exclusive_or_expression ~ ("|" ~ exclusive_or_expression)* }
 
-logical_and_expression = {
-  inclusive_or_expression |
-    logical_and_expression ~ "&&" ~ inclusive_or_expression
-}
+logical_and_expression = { inclusive_or_expression ~ ("&&" ~ inclusive_or_expression)* }
 
-logical_xor_expression = {
-  logical_and_expression |
-    logical_xor_expression ~ "^^" ~ logical_and_expression
-}
+logical_xor_expression = { logical_and_expression ~ ("^^" ~ logical_and_expression)* }
 
-logical_or_expression = {
-  logical_xor_expression |
-    logical_or_expression ~ "||" ~ logical_xor_expression
-}
+logical_or_expression = { logical_xor_expression ~ ("||" ~ logical_xor_expression)* }
 
 conditional_expression = {
   logical_or_expression ~ ("?" ~ expression ~ ":" ~ assignment_expression)?
@@ -169,7 +134,7 @@ conditional_expression = {
 
 assignment_expression = {
   conditional_expression |
-    unary_expression ~ assignment_operator ~ assignment_expression
+  unary_expression ~ assignment_operator ~ assignment_expression
 }
 
 assignment_operator = {
@@ -213,8 +178,9 @@ parameter_type_specifier = {
 }
 
 init_declarator_list = {
-  single_declaration |
-    init_declarator_list ~ COMMA ~ identifier ~ (array_specifier ~ (EQUAL ~ initializer)? | EQUAL ~ initializer)?
+  single_declaration ~ (
+    COMMA ~ identifier ~ (array_specifier ~ (EQUAL ~ initializer)? | EQUAL ~ initializer)?
+  )*
 }
 
 single_declaration = {
