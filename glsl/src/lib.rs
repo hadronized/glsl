@@ -36,9 +36,12 @@
 
 #[macro_use] extern crate nom;
 #[cfg(feature = "spirv")] extern crate shaderc;
+extern crate pest;
+#[macro_use] extern crate pest_derive;
 
 pub mod parser;
-mod parsers;
+mod pest_parser; // new parser, with pest!
+mod parsers; // legacy nom parsers
 pub mod syntax;
 pub mod transpiler;
 pub mod visitor;

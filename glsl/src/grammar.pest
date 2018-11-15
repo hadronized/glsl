@@ -33,35 +33,33 @@ variable_identifier = { identifier }
 primary_expression = {
   variable_identifier |
   int_constant |
-  uint_constant |
   float_constant |
   bool_constant |
-  double_constant |
   LEFT_PARENS ~ expression ~ RIGHT_PARENS
 }
 
 int_constant = @{
-  decimal_constant INTEGER_SUFFIX? |
-  octal_constant INTEGER_SUFFIX? |
-  hexadecimal_constant INTEGER_SUFFIX?
+  decimal_constant ~ INTEGER_SUFFIX? |
+  octal_constant ~ INTEGER_SUFFIX? |
+  hexadecimal_constant ~ INTEGER_SUFFIX?
 }
 
 INTEGER_SUFFIX = _{ "u" | "U" }
 
 decimal_constant = @{ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 
-octal_constant = @{ "0" ~ ("0" .. "7")* }
+octal_constant = @{ "0" ~ ('0' .. '7')* }
 
 hexadecimal_constant = @{ HEXADECIMAL_PREFIX ~ hexadecimal_digit+ }
 HEXADECIMAL_PREFIX = _{ "0x" | "0X" }
-hexadecimal_digit = { "0" .. "9" | "a" .. "f" | "A" .. "F" }
+hexadecimal_digit = { '0' .. '9' | 'a' .. 'f' | 'A' .. 'F' }
 
 float_constant = @{
   fractional_constant ~ exponent_part? ~ FLOATING_SUFFIX? |
   ASCII_DIGIT+ ~ exponent_part ~ FLOATING_SUFFIX?
 }
 
-fractional_constant = @{ ASCII_DIGIT+ ~ "." ASCII_DIGIT* | "." ~ ASCII_DIGIT+ }
+fractional_constant = @{ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* | "." ~ ASCII_DIGIT+ }
 
 exponent_part = @{ ("e" | "E") ~ sign? ~ ASCII_DIGIT+ }
 
@@ -75,7 +73,7 @@ postfix_expression = {
   primary_expression |
   postfix_expression ~ LEFT_BRACKET ~ integer_expression ~ RIGHT_BRACKET |
   function_call |
-  postfix_expression ~ DOT ~ field_selection |
+  postfix_expression ~ DOT ~ identifier |
   postfix_expression ~ INC_OP |
   postfix_expression ~ DEC_OP
 }
@@ -191,7 +189,7 @@ declaration = {
   init_declarator_list ~ SEMICOLON |
   PRECISION ~ precision_qualifier ~ type_specifier ~ SEMICOLON |
   type_qualifier ~ identifier ~ LEFT_BRACE ~ struct_declaration_list ~ RIGHT_BRACE ~ (identifier ~ array_specifier?)? ~ SEMICOLON |
-  type_qualifier ~ (identifier ~ (COMMA ~ identifier)*)? ~ SEMICOLON |
+  type_qualifier ~ (identifier ~ (COMMA ~ identifier)*)? ~ SEMICOLON
 }
 
 PRECISION = _{ "precision" }
@@ -265,11 +263,11 @@ type_specifier_nonarray = @{
   "float" | "double" |
   "int" | "uint" |
   "bool" |
-  "vec2" | vec3 | vec4 |
-  "dvec2" | dvec3 | dvec4 |
-  "bvec2" | bvec3 | bvec4 |
+  "vec2" | "vec3" | "vec4" |
+  "dvec2" | "dvec3" | "dvec4" |
+  "bvec2" | "bvec3" | "bvec4" |
   "ivec2" | "ivec3" | "ivec4" |
-  "uvec2" | "uvec3" | "uvec4"
+  "uvec2" | "uvec3" | "uvec4" |
   "mat2" | "mat3" | "mat4" |
   "mat2x2" | "mat2x3" | "mat2x4" | "mat3x2" | "mat3x3" | "mat3x4" | "mat4x2" | "mat4x3" | "mat4x4" |
   "dmat2" | "dmat3" | "dmat4" |
@@ -337,7 +335,7 @@ declaratiorn_statement = { declaration }
 statement = { compound_statement | simple_statement }
 
 simple_statement = {
-  declaration_statement | expression_statement | selection_statement |
+  declaration | expression_statement | selection_statement |
   switch_statement | case_label | iteration_statement | jump_statement
 }
 
@@ -385,7 +383,7 @@ WHILE = _{ "while" }
 DO = _{ "do" }
 FOR = _{ "for" }
 
-for_it_statement = { expression_statement | declaration_statement }
+for_init_statement = { expression_statement | declaration }
 
 for_rest_statement = { condition? ~ SEMICOLON ~ expression? }
 

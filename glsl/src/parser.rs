@@ -9,23 +9,21 @@
 //! [`Parse`]: parser::Parse
 //! [`ParseResult`]: parser::ParseResult
 
-use nom::{Err as NomErr, ErrorKind, IResult, Needed};
+use nom::{Err as NomErr, IResult, Needed};
 use std::fmt;
 use std::str::{from_utf8_unchecked};
 
 use syntax;
 
-/// A parse error. It contains an [`ErrorKind`] along with a [`String`] giving information on the reason
-/// why the parser failed.
+/// A parse error. It contains a`String` giving information on the reason why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
-  kind: ErrorKind,
   info: String
 }
 
 impl fmt::Display for ParseError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    write!(f, "error ({:?}): {}", self.kind, self.info)
+    write!(f, "error: {}", self.info)
   }
 }
 
@@ -77,29 +75,28 @@ fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
       if i.is_empty() {
         ParseResult::Ok(x)
       } else {
-        let kind = ErrorKind::Custom(0); // FIXME: use our own error kind
         let msg = unsafe { from_utf8_unchecked(i).to_owned() };
         let info = msg.lines().next().unwrap_or("").to_owned();
-        ParseResult::Err(ParseError { kind, info })
+        ParseResult::Err(ParseError { info })
       }
     },
     IResult::Error(err) => match err {
-      NomErr::Code(k) => ParseResult::Err(ParseError { kind: k, info: String::new() }),
-      NomErr::Node(kind, trace) => {
+      NomErr::Code(_) => ParseResult::Err(ParseError { info: String::new() }),
+      NomErr::Node(_, trace) => {
         let info = format!("{:#?}", trace);
-        ParseResult::Err(ParseError { kind, info })
+        ParseResult::Err(ParseError {  info })
       },
-      NomErr::Position(kind, p) => {
+      NomErr::Position(_, p) => {
         let msg = unsafe { from_utf8_unchecked(p).to_owned() };
         let info = msg.lines().next().unwrap_or("").to_owned();
 
-        ParseResult::Err(ParseError { kind, info })
+        ParseResult::Err(ParseError { info })
       },
-      NomErr::NodePosition(kind, p, trace) => {
+      NomErr::NodePosition(_, p, trace) => {
         let p_msg = unsafe { from_utf8_unchecked(p) };
         let info = format!("{}: {:#?}", p_msg, trace);
 
-        ParseResult::Err(ParseError { kind, info })
+        ParseResult::Err(ParseError { info })
       }
     },
     IResult::Incomplete(n) => ParseResult::Incomplete(n)

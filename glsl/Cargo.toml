@@ -20,6 +20,10 @@ maintenance = { status = "passively-maintained" }
 [features]
 spirv = ["shaderc"]
 
+[dependencies]
+pest = "2"
+pest_derive = "2"
+
 [dependencies.nom]
 version = "3.2"
 default-features = true
