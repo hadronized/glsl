@@ -40,7 +40,7 @@ extern crate pest;
 #[macro_use] extern crate pest_derive;
 
 pub mod parser;
-mod pest_parser; // new parser, with pest!
+pub mod pest_parser; // new parser, with pest!
 mod parsers; // legacy nom parsers
 pub mod syntax;
 pub mod transpiler;

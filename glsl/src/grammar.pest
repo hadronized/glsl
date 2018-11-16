@@ -28,10 +28,8 @@ EQUAL = _{ "=" }
 
 identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
-variable_identifier = { identifier }
-
 primary_expression = {
-  variable_identifier |
+  identifier |
   int_constant |
   float_constant |
   bool_constant |
@@ -70,20 +68,14 @@ FLOATING_SUFFIX = _{ "f" | "F" | "lf" | "LF" }
 bool_constant = @{ "true" | "false" }
 
 postfix_expression = {
-  primary_expression ~ (
-    LEFT_BRACKET ~ integer_expression ~ RIGHT_BRACKET |
+  (primary_expression | function_call) ~ (
+    LEFT_BRACKET ~ expression ~ RIGHT_BRACKET |
     DOT ~ identifier |
     INC_OP | DEC_OP
   )*
 }
 
-integer_expression = { expression }
-
-function_call = { function_call_or_method }
-
-function_call_or_method = { function_call_generic }
-
-function_call_generic = {
+function_call = {
   (function_call_header_with_parameters | function_call_header_no_parameters) ~ RIGHT_PARENS
 }
 
@@ -95,37 +87,27 @@ function_call_header_with_parameters = {
 
 function_call_header = { function_identifier ~ LEFT_PARENS }
 
-function_identifier = { type_specifier | postfix_expression }
+function_identifier = { type_specifier }
 
 unary_expression = {
   postfix_expression |
-    INC_OP ~  unary_expression |
-    DEC_OP ~ unary_expression |
-    unary_operator ~ unary_expression
+  INC_OP ~  unary_expression |
+  DEC_OP ~ unary_expression |
+  unary_operator ~ unary_expression
 }
 
 unary_operator = { "+" | "-" | "!" | "~" }
 
 multiplicative_expression = { unary_expression ~ (("*" | "/" | "%") ~ unary_expression)* }
-
 additive_expression = { multiplicative_expression ~ (("+" | "-") ~ multiplicative_expression)* }
-
 shift_expression = { additive_expression ~ (("<<" | ">>") ~ additive_expression)* }
-
 relational_expression = { shift_expression ~ (("<" | ">" | "<=" | ">=") ~ shift_expression)* }
-
 equality_expression = { relational_expression ~ (("==" | "!=") ~ relational_expression)* }
-
 and_expression = { equality_expression ~ ("&" ~ equality_expression)* }
-
 exclusive_or_expression = { and_expression ~ ("^" ~ and_expression)* }
-
 inclusive_or_expression = { exclusive_or_expression ~ ("|" ~ exclusive_or_expression)* }
-
 logical_and_expression = { inclusive_or_expression ~ ("&&" ~ inclusive_or_expression)* }
-
 logical_xor_expression = { logical_and_expression ~ ("^^" ~ logical_and_expression)* }
-
 logical_or_expression = { logical_xor_expression ~ ("||" ~ logical_xor_expression)* }
 
 conditional_expression = {
@@ -141,13 +123,7 @@ assignment_operator = {
   "=" | "*=" | "/=" | "%=" | "+=" | "-=" | "<<=" | ">>=" | "&=" | "^=" | "|="
 }
 
-expression = {
-  assignment_expression ~ ("," ~ assignment_expression)*
-}
-
-constant_expression = {
-  conditional_expression
-}
+expression = { assignment_expression ~ ("," ~ assignment_expression)* }
 
 declaration = {
   function_prototype ~ SEMICOLON |
@@ -171,11 +147,7 @@ function_header = { fully_specified_type ~ identifier ~ LEFT_PARENS }
 
 parameter_declarator = { type_specifier ~ identifier ~ array_specifier? }
 
-parameter_declaration = { type_qualifier? ~ (parameter_declarator | parameter_type_specifier) }
-
-parameter_type_specifier = {
-  type_specifier
-}
+parameter_declaration = { type_qualifier? ~ (parameter_declarator | type_specifier) }
 
 init_declarator_list = {
   single_declaration ~ (
@@ -199,7 +171,7 @@ LAYOUT = _{ "layout" }
 
 layout_qualifier_id_list = { layout_qualifier_id ~ (COMMA ~ layout_qualifier_id)* }
 
-layout_qualifier_id = { identifier ~ (EQUAL ~ constant_expression)? | "shared" }
+layout_qualifier_id = { identifier ~ (EQUAL ~ conditional_expression)? | "shared" }
 
 PRECISE_QUALIFIER = _{ "precise" }
 
@@ -207,22 +179,22 @@ type_qualifier = { single_type_qualifier+ }
 
 single_type_qualifier = {
   storage_qualifier |
-    layout_qualifier |
-    precision_qualifier |
-    interpolation_qualifier |
-    INVARIANT_QUALIFIER |
-    PRECISE_QUALIFIER
+  layout_qualifier |
+  precision_qualifier |
+  interpolation_qualifier |
+  INVARIANT_QUALIFIER |
+  PRECISE_QUALIFIER
 }
 
 storage_qualifier = {
   "const" | "inout" | "in" | "out" | "centroid" | "patch" | "sample" | "uniform" | "buffer" |
-    "shared" | "coherent" | "volatile" | "restrict" | "readonly" | "writeonly" |
-    "subroutine" ~ (LEFT_PARENS ~ identifier ~ (COMMA ~ identifier)* ~ RIGHT_PARENS)?
+  "shared" | "coherent" | "volatile" | "restrict" | "readonly" | "writeonly" |
+  "subroutine" ~ (LEFT_PARENS ~ identifier ~ (COMMA ~ identifier)* ~ RIGHT_PARENS)?
 }
 
 type_specifier = { type_specifier_nonarray ~ array_specifier? }
 
-array_specifier = { (LEFT_BRACKET ~ constant_expression? ~ RIGHT_BRACKET)+ }
+array_specifier = { (LEFT_BRACKET ~ conditional_expression? ~ RIGHT_BRACKET)+ }
 
 type_specifier_nonarray = @{
   "void" |
@@ -295,8 +267,6 @@ initializer = {
 }
 
 initializer_list = { initializer ~ (COMMA ~ initializer)? }
-
-declaratiorn_statement = { declaration }
 
 statement = { compound_statement | simple_statement }
 
