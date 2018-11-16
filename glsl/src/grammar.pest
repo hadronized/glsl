@@ -30,16 +30,16 @@ identifier = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 primary_expression = {
   identifier |
-  int_constant |
   float_constant |
+  int_constant |
   bool_constant |
   LEFT_PARENS ~ expression ~ RIGHT_PARENS
 }
 
 int_constant = @{
   decimal_constant ~ INTEGER_SUFFIX? |
-  octal_constant ~ INTEGER_SUFFIX? |
-  hexadecimal_constant ~ INTEGER_SUFFIX?
+  hexadecimal_constant ~ INTEGER_SUFFIX? |
+  octal_constant ~ INTEGER_SUFFIX?
 }
 
 INTEGER_SUFFIX = _{ "u" | "U" }
@@ -91,7 +91,7 @@ function_identifier = { type_specifier }
 
 unary_expression = {
   postfix_expression |
-  INC_OP ~  unary_expression |
+  INC_OP ~ unary_expression |
   DEC_OP ~ unary_expression |
   unary_operator ~ unary_expression
 }
@@ -171,7 +171,7 @@ LAYOUT = _{ "layout" }
 
 layout_qualifier_id_list = { layout_qualifier_id ~ (COMMA ~ layout_qualifier_id)* }
 
-layout_qualifier_id = { identifier ~ (EQUAL ~ conditional_expression)? | "shared" }
+layout_qualifier_id = { "shared" | identifier ~ (EQUAL ~ conditional_expression)? }
 
 PRECISE_QUALIFIER = _{ "precise" }
 
@@ -198,51 +198,125 @@ array_specifier = { (LEFT_BRACKET ~ conditional_expression? ~ RIGHT_BRACKET)+ }
 
 type_specifier_nonarray = @{
   "void" |
-  "float" | "double" |
-  "int" | "uint" |
+  "float" |
+  "double" |
+  "int" |
+  "uint" |
   "bool" |
-  "vec2" | "vec3" | "vec4" |
-  "dvec2" | "dvec3" | "dvec4" |
-  "bvec2" | "bvec3" | "bvec4" |
-  "ivec2" | "ivec3" | "ivec4" |
-  "uvec2" | "uvec3" | "uvec4" |
-  "mat2" | "mat3" | "mat4" |
-  "mat2x2" | "mat2x3" | "mat2x4" | "mat3x2" | "mat3x3" | "mat3x4" | "mat4x2" | "mat4x3" | "mat4x4" |
-  "dmat2" | "dmat3" | "dmat4" |
-  "dmat2x2" | "dmat2x3" | "dmat2x4" | "dmat3x2" | "dmat3x3" | "dmat3x4" | "dmat4x2" | "dmat4x3" | "dmat4x4" |
+  "vec2" |
+  "vec3" |
+  "vec4" |
+  "dvec2" |
+  "dvec3" |
+  "dvec4" |
+  "bvec2" |
+  "bvec3" |
+  "bvec4" |
+  "ivec2" |
+  "ivec3" |
+  "ivec4" |
+  "uvec2" |
+  "uvec3" |
+  "uvec4" |
+  "mat2x2" |
+  "mat2x3" |
+  "mat2x4" |
+  "mat3x2" |
+  "mat3x3" |
+  "mat3x4" |
+  "mat4x2" |
+  "mat4x3" |
+  "mat4x4" |
+  "mat2" |
+  "mat3" |
+  "mat4" |
+  "dmat2x2" |
+  "dmat2x3" |
+  "dmat2x4" |
+  "dmat3x2" |
+  "dmat3x3" |
+  "dmat3x4" |
+  "dmat4x2" |
+  "dmat4x3" |
+  "dmat4x4" |
+  "dmat2" |
+  "dmat3" |
+  "dmat4" |
   "atomic_uint" |
-  "sampler1d" | "sampler2d" | "sampler3d" |
-  "samplercube" |
-  "sampler1dshadow" | "sampler2dshadow" |
+  "samplerbuffer" |
   "samplercubeshadow" |
-  "sampler1darray" | "sampler2darray" |
-  "sampler1darrayshadow" | "sampler2darrayshadow" |
-  "samplercubearray" | "samplercubearrayshadow" |
-  "isampler1d" | "isampler2d" | "isampler3d" |
-  "isamplercube" |
-  "isampler1darray" | "isampler2darray" |
+  "samplercubearrayshadow" |
+  "samplercubearray" |
+  "samplercube" |
+  "sampler1dshadow" |
+  "sampler1darrayshadow" |
+  "sampler1darray" |
+  "sampler1d" | 
+  "sampler2dshadow" |
+  "sampler2darrayshadow" |
+  "sampler2darray" |
+  "sampler2drectshadow" |
+  "sampler2drect" |
+  "sampler2dmsarray" |
+  "sampler2dms" |
+  "sampler2d" |
+  "sampler3d" |
+  "isamplerbuffer" |
   "isamplercubearray" |
-  "usampler1d" | "usampler2d" | "usampler3d" |
-  "usamplercube" |
-  "usampler1darray" | "usampler2darray" |
+  "isamplercube" |
+  "isampler1darray" |
+  "isampler1d" |
+  "isampler2darray" |
+  "isampler2dmsarray" |
+  "isampler2dms" |
+  "isampler2drect" |
+  "isampler2d" |
+  "isampler3d" |
+  "usamplerbuffer" |
   "usamplercubearray" |
-  "sampler2drect" | "sampler2drectshadow" | "isampler2drect" | "usampler2drect" |
-  "samplerbuffer" | "isamplerbuffer" | "usamplerbuffer" |
-  "sampler2dms" | "isampler2dms" | "usampler2dms" |
-  "sampler2dmsarray" | "isampler2dmsarray" |
+  "usamplercube" |
+  "usampler1darray" |
+  "usampler1d" |
+  "usampler2darray" |
+  "usampler2drect" |
   "usampler2dmsarray" |
-  "image1d" | "iimage1d" | "uimage1d" |
-  "image2d" | "iimage2d" | "uimage2d" |
-  "image3d" | "iimage3d" | "uimage3d" |
-  "image2drect" | "iimage2drect" | "uimage2drect" |
-  "imagecube" | "iimagecube" | "uimagecube" |
-  "imagebuffer" | "iimagebuffer" | "uimagebuffer" |
-  "image1darray" | "iimage1darray" | "uimage1darray" |
-  "image2darray" | "iimage2darray" | "uimage2darray" |
-  "imagecubearray" | "iimagecubearray" | "uimagecubearray" |
-  "image2dms" | "iimage2dms" |"uimage2dms" |
-  "image2dmsarray" | "iimage2dmsarray" | "uimage2dmsarray" |
-  struct_specifier | identifier
+  "usampler2dms" |
+  "usampler2d" |
+  "usampler3d" |
+  "imagebuffer" |
+  "imagecubearray" |
+  "imagecube" |
+  "image1darray" |
+  "image1d" |
+  "image2darray" |
+  "image2drect" |
+  "image2dmsarray" |
+  "image2dms" |
+  "image3d" |
+  "iimagebuffer" |
+  "iimagecubearray" |
+  "iimagecube" |
+  "iimage1darray" |
+  "iimage1d" |
+  "iimage2darray" |
+  "iimage2drect" |
+  "iimage2dmsarray" |
+  "iimage2dms" |
+  "iimage2d" |
+  "iimage3d" |
+  "uimagebuffer" |
+  "uimagecubearray" |
+  "uimagecube" |
+  "uimage1darray" |
+  "uimage1d" |
+  "uimage2darray" |
+  "uimage2drect" |
+  "uimage2dmsarray" |
+  "uimage2dms" |
+  "uimage2d" |
+  "uimage3d" |
+  struct_specifier |
+  identifier
 }
 
 precision_qualifier = { "high" | "medium" | "low" }
