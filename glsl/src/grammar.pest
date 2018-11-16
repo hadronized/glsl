@@ -335,7 +335,7 @@ BREAK = _{ "break" }
 RETURN = _{ "return" }
 DISCARD = _{ "discard" }
 
-translation_unit = { external_declaration+ }
+translation_unit = { SOI ~ external_declaration+ ~ EOI }
 
 external_declaration = { function_definition | declaration }
 
