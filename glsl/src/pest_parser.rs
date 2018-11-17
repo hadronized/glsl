@@ -309,5 +309,6 @@ mod tests {
     assert_eq!(<syntax::TypeSpecifierNonArray as Parse>::parse("uimage2DMSArray").unwrap(), syntax::TypeSpecifierNonArray::UImage2DMSArray);
     assert_eq!(<syntax::TypeSpecifierNonArray as Parse>::parse("usamplerCubeArray").unwrap(), syntax::TypeSpecifierNonArray::USamplerCubeArray);
     assert_eq!(<syntax::TypeSpecifierNonArray as Parse>::parse("uimageCubeArray").unwrap(), syntax::TypeSpecifierNonArray::UImageCubeArray);
+    assert_eq!(<syntax::TypeSpecifierNonArray as Parse>::parse("uimageCubeArrayi").unwrap(), syntax::TypeSpecifierNonArray::TypeName("uimageCubeArrayi".to_owned()));
   }
 }
