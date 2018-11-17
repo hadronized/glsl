@@ -192,11 +192,11 @@ storage_qualifier = {
   "subroutine" ~ (LEFT_PARENS ~ identifier ~ (COMMA ~ identifier)* ~ RIGHT_PARENS)?
 }
 
-type_specifier = { type_specifier_nonarray ~ array_specifier? }
+type_specifier = { type_specifier_non_array ~ array_specifier? }
 
 array_specifier = { (LEFT_BRACKET ~ conditional_expression? ~ RIGHT_BRACKET)+ }
 
-type_specifier_nonarray = { struct_specifier | identifier }
+type_specifier_non_array = { struct_specifier | identifier }
 
 precision_qualifier = { "high" | "medium" | "low" }
 

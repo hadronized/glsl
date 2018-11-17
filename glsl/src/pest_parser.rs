@@ -27,7 +27,7 @@ impl Parse for syntax::Identifier {
 
 impl Parse for syntax::TypeSpecifierNonArray {
   fn parse<'a, S>(input: S) -> Result<Self, String> where S: Into<&'a str> {
-    let mut pairs = Parser::parse(Rule::type_specifier_nonarray, input.into()).map_err(|e| format!("{}", e))?;
+    let mut pairs = Parser::parse(Rule::type_specifier_non_array, input.into()).map_err(|e| format!("{}", e))?;
     parse_type_specifier_non_array(pairs.next().unwrap())
   }
 }
