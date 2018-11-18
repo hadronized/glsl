@@ -584,33 +584,43 @@ impl ExternalDeclaration {
   }
 
   /// Create a new structure.
-  pub fn new_struct<N, F>(name: N, fields: F) -> Self
+  ///
+  /// # Errors
+  ///
+  ///   - `None` if no fields are provided. GLSL forbids having empty structs.
+  pub fn new_struct<N, F>(name: N, fields: F) -> Option<Self>
   where N: Into<String>,
         F: IntoIterator<Item = StructFieldSpecifier> {
-    ExternalDeclaration::Declaration(
-      Declaration::InitDeclaratorList(
-        InitDeclaratorList {
-          head: SingleDeclaration {
-            ty: FullySpecifiedType {
-              qualifier: None,
-              ty: TypeSpecifier {
-                ty: TypeSpecifierNonArray::Struct(
-                      StructSpecifier {
-                        name: Some(name.into()),
-                        fields: fields.into_iter().collect()
-                      }
-                ),
-                array_specifier: None
-              }
+    let fields: Vec<_> = fields.into_iter().collect();
+
+    if fields.is_empty() {
+      None
+    } else {
+      Some(ExternalDeclaration::Declaration(
+        Declaration::InitDeclaratorList(
+          InitDeclaratorList {
+            head: SingleDeclaration {
+              ty: FullySpecifiedType {
+                qualifier: None,
+                ty: TypeSpecifier {
+                  ty: TypeSpecifierNonArray::Struct(
+                        StructSpecifier {
+                          name: Some(name.into()),
+                          fields: fields.into_iter().collect()
+                        }
+                  ),
+                  array_specifier: None
+                }
+              },
+              name: None,
+              array_specifier: None,
+              initializer: None
             },
-            name: None,
-            array_specifier: None,
-            initializer: None
-          },
-          tail: vec![]
-        }
-      )
-    )
+            tail: vec![]
+          }
+        )
+      ))
+    }
   }
 }
 
@@ -883,12 +893,21 @@ mod tests {
   // };
   #[test]
   fn declare_struct() {
-    let _ =
+    let point =
       ExternalDeclaration::new_struct("Point2D",
                                       vec![
                                         StructFieldSpecifier::new("x", TypeSpecifierNonArray::Double),
                                         StructFieldSpecifier::new("y", TypeSpecifierNonArray::Double)
                                       ]
       );
+
+    assert!(point.is_some());
+  }
+
+  // struct Point2D {};
+  #[test]
+  fn declare_bad_struct() {
+    let point = ExternalDeclaration::new_struct("Point2D", vec![]);
+    assert!(point.is_none());
   }
 }
