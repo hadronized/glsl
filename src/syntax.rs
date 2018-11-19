@@ -13,19 +13,56 @@
 //! The types are commented so feel free to inspect each of theme. As a starter, you should read
 //! the documentation of `Expr`, `FunctionDefinition`, `Statement` and `TranslationUnit`.
 
+use std::fmt;
 use std::iter::once;
 
-// FIXME: as soon as deeply-nested types are truly supported in rustc, remove as many boxes as
-// possible. See <https://github.com/rust-lang/rust/issues/42747>.
-
 /// A non-empty `Vec`. It has at least one element.
-pub type NonEmpty<T> = Vec<T>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct NonEmpty<T>(pub Vec<T>);
 
 /// A generic identifier.
-pub type Identifier = String;
+#[derive(Clone, Debug, PartialEq)]
+pub struct Identifier(pub String);
+
+impl<'a> From<&'a str> for Identifier {
+  fn from(s: &str) -> Self {
+    Identifier(s.to_owned())
+  }
+}
+
+impl From<String> for Identifier {
+  fn from(s: String) -> Self {
+    Identifier(s)
+  }
+}
+
+impl fmt::Display for Identifier {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    self.0.fmt(f)
+  }
+}
 
 /// Any type name.
-pub type TypeName = String;
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypeName(pub String);
+
+impl<'a> From<&'a str> for TypeName {
+  fn from(s: &str) -> Self {
+    TypeName(s.to_owned())
+  }
+}
+
+impl From<String> for TypeName {
+  fn from(s: String) -> Self {
+    TypeName(s)
+  }
+}
+
+impl fmt::Display for TypeName {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    self.0.fmt(f)
+  }
+}
 
 /// Type specifier (non-array).
 #[derive(Clone, Debug, PartialEq)]
@@ -176,8 +213,8 @@ impl From<TypeSpecifierNonArray> for TypeSpecifier {
 /// Struct specifier. Used to create new, user-defined types.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructSpecifier {
-  pub name: Option<String>,
-  pub fields: Vec<StructFieldSpecifier>,
+  pub name: Option<TypeName>,
+  pub fields: NonEmpty<StructFieldSpecifier>,
 }
 
 /// Struct field specifier. Used to add fields to struct specifiers.
@@ -199,7 +236,7 @@ impl StructFieldSpecifier {
     StructFieldSpecifier {
       qualifier: None,
       ty: ty.into(),
-      identifiers: vec![identifier.into()]
+      identifiers: NonEmpty(vec![identifier.into()])
     }
   }
 
@@ -212,7 +249,7 @@ impl StructFieldSpecifier {
     StructFieldSpecifier {
       qualifier: None,
       ty,
-      identifiers: identifiers.into_iter().collect()
+      identifiers: NonEmpty(identifiers.into_iter().collect())
     }
   }
 }
@@ -236,14 +273,14 @@ impl ArrayedIdentifier {
 impl<'a> From<&'a str> for ArrayedIdentifier {
   fn from(ident: &str) -> Self {
     ArrayedIdentifier {
-      ident: ident.to_owned(),
+      ident: Identifier(ident.to_owned()),
       array_spec: None
     }
   }
 }
 
 impl From<Identifier> for ArrayedIdentifier {
-  fn from(ident: String) -> Self {
+  fn from(ident: Identifier) -> Self {
     ArrayedIdentifier {
       ident,
       array_spec: None
@@ -428,8 +465,6 @@ pub struct InitDeclaratorList {
   pub tail: Vec<SingleDeclarationNoType>
 }
 
-// FIXME: the three fields are wrong. It’s not possible to have the last two if the second one
-// is not Some(_) – see page 197 of the GLSLangSpec.4.50.pdf document.
 /// Single declaration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SingleDeclaration {
@@ -547,7 +582,8 @@ pub enum AssignmentOp {
 }
 
 /// Starting rule.
-pub type TranslationUnit = NonEmpty<ExternalDeclaration>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct TranslationUnit(pub NonEmpty<ExternalDeclaration>);
 
 /// External declaration.
 #[derive(Clone, Debug, PartialEq)]
@@ -566,7 +602,7 @@ impl ExternalDeclaration {
     body: S
   ) -> Self
   where T: Into<FullySpecifiedType>,
-        N: Into<String>,
+        N: Into<Identifier>,
         A: IntoIterator<Item = FunctionParameterDeclaration>,
         S: IntoIterator<Item = Statement> {
     ExternalDeclaration::FunctionDefinition(
@@ -589,7 +625,7 @@ impl ExternalDeclaration {
   ///
   ///   - `None` if no fields are provided. GLSL forbids having empty structs.
   pub fn new_struct<N, F>(name: N, fields: F) -> Option<Self>
-  where N: Into<String>,
+  where N: Into<TypeName>,
         F: IntoIterator<Item = StructFieldSpecifier> {
     let fields: Vec<_> = fields.into_iter().collect();
 
@@ -606,7 +642,7 @@ impl ExternalDeclaration {
                   ty: TypeSpecifierNonArray::Struct(
                         StructSpecifier {
                           name: Some(name.into()),
-                          fields: fields.into_iter().collect()
+                          fields: NonEmpty(fields.into_iter().collect())
                         }
                   ),
                   array_specifier: None
