@@ -66,8 +66,14 @@ named!(identifier_str,
   ))
 );
 
+/// Parse a string that could be used as an identifier.
+named!(pub string<&[u8], String>, map!(identifier_str, bytes_to_string));
+
 /// Parse an identifier.
-named!(pub identifier<&[u8], syntax::Identifier>, map!(identifier_str, bytes_to_string));
+named!(pub identifier<&[u8], syntax::Identifier>, map!(identifier_str, |b| syntax::Identifier(bytes_to_string(b))));
+
+/// Parse a type name.
+named!(pub type_name<&[u8], syntax::TypeName>, map!(identifier_str, |b| syntax::TypeName(bytes_to_string(b))));
 
 #[inline]
 fn identifier_pred(c: u8) -> bool {
@@ -90,6 +96,20 @@ named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
       let mut identifiers = rest.clone();
       identifiers.insert(0, first);
       identifiers
+    })
+  ))
+);
+
+/// Parse a non-empty list of type names, delimited by comma (,).
+named!(nonempty_type_names<&[u8], Vec<syntax::TypeName>>,
+  bl!(do_parse!(
+    first: type_name >>
+    rest: many0!(do_parse!(char!(',') >> i: bl!(type_name) >> (i))) >>
+
+    ({
+      let mut names = rest.clone();
+      names.insert(0, first);
+      names
     })
   ))
 );
@@ -227,7 +247,7 @@ named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
   alt!(
     type_specifier_non_struct |
     map!(struct_specifier, syntax::TypeSpecifierNonArray::Struct) |
-    map!(identifier, syntax::TypeSpecifierNonArray::TypeName)
+    map!(type_name, syntax::TypeSpecifierNonArray::TypeName)
   )
 );
 
@@ -482,7 +502,7 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
     (syntax::StructFieldSpecifier {
       qualifier: qual,
       ty: ty,
-      identifiers: identifiers
+      identifiers: syntax::NonEmpty(identifiers)
     })
   ))
 );
@@ -491,9 +511,9 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
 named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
   bl!(do_parse!(
     atag!("struct") >>
-    name: opt!(identifier) >>
+    name: opt!(type_name) >>
     fields: delimited!(char!('{'), many1!(struct_field_specifier), char!('}')) >>
-    (syntax::StructSpecifier { name: name, fields: fields })
+    (syntax::StructSpecifier { name: name, fields: syntax::NonEmpty(fields) })
   ))
 );
 
@@ -502,7 +522,7 @@ named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
   bl!(do_parse!(
     atag!("subroutine") >>
     identifiers: delimited!(char!('('),
-                            nonempty_identifiers,
+                            nonempty_type_names,
                             char!(')')) >>
     (syntax::StorageQualifier::Subroutine(identifiers))
   ))
@@ -556,7 +576,7 @@ named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
       let mut ids = rest.clone();
       ids.insert(0, first);
 
-      syntax::LayoutQualifier { ids: ids }
+      syntax::LayoutQualifier { ids: syntax::NonEmpty(ids) }
     })
   ))
 );
@@ -604,7 +624,7 @@ named!(pub precise_qualifier<&[u8], ()>,
 named!(pub type_qualifier<&[u8], syntax::TypeQualifier>,
   do_parse!(
     qualifiers: many1!(bl!(type_qualifier_spec)) >>
-    (syntax::TypeQualifier { qualifiers: qualifiers })
+    (syntax::TypeQualifier { qualifiers: syntax::NonEmpty(qualifiers) })
   )
 );
 
@@ -651,7 +671,6 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
   )
 );
 
-// FIXME: optimize primary_expr calls here
 /// Parse a postfix expression.
 named!(pub postfix_expr<&[u8], syntax::Expr>,
   do_parse!(
@@ -766,7 +785,6 @@ named!(pub function_prototype<&[u8], syntax::FunctionPrototype>,
   ))
 );
 
-// TODO: fixme complex
 /// Parse an init declarator list.
 named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList>,
   bl!(do_parse!(
@@ -827,7 +845,7 @@ named!(pub initializer<&[u8], syntax::Initializer>,
       opt!(char!(',')) >>
       char!('}') >>
 
-      (syntax::Initializer::List(il))
+      (syntax::Initializer::List(syntax::NonEmpty(il)))
     ))
   )
 );
@@ -1461,7 +1479,9 @@ named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
 );
 
 /// Parse a translation unit (entry point).
-named!(pub translation_unit<&[u8], syntax::TranslationUnit>, many1!(external_declaration));
+named!(pub translation_unit<&[u8], syntax::TranslationUnit>,
+  map!(many1!(external_declaration), |v| syntax::TranslationUnit(syntax::NonEmpty(v)))
+);
 
 /// Parse a preprocessor command.
 named!(pub preprocessor<&[u8], syntax::Preprocessor>,
@@ -1514,7 +1534,7 @@ named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
 named!(pub pp_extension_name<&[u8], syntax::PreprocessorExtensionName>,
   alt!(
     value!(syntax::PreprocessorExtensionName::All, tag!("all")) |
-    map!(identifier, syntax::PreprocessorExtensionName::Specific)
+    map!(string, syntax::PreprocessorExtensionName::Specific)
   )
 );
 
@@ -1734,11 +1754,11 @@ mod tests {
 
   #[test]
   fn parse_identifier() {
-    assert_eq!(identifier(&b"a"[..]), IResult::Done(&b""[..], "a".to_owned()));
-    assert_eq!(identifier(&b"ab_cd"[..]), IResult::Done(&b""[..], "ab_cd".to_owned()));
-    assert_eq!(identifier(&b"Ab_cd"[..]), IResult::Done(&b""[..], "Ab_cd".to_owned()));
-    assert_eq!(identifier(&b"Ab_c8d"[..]), IResult::Done(&b""[..], "Ab_c8d".to_owned()));
-    assert_eq!(identifier(&b"Ab_c8d9"[..]), IResult::Done(&b""[..], "Ab_c8d9".to_owned()));
+    assert_eq!(identifier(&b"a"[..]), IResult::Done(&b""[..], "a".into()));
+    assert_eq!(identifier(&b"ab_cd"[..]), IResult::Done(&b""[..], "ab_cd".into()));
+    assert_eq!(identifier(&b"Ab_cd"[..]), IResult::Done(&b""[..], "Ab_cd".into()));
+    assert_eq!(identifier(&b"Ab_c8d"[..]), IResult::Done(&b""[..], "Ab_c8d".into()));
+    assert_eq!(identifier(&b"Ab_c8d9"[..]), IResult::Done(&b""[..], "Ab_c8d9".into()));
   }
 
   #[test]
@@ -1829,16 +1849,18 @@ mod tests {
     assert_eq!(storage_qualifier(&b"writeonly "[..]), IResult::Done(&b" "[..], syntax::StorageQualifier::WriteOnly));
     assert_eq!(storage_qualifier(&b"subroutine a"[..]), IResult::Done(&b" a"[..], syntax::StorageQualifier::Subroutine(vec![])));
   
-    let a = "vec3".to_owned();
-    let b = "float".to_owned();
-    let c = "dmat43".to_owned();
+    let a = syntax::TypeName("vec3".to_owned());
+    let b = syntax::TypeName("float".to_owned());
+    let c = syntax::TypeName("dmat43".to_owned());
     let types = vec![a, b, c];
     assert_eq!(storage_qualifier(&b"subroutine (vec3, float, dmat43)"[..]), IResult::Done(&b""[..], syntax::StorageQualifier::Subroutine(types)));
   }
   
   #[test]
   fn parse_layout_qualifier_std430() {
-    let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Identifier("std430".to_owned(), None)] };
+    let expected = syntax::LayoutQualifier {
+      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Identifier("std430".into(), None)])
+    };
   
     assert_eq!(layout_qualifier(&b"layout (std430)"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(layout_qualifier(&b" layout  (std430   )"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1848,7 +1870,9 @@ mod tests {
   
   #[test]
   fn parse_layout_qualifier_shared() {
-    let expected = syntax::LayoutQualifier { ids: vec![syntax::LayoutQualifierSpec::Shared] };
+    let expected = syntax::LayoutQualifier {
+      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Shared])
+    };
   
     assert_eq!(layout_qualifier(&b"layout (shared)"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(layout_qualifier(&b"   layout ( shared )"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1858,9 +1882,9 @@ mod tests {
   #[test]
   fn parse_layout_qualifier_list() {
     let id_0 = syntax::LayoutQualifierSpec::Shared;
-    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst(3))));
-    let expected = syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] };
+    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".into(), None);
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".into(), Some(Box::new(syntax::Expr::IntConst(3))));
+    let expected = syntax::LayoutQualifier { ids: syntax::NonEmpty(vec![id_0, id_1, id_2]) };
   
     assert_eq!(layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(layout_qualifier(&b"layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1871,10 +1895,12 @@ mod tests {
   fn parse_type_qualifier() {
     let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
     let id_0 = syntax::LayoutQualifierSpec::Shared;
-    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".to_owned(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".to_owned(), Some(Box::new(syntax::Expr::IntConst(3))));
-    let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier { ids: vec![id_0, id_1, id_2] });
-    let expected = syntax::TypeQualifier { qualifiers: vec![storage_qual, layout_qual] };
+    let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".into(), None);
+    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".into(), Some(Box::new(syntax::Expr::IntConst(3))));
+    let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier {
+      ids: syntax::NonEmpty(vec![id_0, id_1, id_2])
+    });
+    let expected = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![storage_qual, layout_qual]) };
   
     assert_eq!(type_qualifier(&b"const layout (shared, std140, max_vertices = 3)"[..]), IResult::Done(&b""[..], expected.clone()));
     assert_eq!(type_qualifier(&b"    const layout(shared,std140,max_vertices=3)"[..]), IResult::Done(&b""[..], expected));
@@ -1888,7 +1914,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec!["foo".into()]
+      identifiers: syntax::NonEmpty(vec!["foo".into()])
     };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1900,10 +1926,10 @@ mod tests {
     let expected = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
-        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".into()),
         array_specifier: None
       },
-      identifiers: vec!["x".into()]
+      identifiers: syntax::NonEmpty(vec!["x".into()])
     };
   
     assert_eq!(struct_field_specifier(&b"S0238_3 x;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1918,7 +1944,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec!["foo".into(), "bar".into(), "zoo".into()]
+      identifiers: syntax::NonEmpty(vec!["foo".into(), "bar".into(), "zoo".into()])
     };
   
     assert_eq!(struct_field_specifier(&b"vec4 foo, bar, zoo;"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1933,11 +1959,11 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec!["foo".into()]
+      identifiers: syntax::NonEmpty(vec!["foo".into()])
     };
     let expected = syntax::StructSpecifier {
-      name: Some("TestStruct".to_owned()),
-      fields: vec![field]
+      name: Some("TestStruct".into()),
+      fields: syntax::NonEmpty(vec![field])
     };
   
     assert_eq!(struct_specifier(&b"struct TestStruct { vec4 foo; }"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -1952,7 +1978,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec4,
         array_specifier: None
       },
-      identifiers: vec!["foo".into()]
+      identifiers: syntax::NonEmpty(vec!["foo".into()])
     };
     let b = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1960,7 +1986,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec!["bar".into()]
+      identifiers: syntax::NonEmpty(vec!["bar".into()])
     };
     let c = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1968,7 +1994,7 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::UInt,
         array_specifier: None
       },
-      identifiers: vec!["zoo".into()]
+      identifiers: syntax::NonEmpty(vec!["zoo".into()])
     };
     let d = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -1976,19 +2002,19 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::BVec3,
         array_specifier: None
       },
-      identifiers: vec!["foo_BAR_zoo3497_34".into()]
+      identifiers: syntax::NonEmpty(vec!["foo_BAR_zoo3497_34".into()])
     };
     let e = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
-        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".to_owned()),
+        ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".into()),
         array_specifier: None
       },
-      identifiers: vec!["x".into()]
+      identifiers: syntax::NonEmpty(vec!["x".into()])
     };
     let expected = syntax::StructSpecifier {
-      name: Some("_TestStruct_934i".to_owned()),
-      fields: vec![a, b, c, d, e]
+      name: Some("_TestStruct_934i".into()),
+      fields: syntax::NonEmpty(vec![a, b, c, d, e])
     };
   
     assert_eq!(struct_specifier(&b"struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"[..]), IResult::Done(&b""[..], expected.clone()));
@@ -2143,8 +2169,8 @@ mod tests {
   
   #[test]
   fn parse_fully_specified_type_with_qualifier() {
-    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".to_owned(), "S032_29k".to_owned()]));
-    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".into(), "S032_29k".into()]));
+    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
       array_specifier: None
@@ -2203,7 +2229,7 @@ mod tests {
   
   #[test]
   fn parse_postfix_function_call_no_args() {
-    let fun = syntax::FunIdentifier::Identifier("vec3".to_owned());
+    let fun = syntax::FunIdentifier::Identifier("vec3".into());
     let args = Vec::new();
     let expected = syntax::Expr::FunCall(fun, args);
 
@@ -2214,7 +2240,7 @@ mod tests {
 
   #[test]
   fn parse_postfix_function_call_one_arg() {
-    let fun = syntax::FunIdentifier::Identifier("foo".to_owned());
+    let fun = syntax::FunIdentifier::Identifier("foo".into());
     let args = vec![syntax::Expr::IntConst(0)];
     let expected = syntax::Expr::FunCall(fun, args);
 
@@ -2225,11 +2251,11 @@ mod tests {
 
   #[test]
   fn parse_postfix_function_call_multi_arg() {
-    let fun = syntax::FunIdentifier::Identifier("foo".to_owned());
+    let fun = syntax::FunIdentifier::Identifier("foo".into());
     let args = vec![
       syntax::Expr::IntConst(0),
       syntax::Expr::BoolConst(false),
-      syntax::Expr::Variable("bar".to_owned()),
+      syntax::Expr::Variable("bar".into()),
    ];
     let expected = syntax::Expr::FunCall(fun, args);
 
@@ -2239,7 +2265,7 @@ mod tests {
 
   #[test]
   fn parse_postfix_expr_bracket() {
-    let id = syntax::Expr::Variable("foo".to_owned());
+    let id = syntax::Expr::Variable("foo".into());
     let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
   
@@ -2249,8 +2275,8 @@ mod tests {
  
   #[test]
   fn parse_postfix_expr_dot() {
-    let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
-    let expected = syntax::Expr::Dot(foo, "bar".to_owned());
+    let foo = Box::new(syntax::Expr::Variable("foo".into()));
+    let expected = syntax::Expr::Dot(foo, "bar".into());
 
     assert_eq!(postfix_expr(&b"foo.bar;"[..]), IResult::Done(&b";"[..], expected.clone()));
     assert_eq!(postfix_expr(&b"(foo).bar;"[..]), IResult::Done(&b";"[..], expected));
@@ -2258,8 +2284,8 @@ mod tests {
   
   #[test]
   fn parse_postfix_expr_dot_several() {
-    let foo = Box::new(syntax::Expr::Variable("foo".to_owned()));
-    let expected = syntax::Expr::Dot(Box::new(syntax::Expr::Dot(foo, "bar".to_owned())), "zoo".to_owned());
+    let foo = Box::new(syntax::Expr::Variable("foo".into()));
+    let expected = syntax::Expr::Dot(Box::new(syntax::Expr::Dot(foo, "bar".into())), "zoo".into());
 
     assert_eq!(postfix_expr(&b"foo.bar.zoo;"[..]), IResult::Done(&b";"[..], expected.clone()));
     assert_eq!(postfix_expr(&b"(foo).bar.zoo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2268,7 +2294,7 @@ mod tests {
 
   #[test]
   fn parse_postfix_postinc() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::PostInc(Box::new(foo));
 
     assert_eq!(postfix_expr(&b"foo++;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2276,7 +2302,7 @@ mod tests {
 
   #[test]
   fn parse_postfix_postdec() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::PostDec(Box::new(foo));
 
     assert_eq!(postfix_expr(&b"foo--;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2284,7 +2310,7 @@ mod tests {
 
   #[test]
   fn parse_unary_add() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Add, Box::new(foo));
 
     assert_eq!(unary_expr(&b"+foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2292,7 +2318,7 @@ mod tests {
 
   #[test]
   fn parse_unary_minus() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Minus, Box::new(foo));
 
     assert_eq!(unary_expr(&b"-foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2300,7 +2326,7 @@ mod tests {
 
   #[test]
   fn parse_unary_not() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Not, Box::new(foo));
 
     assert_eq!(unary_expr(&b"!foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2308,7 +2334,7 @@ mod tests {
 
   #[test]
   fn parse_unary_complement() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Complement, Box::new(foo));
 
     assert_eq!(unary_expr(&b"~foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2316,7 +2342,7 @@ mod tests {
 
   #[test]
   fn parse_unary_inc() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(foo));
 
     assert_eq!(unary_expr(&b"++foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2324,7 +2350,7 @@ mod tests {
 
   #[test]
   fn parse_unary_dec() {
-    let foo = syntax::Expr::Variable("foo".to_owned());
+    let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Dec, Box::new(foo));
 
     assert_eq!(unary_expr(&b"--foo;"[..]), IResult::Done(&b";"[..], expected.clone()));
@@ -2387,14 +2413,14 @@ mod tests {
   fn parse_complex_expr() {
     let input = b"normalize((inverse(view) * vec4(ray.dir, 0.)).xyz);";
     let zero = syntax::Expr::DoubleConst(0.);
-    let ray = syntax::Expr::Variable("ray".to_owned());
-    let raydir = syntax::Expr::Dot(Box::new(ray), "dir".to_owned());
-    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".to_owned()), vec![raydir, zero]);
-    let view = syntax::Expr::Variable("view".to_owned());
-    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".to_owned()), vec![view]);
+    let ray = syntax::Expr::Variable("ray".into());
+    let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
+    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".into()), vec![raydir, zero]);
+    let view = syntax::Expr::Variable("view".into());
+    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".into()), vec![view]);
     let mul = syntax::Expr::Binary(syntax::BinaryOp::Mult, Box::new(iview), Box::new(vec4));
-    let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".to_owned());
-    let normalize = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".to_owned()), vec![xyz]);
+    let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".into());
+    let normalize = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".into()), vec![xyz]);
     let expected = normalize;
 
     assert_eq!(expr(&input[..]), IResult::Done(&b";"[..], expected));
@@ -2402,7 +2428,7 @@ mod tests {
 
   #[test]
   fn parse_function_identifier_typename() {
-    let expected = syntax::FunIdentifier::Identifier("foo".to_owned());
+    let expected = syntax::FunIdentifier::Identifier("foo".into());
     assert_eq!(function_identifier(&b"foo("[..]), IResult::Done(&b"("[..], expected.clone()));
     assert_eq!(function_identifier(&b"  foo\n\t("[..]), IResult::Done(&b"("[..], expected.clone()));
     assert_eq!(function_identifier(&b" \tfoo\n ("[..]), IResult::Done(&b"("[..], expected));
@@ -2410,7 +2436,7 @@ mod tests {
 
   #[test]
   fn parse_function_identifier_cast() {
-    let expected = syntax::FunIdentifier::Identifier("vec3".to_owned());
+    let expected = syntax::FunIdentifier::Identifier("vec3".into());
     assert_eq!(function_identifier(&b"vec3("[..]), IResult::Done(&b"("[..], expected.clone()));
     assert_eq!(function_identifier(&b"  vec3 ("[..]), IResult::Done(&b"("[..], expected.clone()));
     assert_eq!(function_identifier(&b" \t\n vec3\t\n\n \t ("[..]), IResult::Done(&b"("[..], expected));
@@ -2421,7 +2447,7 @@ mod tests {
     let expected =
       syntax::FunIdentifier::Expr(
         Box::new(
-          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".to_owned())),
+          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".into())),
                                 syntax::ArraySpecifier::Unsized
           )
         )
@@ -2436,7 +2462,7 @@ mod tests {
     let expected =
       syntax::FunIdentifier::Expr(
         Box::new(
-          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".to_owned())),
+          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".into())),
                                 syntax::ArraySpecifier::ExplicitlySized(
                                   Box::new(
                                     syntax::Expr::IntConst(12)
@@ -2512,7 +2538,7 @@ mod tests {
 
   #[test]
   fn parse_expr_statement() {
-    let expected = Some(syntax::Expr::Assignment(Box::new(syntax::Expr::Variable("foo".to_owned())),
+    let expected = Some(syntax::Expr::Assignment(Box::new(syntax::Expr::Variable("foo".into())),
                                                  syntax::AssignmentOp::Equal,
                                                  Box::new(syntax::Expr::FloatConst(314.))));
 
@@ -2536,7 +2562,7 @@ mod tests {
     };
     let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, arg0_ty);
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Out);
-    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
     let arg1 = syntax::FunctionParameterDeclaration::Named(Some(qual), syntax::FunctionParameterDeclarator {
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
@@ -2546,7 +2572,7 @@ mod tests {
     });
     let fp = syntax::FunctionPrototype {
       ty: rt,
-      name: "foo".to_owned(),
+      name: "foo".into(),
       parameters: vec![arg0, arg1]
     };
     let expected = syntax::Declaration::FunctionPrototype(fp);
@@ -2567,7 +2593,7 @@ mod tests {
     };
     let sd = syntax::SingleDeclaration {
       ty,
-      name: Some("foo".to_owned()),
+      name: Some("foo".into()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
@@ -2590,7 +2616,7 @@ mod tests {
     };
     let sd = syntax::SingleDeclaration {
       ty,
-      name: Some("foo".to_owned()),
+      name: Some("foo".into()),
       array_specifier: None,
       initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
     };
@@ -2647,14 +2673,14 @@ mod tests {
   #[test]
   fn parse_declaration_uniform_block() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Uniform);
-    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec!["a".into()]
+      identifiers: syntax::NonEmpty(vec!["a".into()])
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2662,21 +2688,21 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec3,
         array_specifier: None
       },
-      identifiers: vec!["b".into()]
+      identifiers: syntax::NonEmpty(vec!["b".into()])
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
-        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".into()),
         array_specifier: None
       },
-      identifiers: vec!["c".into(), "d".into()]
+      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()])
     };
     let expected =
       syntax::Declaration::Block(
         syntax::Block {
           qualifier: qual,
-          name: "UniformBlockTest".to_owned(),
+          name: "UniformBlockTest".into(),
           fields: vec![f0, f1, f2],
           identifier: None
         }
@@ -2689,14 +2715,14 @@ mod tests {
   #[test]
   fn parse_declaration_buffer_block() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer);
-    let qual = syntax::TypeQualifier { qualifiers: vec![qual_spec] };
+    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
         array_specifier: None
       },
-      identifiers: vec!["a".into()]
+      identifiers: syntax::NonEmpty(vec!["a".into()])
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
@@ -2704,21 +2730,21 @@ mod tests {
         ty: syntax::TypeSpecifierNonArray::Vec3,
         array_specifier: None
       },
-      identifiers: vec![syntax::ArrayedIdentifier::new("b", Some(syntax::ArraySpecifier::Unsized))]
+      identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new("b", Some(syntax::ArraySpecifier::Unsized))])
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
-        ty: syntax::TypeSpecifierNonArray::TypeName("foo".to_owned()),
+        ty: syntax::TypeSpecifierNonArray::TypeName("foo".into()),
         array_specifier: None
       },
-      identifiers: vec!["c".into(), "d".into()]
+      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()])
     };
     let expected =
       syntax::Declaration::Block(
         syntax::Block {
           qualifier: qual,
-          name: "UniformBlockTest".to_owned(),
+          name: "UniformBlockTest".into(),
           fields: vec![f0, f1, f2],
           identifier: None
         }
@@ -2728,12 +2754,10 @@ mod tests {
     assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), IResult::Done(&b""[..], expected));
   }
 
-  // TODO: unit test for syntax::Declaration::Global
-
   #[test]
   fn parse_selection_statement_if() {
     let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
-                                    Box::new(syntax::Expr::Variable("foo".to_owned())),
+                                    Box::new(syntax::Expr::Variable("foo".into())),
                                     Box::new(syntax::Expr::IntConst(10)));
     let ret = Box::new(syntax::Expr::BoolConst(false));
     let st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(ret))));
@@ -2751,12 +2775,12 @@ mod tests {
   #[test]
   fn parse_selection_statement_if_else() {
     let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
-                                    Box::new(syntax::Expr::Variable("foo".to_owned())),
+                                    Box::new(syntax::Expr::Variable("foo".into())),
                                     Box::new(syntax::Expr::IntConst(10)));
     let if_ret = Box::new(syntax::Expr::FloatConst(0.));
     let if_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(if_ret))));
     let if_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![if_st] }));
-    let else_ret = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let else_ret = Box::new(syntax::Expr::Variable("foo".into()));
     let else_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(else_ret))));
     let else_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![else_st] }));
     let rest = syntax::SelectionRestStatement::Else(Box::new(if_body), Box::new(else_body));
@@ -2771,7 +2795,7 @@ mod tests {
 
   #[test]
   fn parse_switch_statement_empty() {
-    let head = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let head = Box::new(syntax::Expr::Variable("foo".into()));
     let expected = syntax::SwitchStatement {
       head: head,
       body: Vec::new()
@@ -2784,7 +2808,7 @@ mod tests {
 
   #[test]
   fn parse_switch_statement_cases() {
-    let head = Box::new(syntax::Expr::Variable("foo".to_owned()));
+    let head = Box::new(syntax::Expr::Variable("foo".into()));
     let case0 = syntax::Statement::Simple(
                   Box::new(
                     syntax::SimpleStatement::CaseLabel(
@@ -2842,8 +2866,8 @@ mod tests {
     let cond = syntax::Condition::Expr(
                  Box::new(
                    syntax::Expr::Binary(syntax::BinaryOp::GTE,
-                                        Box::new(syntax::Expr::Variable("a".to_owned())),
-                                        Box::new(syntax::Expr::Variable("b".to_owned())))
+                                        Box::new(syntax::Expr::Variable("a".into())),
+                                        Box::new(syntax::Expr::Variable("b".into())))
                  )
                );
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
@@ -2859,8 +2883,8 @@ mod tests {
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
     let cond = Box::new(
                  syntax::Expr::Binary(syntax::BinaryOp::GTE,
-                                      Box::new(syntax::Expr::Variable("a".to_owned())),
-                                      Box::new(syntax::Expr::Variable("b".to_owned())))
+                                      Box::new(syntax::Expr::Variable("a".into())),
+                                      Box::new(syntax::Expr::Variable("b".into())))
                );
     let expected = syntax::IterationStatement::DoWhile(Box::new(st), cond);
 
@@ -2883,7 +2907,7 @@ mod tests {
                                    array_specifier: None
                                  }
                                },
-                               name: Some("i".to_owned()),
+                               name: Some("i".into()),
                                array_specifier: None,
                                initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
                              },
@@ -2894,9 +2918,9 @@ mod tests {
                );
     let rest = syntax::ForRestStatement {
       condition: Some(syntax::Condition::Expr(Box::new(syntax::Expr::Binary(syntax::BinaryOp::LTE,
-                                                                            Box::new(syntax::Expr::Variable("i".to_owned())),
+                                                                            Box::new(syntax::Expr::Variable("i".into())),
                                                                             Box::new(syntax::Expr::FloatConst(10.)))))),
-      post_expr: Some(Box::new(syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(syntax::Expr::Variable("i".to_owned())))))
+      post_expr: Some(Box::new(syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(syntax::Expr::Variable("i".into())))))
     };
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
     let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
@@ -2973,7 +2997,7 @@ mod tests {
                               array_specifier: None
                             }
                           },
-                          name: Some("x".to_owned()),
+                          name: Some("x".into()),
                           array_specifier: None,
                           initializer: None
                         },
@@ -3013,7 +3037,7 @@ mod tests {
     };
     let fp = syntax::FunctionPrototype {
       ty: rt,
-      name: "foo".to_owned(),
+      name: "foo".into(),
       parameters: Vec::new()
     };
     let st0 = syntax::Statement::Simple(
@@ -3021,7 +3045,7 @@ mod tests {
                   syntax::SimpleStatement::Jump(
                     syntax::JumpStatement::Return(
                       Box::new(
-                        syntax::Expr::Variable("bar".to_owned())
+                        syntax::Expr::Variable("bar".into())
                       )
                     )
                   )
@@ -3051,7 +3075,7 @@ mod tests {
             array_specifier: None
           }
         },
-        name: "main".to_owned(),
+        name: "main".into(),
         parameters: Vec::new(),
       },
       statement: syntax::CompoundStatement {
@@ -3063,24 +3087,24 @@ mod tests {
         syntax::Declaration::Block(
           syntax::Block {
             qualifier: syntax::TypeQualifier {
-              qualifiers: vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)]
+              qualifiers: syntax::NonEmpty(vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)])
             },
-            name: "Foo".to_owned(),
+            name: "Foo".into(),
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
                 ty: syntax::TypeSpecifier {
-                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
                   array_specifier: None
                 },
-                identifiers: vec![syntax::ArrayedIdentifier::new("tiles", Some(syntax::ArraySpecifier::Unsized))]
+                identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new("tiles", Some(syntax::ArraySpecifier::Unsized))])
               }
             ],
             identifier: Some("main_tiles".into())
           }
         )
       );
-    let expected = vec![buffer_block, main_fn];
+    let expected = syntax::TranslationUnit(syntax::NonEmpty(vec![buffer_block, main_fn]));
 
     assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
   }
@@ -3089,31 +3113,31 @@ mod tests {
   fn parse_layout_buffer_block_0() {
     let src = include_bytes!("../data/tests/layout_buffer_block_0.glsl");
     let layout = syntax::LayoutQualifier {
-      ids: vec![
-        syntax::LayoutQualifierSpec::Identifier("set".to_owned(), Some(Box::new(syntax::Expr::IntConst(0)))),
-        syntax::LayoutQualifierSpec::Identifier("binding".to_owned(), Some(Box::new(syntax::Expr::IntConst(0)))),
-      ]
+      ids: syntax::NonEmpty(vec![
+        syntax::LayoutQualifierSpec::Identifier("set".into(), Some(Box::new(syntax::Expr::IntConst(0)))),
+        syntax::LayoutQualifierSpec::Identifier("binding".into(), Some(Box::new(syntax::Expr::IntConst(0)))),
+      ])
     };
     let type_qual = syntax::TypeQualifier {
-      qualifiers: vec![
+      qualifiers: syntax::NonEmpty(vec![
         syntax::TypeQualifierSpec::Layout(layout),
         syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)
-      ]
+      ])
     };
     let block =
       syntax::ExternalDeclaration::Declaration(
         syntax::Declaration::Block(
           syntax::Block {
             qualifier: type_qual,
-            name: "Foo".to_owned(),
+            name: "Foo".into(),
             fields: vec![
               syntax::StructFieldSpecifier {
                 qualifier: None,
                 ty: syntax::TypeSpecifier {
-                  ty: syntax::TypeSpecifierNonArray::TypeName("char".to_owned()),
+                  ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
                   array_specifier: None
                 },
-                identifiers: vec!["a".into()]
+                identifiers: syntax::NonEmpty(vec!["a".into()])
               }
             ],
             identifier: Some("foo".into())
@@ -3121,7 +3145,7 @@ mod tests {
         )
       );
                                               
-    let expected = vec![block];
+    let expected = syntax::TranslationUnit(syntax::NonEmpty(vec![block]));
 
     assert_eq!(translation_unit(src), IResult::Done(&b""[..], expected));
   }
@@ -3200,9 +3224,9 @@ mod tests {
     let expected =
       syntax::Expr::Dot(
         Box::new(syntax::Expr::Bracket(
-          Box::new(syntax::Expr::Variable("a".to_owned())),
+          Box::new(syntax::Expr::Variable("a".into())),
           syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(0))))),
-        "xyz".to_owned()
+        "xyz".into()
       );
 
     assert_eq!(expr(&src[..]), IResult::Done(&b";"[..], expected));
@@ -3211,17 +3235,17 @@ mod tests {
   #[test]
   fn parse_dot_field_expr_statement() {
     let src = b"vec3 v = smoothstep(vec3(border_width), vec3(0.0), v_barycenter).zyx;";
-    let fun = syntax::FunIdentifier::Identifier("smoothstep".to_owned());
+    let fun = syntax::FunIdentifier::Identifier("smoothstep".into());
     let args =
       vec![
-        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".to_owned()), vec![syntax::Expr::Variable("border_width".to_owned())]),
-        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".to_owned()), vec![syntax::Expr::DoubleConst(0.)]),
-        syntax::Expr::Variable("v_barycenter".to_owned())
+        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".into()), vec![syntax::Expr::Variable("border_width".into())]),
+        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".into()), vec![syntax::Expr::DoubleConst(0.)]),
+        syntax::Expr::Variable("v_barycenter".into())
       ];
     let ini =
       syntax::Initializer::Simple(
         Box::new(
-          syntax::Expr::Dot(Box::new(syntax::Expr::FunCall(fun, args)), "zyx".to_owned())
+          syntax::Expr::Dot(Box::new(syntax::Expr::FunCall(fun, args)), "zyx".into())
         )
       );
     let sd = syntax::SingleDeclaration {
@@ -3232,7 +3256,7 @@ mod tests {
             array_specifier: None
           }
       },
-      name: Some("v".to_owned()),
+      name: Some("v".into()),
       array_specifier: None,
       initializer: Some(ini)
     };

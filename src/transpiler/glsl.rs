@@ -28,11 +28,11 @@ use std::fmt::Write;
 use syntax;
 
 pub fn show_identifier<F>(f: &mut F, i: &syntax::Identifier) where F: Write {
-  let _ = f.write_str(i);
+  let _ = f.write_str(&i.0);
 }
 
 pub fn show_type_name<F>(f: &mut F, t: &syntax::TypeName) where F: Write {
-  let _ = f.write_str(t); 
+  let _ = f.write_str(&t.0); 
 }
 
 pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonArray) where F: Write {
@@ -181,7 +181,7 @@ pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier) wh
 
   let _ = f.write_str("{\n");
 
-  for field in &s.fields {
+  for field in &s.fields.0 {
     show_struct_field(f, field);
   }
 
@@ -203,7 +203,7 @@ pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) whe
   let _ = f.write_str(" ");
 
   // there’s at least one identifier
-  let mut identifiers = field.identifiers.iter();
+  let mut identifiers = field.identifiers.0.iter();
   let identifier = identifiers.next().unwrap();
 
   show_arrayed_identifier(f, identifier);
@@ -237,7 +237,7 @@ pub fn show_arrayed_identifier<F>(f: &mut F, a: &syntax::ArrayedIdentifier) wher
 }
 
 pub fn show_type_qualifier<F>(f: &mut F, q: &syntax::TypeQualifier) where F: Write {
-  let mut qualifiers = q.qualifiers.iter();
+  let mut qualifiers = q.qualifiers.0.iter();
   let first = qualifiers.next().unwrap();
 
   show_type_qualifier_spec(f, first);
@@ -301,7 +301,7 @@ pub fn show_subroutine<F>(f: &mut F, types: &Vec<syntax::TypeName>) where F: Wri
 }
 
 pub fn show_layout_qualifier<F>(f: &mut F, l: &syntax::LayoutQualifier) where F: Write {
-  let mut qualifiers = l.ids.iter();
+  let mut qualifiers = l.ids.0.iter();
   let first = qualifiers.next().unwrap();
 
   let _ = f.write_str("layout (");
@@ -358,7 +358,6 @@ pub fn show_double<F>(f: &mut F, x: f64) where F: Write {
   }
 }
 
-// FIXME: better parens scheme, maybe?
 pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
   match *expr {
     syntax::Expr::Variable(ref i) => show_identifier(f, &i),
@@ -622,7 +621,7 @@ pub fn show_initializer<F>(f: &mut F, i: &syntax::Initializer) where F: Write {
   match *i {
     syntax::Initializer::Simple(ref e) => show_expr(f, e),
     syntax::Initializer::List(ref list) => {
-      let mut iter = list.iter();
+      let mut iter = list.0.iter();
       let first = iter.next().unwrap();
 
       let _ = f.write_str("{ ");
@@ -866,7 +865,7 @@ pub fn show_external_declaration<F>(f: &mut F, ed: &syntax::ExternalDeclaration)
 }
 
 pub fn show_translation_unit<F>(f: &mut F, tu: &syntax::TranslationUnit) where F: Write {
-  for ed in tu {
+  for ed in &(tu.0).0 {
     show_external_declaration(f, ed);
   }
 }
@@ -882,14 +881,14 @@ mod tests {
     use parsers::expr;
 
     let zero = syntax::Expr::DoubleConst(0.);
-    let ray = syntax::Expr::Variable("ray".to_owned());
-    let raydir = syntax::Expr::Dot(Box::new(ray), "dir".to_owned());
-    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".to_owned()), vec![raydir, zero]);
-    let view = syntax::Expr::Variable("view".to_owned());
-    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".to_owned()), vec![view]);
+    let ray = syntax::Expr::Variable("ray".into());
+    let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
+    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".into()), vec![raydir, zero]);
+    let view = syntax::Expr::Variable("view".into());
+    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".into()), vec![view]);
     let mul = syntax::Expr::Binary(syntax::BinaryOp::Mult, Box::new(iview), Box::new(vec4));
-    let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".to_owned());
-    let input = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".to_owned()), vec![xyz]);
+    let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".into());
+    let input = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".into()), vec![xyz]);
 
     let mut output = String::new();
     show_expr(&mut output, &input);
