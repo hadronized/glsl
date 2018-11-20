@@ -30,4 +30,4 @@ pub mod parser;
 mod parsers;
 pub mod syntax;
 pub mod transpiler;
-//pub mod visitor;
+pub mod visitor;
