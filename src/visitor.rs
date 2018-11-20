@@ -932,3 +932,72 @@ impl Host for syntax::Initializer {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use syntax;
+
+  // FIXME: use proper methods
+  #[test]
+  fn count_variables() {
+    let to_stmt = |sd| {
+      syntax::Statement::Simple(
+        Box::new(syntax::SimpleStatement::Declaration(
+          syntax::Declaration::InitDeclaratorList(
+            syntax::InitDeclaratorList {
+              head: sd,
+              tail: Vec::new()
+            }
+          )
+        ))
+      )
+    };
+
+    let decl0 = to_stmt(syntax::SingleDeclaration {
+      ty: syntax::TypeSpecifierNonArray::Float.into(),
+      name: Some("x".into()),
+      array_specifier: None,
+      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(3.14))))
+    });
+
+    let decl1 = to_stmt(syntax::SingleDeclaration {
+      ty: syntax::TypeSpecifierNonArray::Int.into(),
+      name: Some("y".into()),
+      array_specifier: None,
+      initializer: None
+    });
+
+    let decl2 = to_stmt(syntax::SingleDeclaration {
+      ty: syntax::TypeSpecifierNonArray::Vec4.into(),
+      name: Some("z".into()),
+      array_specifier: None,
+      initializer: None
+    });
+
+    let mut compound = syntax::CompoundStatement {
+      statement_list: vec![decl0, decl1, decl2]
+    };
+
+    // our visitor that will count the number of variables it saw
+    struct Counter {
+      var_nb: usize
+    }
+
+    impl Visitor for Counter {
+      // we are only interested in single declaration with a name
+      fn visit_single_declaration(&mut self, declaration: &mut syntax::SingleDeclaration) -> Visit {
+        if declaration.name.is_some() {
+          self.var_nb += 1;
+        }
+
+        // do not go deeper
+        Visit::Parent
+      }
+    }
+
+    let mut counter = Counter { var_nb: 0 };
+    compound.visit(&mut counter);
+    assert_eq!(counter.var_nb, 3);
+  }
+}
