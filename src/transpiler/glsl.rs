@@ -817,9 +817,16 @@ pub fn show_jump_statement<F>(f: &mut F, j: &syntax::JumpStatement) where F: Wri
 
 pub fn show_preprocessor<F>(f: &mut F, pp: &syntax::Preprocessor) where F: Write {
   match *pp {
+    syntax::Preprocessor::Define(ref pd) => show_preprocessor_define(f, pd),
     syntax::Preprocessor::Version(ref pv) => show_preprocessor_version(f, pv),
     syntax::Preprocessor::Extension(ref pe) => show_preprocessor_extension(f, pe)
   }
+}
+
+pub fn show_preprocessor_define<F>(f: &mut F, pd: &syntax::PreprocessorDefine) where F: Write {
+  let _ = write!(f, "#define {} ", pd.name);
+  show_expr(f, &pd.value);
+  let _ = f.write_str("\n");
 }
 
 pub fn show_preprocessor_version<F>(f: &mut F, pv: &syntax::PreprocessorVersion) where F: Write {

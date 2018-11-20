@@ -1486,6 +1486,7 @@ named!(pub translation_unit<&[u8], syntax::TranslationUnit>,
 /// Parse a preprocessor command.
 named!(pub preprocessor<&[u8], syntax::Preprocessor>,
   bl!(alt!(
+    map!(pp_define, syntax::Preprocessor::Define) |
     map!(pp_version, syntax::Preprocessor::Version) |
     map!(pp_extension, syntax::Preprocessor::Extension)
   ))
@@ -1513,6 +1514,23 @@ macro_rules! ppws {
     sep!($i, ppws_, $($args)*)
   }}
 }
+
+/// Parse a #define
+named!(pub pp_define<&[u8], syntax::PreprocessorDefine>,
+  ppws!(do_parse!(
+    char!('#') >>
+      tag!("define") >>
+      name: identifier >>
+      value: primary_expr>>
+      char!('\n') >>
+
+      (syntax::PreprocessorDefine {
+        name: name,
+        value: value
+      })
+  ))
+);
+
 
 /// Parse a #version.
 named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
@@ -3193,7 +3211,32 @@ mod tests {
                                profile: Some(syntax::PreprocessorVersionProfile::Core)
                              })));
   }
-  
+
+    #[test]
+    fn parse_define() {
+        assert_eq!(preprocessor(&b"#define test 1.0\n"[..]),
+                   IResult::Done(&b""[..],
+                                 syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+                                     name: "test".to_string(),
+                                     value: syntax::Expr::DoubleConst(1.0)
+                                 })));
+
+        assert_eq!(preprocessor(&b"#define test123 .0\n"[..]),
+                   IResult::Done(&b""[..],
+                                 syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+                                     name: "test123".to_string(),
+                                     value: syntax::Expr::DoubleConst(0.0)
+                                 })));
+
+        assert_eq!(preprocessor(&b"#define test 1\n"[..]),
+                   IResult::Done(&b""[..],
+                                 syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+                                     name: "test".to_string(),
+                                     value: syntax::Expr::IntConst(1)
+                                 })));
+    }
+
+
   #[test]
   fn parse_pp_extension_name() {
     assert_eq!(pp_extension_name(&b"all"[..]), IResult::Done(&b""[..], syntax::PreprocessorExtensionName::All));
