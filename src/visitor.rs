@@ -1,19 +1,29 @@
 //! AST visitors (i.e. on-the-fly mutation at different places in the AST).
 //!
-//! Visitors are mutable objects that can mutate parts of an AST while traversing it. Visitors must
-//! implement the [`Visitor`] trait in order to be usable.
+//! Visitors are mutable objects that can mutate parts of an AST while traversing it. You can see
+//! them as flexible mutations taking place on *patterns* representing your AST – they get called
+//! everytime an interesting node gets visited. Because of their mutable nature, you can accumulate
+//! a state as you traverse the AST and implement exotic filtering.
+//!
+//! Visitors must implement the [`Visitor`] trait in order to be usable.
+//!
+//! In order to visit any part of an AST (from its very top root or from any part of it), you must
+//! use the [`Host`] interface, that provides the `Host::visit` function.
 
 use syntax;
 
 /// Visit strategy after having visited an AST node.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Visit {
-  /// The visitor will go deeper in the AST by visiting all the children.
+  /// The visitor will go deeper in the AST by visiting all the children, if any. If no children are
+  /// present are if having children doesn’t make sense for a specific part of the AST, this
+  /// strategy will be ignored.
   Children,
   /// The visitor won’t visit children nor siblings and will go up.
   Parent
 }
 
+/// Visitor object, visiting AST nodes.
 pub trait Visitor {
   fn visit_translation_unit(&mut self, _: &mut syntax::TranslationUnit) -> Visit {
     Visit::Children
@@ -23,7 +33,15 @@ pub trait Visitor {
     Visit::Children
   }
 
+  fn visit_identifier(&mut self, _: &mut syntax::Identifier) -> Visit {
+    Visit::Children
+  }
+
   fn visit_arrayed_identifier(&mut self, _: &mut syntax::ArrayedIdentifier) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_type_name(&mut self, _: &mut syntax::TypeName) -> Visit {
     Visit::Children
   }
 
@@ -36,10 +54,6 @@ pub trait Visitor {
   }
 
   fn visit_for_rest_statement(&mut self, _: &mut syntax::ForRestStatement) -> Visit {
-    Visit::Children
-  }
-
-  fn visit_full_specified_type(&mut self, _: &mut syntax::FullySpecifiedType) -> Visit {
     Visit::Children
   }
 
@@ -120,6 +134,10 @@ pub trait Visitor {
   }
 
   fn visit_type_specifier(&mut self, _: &mut syntax::TypeSpecifier) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_full_specified_type(&mut self, _: &mut syntax::FullySpecifiedType) -> Visit {
     Visit::Children
   }
 
@@ -214,17 +232,28 @@ pub trait Visitor {
   fn visit_expr_statement(&mut self, _: &mut syntax::ExprStatement) -> Visit {
     Visit::Children
   }
-
-  fn visit_identifier(&mut self, _: &mut syntax::Identifier) -> Visit {
-    Visit::Children
-  }
-
-  fn visit_type_name(&mut self, _: &mut syntax::TypeName) -> Visit {
-    Visit::Children
-  }
 }
 
+/// Part of the AST that can be visited.
+///
+/// You shouldn’t have to worry about this type nor how to implement it – it’s completely
+/// implemented for you. However, it works in a pretty simple way: any implementor of [`Host`] can
+/// be used with a [`Visitor`].
+///
+/// The idea is that visiting an AST node is a two-step process:
+///
+///   - First, you *can* get your visitor called once as soon as an interesting node gets visited.
+///     For instance, if your visitor has an implementation for visiting expressions, everytime an
+///     expression gets visited, your visitor will run.
+///   - If your implementation of visiting an AST node returns `Visit::Children` and if the given
+///     node has children, the visitor will go deeper, invoking other calls if you have defined any.
+///     A typical pattern you might want to do is to implement your visitor to gets run on all
+///     typenames. Since expressions contains variables, you will get your visitor called once again
+///     there.
+///   - Notice that since visitors are mutable, you can accumulate a state as you go deeper in the
+///     AST to implement various checks and validations.
 pub trait Host {
+  /// Visit an AST node.
   fn visit<V>(&mut self, visitor: &mut V) where V: Visitor;
 }
 

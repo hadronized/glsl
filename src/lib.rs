@@ -9,6 +9,8 @@
 //!   - `parser`, which exports the parsing interface.
 //!   - `syntax`, which exports the AST and language definitions.
 //!   - `transpiler`, which provides you with GLSL transpilers.
+//!   - `visitor`, which gives you a way to visit AST nodes and mutate them, both with inner and
+//!     outer mutation.
 //!
 //! Feel free to inspect those modules for further information.
 //!
@@ -22,6 +24,10 @@
 //! [`ExternalDeclaration`]s. An [`ExternalDeclaration`] is just a declaration at the top-most level
 //! of a shader. It can be a global, uniform declarations, vertex attributes, a function, a
 //! structure, etc.
+//!
+//! The crate is also getting more and more combinators and functions to transform the AST or create
+//! nodes with regular Rust. The [`Visitor`] trait will be a great friend of yours when you will
+//! want to cope with deep mutation, filtering and validation.
 
 #[macro_use]
 extern crate nom;
