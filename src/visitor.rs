@@ -13,10 +13,13 @@
 use syntax;
 
 /// Visit strategy after having visited an AST node.
+///
+/// Some AST nodes have *children* – in enum’s variants, in some fields as nested in `Vec<_>`, etc.
+/// Those nodes can be visited depending on the strategy you chose.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Visit {
   /// The visitor will go deeper in the AST by visiting all the children, if any. If no children are
-  /// present are if having children doesn’t make sense for a specific part of the AST, this
+  /// present or if having children doesn’t make sense for a specific part of the AST, this
   /// strategy will be ignored.
   Children,
   /// The visitor won’t visit children nor siblings and will go up.
