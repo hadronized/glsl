@@ -863,8 +863,17 @@ pub enum JumpStatement {
 /// > added in the future. Stay tuned.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Preprocessor {
+  Define(PreprocessorDefine),
   Version(PreprocessorVersion),
   Extension(PreprocessorExtension)
+}
+
+/// A #define preprocessor command.
+/// Allows any expression but only Integer and Float literals make sense
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorDefine {
+  pub name: Identifier,
+  pub value: Expr,
 }
 
 /// A #version preprocessor command.

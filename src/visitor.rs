@@ -84,6 +84,10 @@ pub trait Visitor {
     Visit::Children
   }
 
+  fn visit_preprocessor_define(&mut self, _: &mut syntax::PreprocessorDefine) -> Visit {
+    Visit::Children
+  }
+
   fn visit_preprocessor_extension(&mut self, _: &mut syntax::PreprocessorExtension) -> Visit {
     Visit::Children
   }
@@ -306,9 +310,21 @@ impl Host for syntax::Preprocessor {
 
     if visit == Visit::Children {
       match *self {
+        syntax::Preprocessor::Define(ref mut pd) => pd.visit(visitor),
         syntax::Preprocessor::Version(ref mut pv) => pv.visit(visitor),
         syntax::Preprocessor::Extension(ref mut ext) => ext.visit(visitor)
       }
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorDefine {
+  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+    let visit = visitor.visit_preprocessor_define(self);
+
+    if visit == Visit::Children {
+      self.name.visit(visitor);
+      self.value.visit(visitor);
     }
   }
 }
