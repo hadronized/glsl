@@ -1,10 +1,13 @@
 //! GLSL parsing.
 //!
 //! This module gives you several functions and types to deal with GLSL parsing, transforming an
-//! input source into an AST. The AST is defined in the `syntax` module.
+//! input source into an AST. The AST is defined in the [`syntax`] module.
 //!
 //! You want to use the [`Parse`]’s methods to get starting with parsing and pattern match on
 //! [`ParseResult`].
+//!
+//! [`Parse`]: parser::Parse
+//! [`ParseResult`]: parser::ParseResult
 
 use nom::{Err as NomErr, ErrorKind, IResult, Needed};
 use std::fmt;
@@ -12,7 +15,7 @@ use std::str::{from_utf8_unchecked};
 
 use syntax;
 
-/// A parse error. It contains an `ErrorKind` along with a `String` giving information on the reason
+/// A parse error. It contains an [`ErrorKind`] along with a [`String`] giving information on the reason
 /// why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
@@ -31,7 +34,7 @@ impl fmt::Display for ParseError {
 pub enum ParseResult<T> {
   /// The source was successfully parsed.
   Ok(T),
-  /// The parser failed with a `ParseError`.
+  /// The parser failed with a [`ParseError`].
   Err(ParseError),
   /// More data is required to go on.
   Incomplete(Needed)
@@ -78,11 +81,11 @@ fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
 ///
 /// This trait exposes two methods:
 /// 
-///   - `Parse::parse`, that runs on bytes.
-///   - `Parse::parse_str`, a convenient function that runs on strings.
+///   - [`Parse::parse`], that runs on bytes.
+///   - [`Parse::parse_str`], a convenient function that runs on strings.
 ///
-/// If you want to implement [`Parse`], only `Parse::parse` is mandatory – `Parse::parse_str` has
-/// a default implementation using `Parse::parse`.
+/// If you want to implement [`Parse`], only [`Parse::parse`] is mandatory – [`Parse::parse_str`]
+/// has a default implementation using [`Parse::parse`].
 ///
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {

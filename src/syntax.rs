@@ -3,7 +3,7 @@
 //! This module exports all the grammar syntax that defines GLSL. You’ll be handling ASTs
 //! representing your GLSL source.
 //!
-//! The most external form of a GLSL parsed AST is `TranslationUnit` (a shader). Some part of the
+//! The most external form of a GLSL parsed AST is [`TranslationUnit`] (a shader). Some part of the
 //! tree are *boxed*. This is due to two facts
 //!
 //! - Recursion is used, hence we need a way to give our types a static size.
@@ -11,12 +11,17 @@
 //!   in place.
 //!
 //! The types are commented so feel free to inspect each of theme. As a starter, you should read
-//! the documentation of `Expr`, `FunctionDefinition`, `Statement` and `TranslationUnit`.
+//! the documentation of [`Expr`], [`FunctionDefinition`], [`Statement`] and [`TranslationUnit`].
+//!
+//! [`Statement`]: syntax::Statement
+//! [`TranslationUnit`]: syntax::TranslationUnit
+//! [`Expr`]: syntax::Expr
+//! [`FunctionDefinition`]: syntax::FunctionDefinition
 
 use std::fmt;
 use std::iter::{FromIterator, once};
 
-/// A non-empty `Vec`. It has at least one element.
+/// A non-empty [`Vec`]. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
 
@@ -714,7 +719,7 @@ impl ExternalDeclaration {
   ///
   /// # Errors
   ///
-  ///   - `None` if no fields are provided. GLSL forbids having empty structs.
+  ///   - [`None`] if no fields are provided. GLSL forbids having empty structs.
   pub fn new_struct<N, F>(name: N, fields: F) -> Option<Self>
   where N: Into<TypeName>,
         F: IntoIterator<Item = StructFieldSpecifier> {
@@ -866,7 +871,7 @@ impl SimpleStatement {
 
   /// Create a new switch statement.
   ///
-  /// A switch statement is always composed of a `SimpleStatement::Switch` block, that contains it
+  /// A switch statement is always composed of a [`SimpleStatement::Switch`] block, that contains it
   /// all, and has as body a compound list of case statements.
   pub fn new_switch<H, B>(
     head: H,

@@ -8,7 +8,7 @@
 //! Visitors must implement the [`Visitor`] trait in order to be usable.
 //!
 //! In order to visit any part of an AST (from its very top root or from any part of it), you must
-//! use the [`Host`] interface, that provides the `Host::visit` function.
+//! use the [`Host`] interface, that provides the [`Host::visit`] function.
 //!
 //! For instance, we can imagine visiting an AST to count how many variable are declared:
 //!
@@ -61,12 +61,16 @@
 //! compound.visit(&mut counter);
 //! assert_eq!(counter.var_nb, 3);
 //! ```
+//!
+//! [`Host`]: visitor::Host
+//! [`Host::visit`]: visitor::Host::visit
+//! [`Visitor`]: visitor::Visitor
 
 use syntax;
 
 /// Visit strategy after having visited an AST node.
 ///
-/// Some AST nodes have *children* – in enum’s variants, in some fields as nested in `Vec<_>`, etc.
+/// Some AST nodes have *children* – in enum’s variants, in some fields as nested in [`Vec`], etc.
 /// Those nodes can be visited depending on the strategy you chose.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Visit {
@@ -304,7 +308,7 @@ pub trait Visitor {
 ///   - First, you *can* get your visitor called once as soon as an interesting node gets visited.
 ///     For instance, if your visitor has an implementation for visiting expressions, everytime an
 ///     expression gets visited, your visitor will run.
-///   - If your implementation of visiting an AST node returns `Visit::Children` and if the given
+///   - If your implementation of visiting an AST node returns [`Visit::Children`] and if the given
 ///     node has children, the visitor will go deeper, invoking other calls if you have defined any.
 ///     A typical pattern you might want to do is to implement your visitor to gets run on all
 ///     typenames. Since expressions contains variables, you will get your visitor called once again

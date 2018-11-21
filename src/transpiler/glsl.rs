@@ -1,28 +1,34 @@
-//! A GLSL450 transpiler that takes a syntax tree and writes it as a plain raw GLSL `String`.
+//! A GLSL450 transpiler that takes a syntax tree and writes it as a plain raw GLSL [`String`].
 //!
 //! # Foreword
 //!
 //! This module exports several functions that just transform a part of a syntax tree into its raw
-//! GLSL `String` representation.
+//! GLSL [`String`] representation.
 //!
-//! > Important note: this module – and actually, any `transpiler::*` module – is not responsible in
+//! > Important note: this module – and actually, any [`transpiler`] module – is not responsible in
 //! > optimizing the syntax tree nor semantically check its validity. This is done in other stages
 //! > of the compilation process.
 //!
 //! In order to achieve that purpose, you could:
 //!
-//! - For each elements in the AST, return a `String` or `Cow<str>`.
+//! - For each elements in the AST, return a [`String`] or [`Cow<str>`].
 //! - Insert the string representation via a formatter.
 //!
 //! The second solution is better because it lets the user handle the memory the way they want:
-//! they might just use a dynamic buffer that implements `Write` or simply pass a `&mut String`.
-//! It’s up to you.
+//! they might just use a dynamic buffer that implements [`Write`] or simply pass a `&mut`
+//! [`String`]. It’s up to you.
 //!
 //! # How to use this module
 //!
-//! First, head over to the `syntax` module. That module defines the AST items defined by GLSL. This
+//! First, head over to the [`syntax`] module. That module defines the AST items defined by GLSL. This
 //! very module provides you with functions like `show_*` taking the AST item and writing it to a
-//! `Write` object. You’re likely to be interested in `show_translation_unit` to start with.
+//! [`Write`] object. You’re likely to be interested in [`show_translation_unit`] to start with.
+//!
+//! [`Cow<str>`]: std::borrow::Cow
+//! [`Write`]: std::fmt::Write
+//! [`show_translation_unit`]: crate::transpiler::glsl::show_translation_unit
+//! [`syntax`]: crate::syntax
+//! [`transpiler`]: crate::transpiler
 
 use std::fmt::Write;
 use syntax;
