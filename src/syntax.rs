@@ -20,9 +20,50 @@ use std::iter::once;
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
 
+/// Error that might occur when creating a new [`Identifier`].
+#[derive(Debug)]
+pub enum IdentifierError {
+  StartsWithDigit,
+  ContainsNonASCIIAlphaNum
+}
+
+impl fmt::Display for IdentifierError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    match *self {
+      IdentifierError::StartsWithDigit =>
+        f.write_str("starts starts with a digit"),
+
+      IdentifierError::ContainsNonASCIIAlphaNum =>
+        f.write_str("contains at least one non-alphanumeric ASCII character")
+    }
+  }
+}
+
 /// A generic identifier.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Identifier(pub String);
+
+impl Identifier {
+  /// Create a new [`Identifier`].
+  ///
+  /// # Errors
+  ///
+  /// This function will fail if the identifier starts with a digit or contains non-alphanumeric
+  /// ASCII characters.
+  pub fn new<N>(name: N) -> Result<Self, IdentifierError> where N: Into<String> {
+    let name = name.into();
+
+    if name.chars().next().map(|c| c.is_ascii_alphabetic()) == Some(false) {
+      // check the first letter is not a digit
+      Err(IdentifierError::StartsWithDigit)
+    } else if name.contains(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
+      // check we only have ASCII alphanumeric characters
+      Err(IdentifierError::ContainsNonASCIIAlphaNum)
+    } else {
+      Ok(Identifier(name))
+    }
+  }
+}
 
 impl<'a> From<&'a str> for Identifier {
   fn from(s: &str) -> Self {
@@ -45,6 +86,20 @@ impl fmt::Display for Identifier {
 /// Any type name.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeName(pub String);
+
+impl TypeName {
+  /// Create a new [`TypeName`].
+  ///
+  /// # Errors
+  ///
+  /// This function will fail if the type name starts with a digit or contains non-alphanumeric
+  /// ASCII characters.
+  pub fn new<N>(name: N) -> Result<Self, IdentifierError> where N: Into<String> {
+    // build as identifier and unwrap into type name
+    let Identifier(tn) = Identifier::new(name)?;
+    Ok(TypeName(tn))
+  }
+}
 
 impl<'a> From<&'a str> for TypeName {
   fn from(s: &str) -> Self {
@@ -919,6 +974,29 @@ pub enum PreprocessorExtensionBehavior {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn create_new_identifier() {
+    assert!(Identifier::new("foo_bar").is_ok());
+    assert!(Identifier::new("3foo_bar").is_err());
+    assert!(Identifier::new("FooBar").is_ok());
+    assert!(Identifier::new("_FooBar").is_err());
+    assert!(Identifier::new("foo3").is_ok());
+    assert!(Identifier::new("foo3_").is_ok());
+    assert!(Identifier::new("fδo3_").is_err());
+  }
+
+  #[test]
+  fn create_new_type_name() {
+    assert!(TypeName::new("foo_bar").is_ok());
+    assert!(TypeName::new("FooBar").is_ok());
+    assert!(TypeName::new("foo3").is_ok());
+    assert!(TypeName::new("foo3_").is_ok());
+
+    assert!(TypeName::new("_FooBar").is_err());
+    assert!(TypeName::new("3foo_bar").is_err());
+    assert!(TypeName::new("fδo3_").is_err());
+  }
 
   // bool predicate(float x) {
   // }
