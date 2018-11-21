@@ -1,3 +1,17 @@
+# 0.13
+
+> Wed 21st of November 2018
+
+  - Update/reset hyperlinks in all the documentation for types, traits, methods, etc.
+  - General enhancement of the documentation.
+  - `ExternalDeclaration::new_struct` can now fail. Check the doc for further details.
+  - `NonEmpty`, `Identifier` and `TypeName` and `TranslationUnit` are now plain types and not
+    aliases anymore.
+  - Add AST visitors. Visitors allow for traversing through an AST and on-the-fly mutation,
+    filtering, etc.
+  - The `#define` preprocessor pragma is now supported in a limited form (it can only be used in
+    the global scope).
+
 # 0.12
 
 > Sun 11th of November 2018
