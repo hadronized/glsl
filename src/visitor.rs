@@ -9,6 +9,58 @@
 //!
 //! In order to visit any part of an AST (from its very top root or from any part of it), you must
 //! use the [`Host`] interface, that provides the `Host::visit` function.
+//!
+//! For instance, we can imagine visiting an AST to count how many variable are declared:
+//!
+//! ```
+//! use glsl::syntax::{CompoundStatement, Expr, SingleDeclaration, Statement, TypeSpecifierNonArray};
+//! use glsl::visitor::{Host, Visit, Visitor};
+//! use std::iter::FromIterator;
+//!
+//! let decl0 = Statement::declare_var(
+//!   TypeSpecifierNonArray::Float,
+//!   "x",
+//!   None,
+//!   Some(Expr::from(3.14).into())
+//! );
+//!
+//! let decl1 = Statement::declare_var(
+//!   TypeSpecifierNonArray::Int,
+//!   "y",
+//!   None,
+//!   None
+//! );
+//!
+//! let decl2 = Statement::declare_var(
+//!   TypeSpecifierNonArray::Vec4,
+//!   "z",
+//!   None,
+//!   None
+//! );
+//!
+//! let mut compound = CompoundStatement::from_iter(vec![decl0, decl1, decl2]);
+//!
+//! // our visitor that will count the number of variables it saw
+//! struct Counter {
+//!   var_nb: usize
+//! }
+//!
+//! impl Visitor for Counter {
+//!   // we are only interested in single declaration with a name
+//!   fn visit_single_declaration(&mut self, declaration: &mut SingleDeclaration) -> Visit {
+//!     if declaration.name.is_some() {
+//!       self.var_nb += 1;
+//!     }
+//!
+//!     // do not go deeper
+//!     Visit::Parent
+//!   }
+//! }
+//!
+//! let mut counter = Counter { var_nb: 0 };
+//! compound.visit(&mut counter);
+//! assert_eq!(counter.var_nb, 3);
+//! ```
 
 use syntax;
 
@@ -983,49 +1035,35 @@ impl Host for syntax::Initializer {
 
 #[cfg(test)]
 mod tests {
+  use std::iter::FromIterator;
+
   use super::*;
   use syntax;
 
-  // FIXME: use proper methods
   #[test]
   fn count_variables() {
-    let to_stmt = |sd| {
-      syntax::Statement::Simple(
-        Box::new(syntax::SimpleStatement::Declaration(
-          syntax::Declaration::InitDeclaratorList(
-            syntax::InitDeclaratorList {
-              head: sd,
-              tail: Vec::new()
-            }
-          )
-        ))
-      )
-    };
+    let decl0 = syntax::Statement::declare_var(
+      syntax::TypeSpecifierNonArray::Float,
+      "x",
+      None,
+      Some(syntax::Expr::from(3.14).into())
+    );
 
-    let decl0 = to_stmt(syntax::SingleDeclaration {
-      ty: syntax::TypeSpecifierNonArray::Float.into(),
-      name: Some("x".into()),
-      array_specifier: None,
-      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(3.14))))
-    });
+    let decl1 = syntax::Statement::declare_var(
+      syntax::TypeSpecifierNonArray::Int,
+      "y",
+      None,
+      None
+    );
 
-    let decl1 = to_stmt(syntax::SingleDeclaration {
-      ty: syntax::TypeSpecifierNonArray::Int.into(),
-      name: Some("y".into()),
-      array_specifier: None,
-      initializer: None
-    });
+    let decl2 = syntax::Statement::declare_var(
+      syntax::TypeSpecifierNonArray::Vec4,
+      "z",
+      None,
+      None
+    );
 
-    let decl2 = to_stmt(syntax::SingleDeclaration {
-      ty: syntax::TypeSpecifierNonArray::Vec4.into(),
-      name: Some("z".into()),
-      array_specifier: None,
-      initializer: None
-    });
-
-    let mut compound = syntax::CompoundStatement {
-      statement_list: vec![decl0, decl1, decl2]
-    };
+    let mut compound = syntax::CompoundStatement::from_iter(vec![decl0, decl1, decl2]);
 
     // our visitor that will count the number of variables it saw
     struct Counter {

@@ -14,7 +14,7 @@
 //! the documentation of `Expr`, `FunctionDefinition`, `Statement` and `TranslationUnit`.
 
 use std::fmt;
-use std::iter::once;
+use std::iter::{FromIterator, once};
 
 /// A non-empty `Vec`. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
@@ -543,6 +543,12 @@ pub enum Initializer {
   List(NonEmpty<Initializer>)
 }
 
+impl From<Expr> for Initializer {
+  fn from(e: Expr) -> Self {
+    Initializer::Simple(Box::new(e))
+  }
+}
+
 /// The most general form of an expression. As you can see if you read the variant list, in GLSL, an
 /// assignment is an expression. This is a bit silly but think of an assignment as a statement first
 /// then an expression which evaluates to what the statement “returns”.
@@ -583,6 +589,36 @@ pub enum Expr {
   PostDec(Box<Expr>),
   /// An expression that contains several, separated with comma.
   Comma(Box<Expr>, Box<Expr>)
+}
+
+impl From<i32> for Expr {
+  fn from(x: i32) -> Expr {
+    Expr::IntConst(x)
+  }
+}
+
+impl From<u32> for Expr {
+  fn from(x: u32) -> Expr {
+    Expr::UIntConst(x)
+  }
+}
+
+impl From<bool> for Expr {
+  fn from(x: bool) -> Expr {
+    Expr::BoolConst(x)
+  }
+}
+
+impl From<f32> for Expr {
+  fn from(x: f32) -> Expr {
+    Expr::FloatConst(x)
+  }
+}
+
+impl From<f64> for Expr {
+  fn from(x: f64) -> Expr {
+    Expr::DoubleConst(x)
+  }
 }
 
 /// All unary operators that exist in GLSL.
@@ -728,6 +764,14 @@ pub struct CompoundStatement {
   pub statement_list: Vec<Statement>
 }
 
+impl FromIterator<Statement> for CompoundStatement {
+  fn from_iter<T>(iter: T) -> Self where T: IntoIterator<Item = Statement> {
+    CompoundStatement {
+      statement_list: iter.into_iter().collect()
+    }
+  }
+}
+
 /// Statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
@@ -749,6 +793,38 @@ impl Statement {
       Box::new(CompoundStatement {
         statement_list: once(case_stmt).chain(statements.into_iter()).collect()
       })
+    )
+  }
+
+  /// Declare a new variable.
+  ///
+  /// `ty` is the type of the variable, `name` the name of the binding to create,
+  /// `array_specifier` an optional argument to make your binding an array and
+  /// `initializer`
+  pub fn declare_var<T, N, A, I>(
+    ty: T,
+    name: N,
+    array_specifier: A,
+    initializer: I
+  ) -> Self
+  where T: Into<FullySpecifiedType>,
+        N: Into<Identifier>,
+        A: Into<Option<ArraySpecifier>>,
+        I: Into<Option<Initializer>> {
+    Statement::Simple(
+      Box::new(SimpleStatement::Declaration(
+        Declaration::InitDeclaratorList(
+          InitDeclaratorList {
+            head: SingleDeclaration {
+              ty: ty.into(),
+              name: Some(name.into()),
+              array_specifier: array_specifier.into(),
+              initializer: initializer.into()
+            },
+            tail: Vec::new()
+          }
+        )
+      ))
     )
   }
 }
@@ -1032,5 +1108,10 @@ mod tests {
   fn declare_bad_struct() {
     let point = ExternalDeclaration::new_struct("Point2D", vec![]);
     assert!(point.is_none());
+  }
+
+  #[test]
+  fn initializer_from_expr() {
+    let _: Initializer = Expr::from(false).into();
   }
 }
