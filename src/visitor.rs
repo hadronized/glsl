@@ -10,7 +10,7 @@
 //! In order to visit any part of an AST (from its very top root or from any part of it), you must
 //! use the [`Host`] interface, that provides the [`Host::visit`] function.
 //!
-//! For instance, we can imagine visiting an AST to count how many variable are declared:
+//! For instance, we can imagine visiting an AST to count how many variables are declared:
 //!
 //! ```
 //! use glsl::syntax::{CompoundStatement, Expr, SingleDeclaration, Statement, TypeSpecifierNonArray};

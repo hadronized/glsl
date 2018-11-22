@@ -1,3 +1,9 @@
+## 0.13.2
+
+> Wed 22nd of November 2018
+
+  - Fix a typo in documentation.
+
 ## 0.13.1
 
 > Wed 22nd of November 2018
