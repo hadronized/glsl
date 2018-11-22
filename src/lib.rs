@@ -9,7 +9,7 @@
 //!   - [`parser`], which exports the parsing interface.
 //!   - [`syntax`], which exports the AST and language definitions.
 //!   - [`transpiler`], which provides you with GLSL transpilers.
-//!   - [`visitor`], which gives you a way to visit AST nodes and mutate them, both with inner and
+//!   - [`visitor`](visitor), which gives you a way to visit AST nodes and mutate them, both with inner and
 //!     outer mutation.
 //!
 //! Feel free to inspect those modules for further information.
