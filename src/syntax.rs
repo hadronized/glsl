@@ -25,6 +25,23 @@ use std::iter::{FromIterator, once};
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
 
+impl<T> NonEmpty<T> {
+  /// Construct a non-empty from an iterator.
+  ///
+  /// # Errors
+  ///
+  /// `None` if the iterator yields no value.
+  pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = T> {
+    let vec: Vec<_> = iter.into_iter().collect();
+
+    if vec.is_empty() {
+      None
+    } else {
+      Some(NonEmpty(vec))
+    }
+  }
+}
+
 impl<T> IntoIterator for NonEmpty<T> {
   type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
   type Item = T;
@@ -707,6 +724,17 @@ pub enum AssignmentOp {
 /// Starting rule.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TranslationUnit(pub NonEmpty<ExternalDeclaration>);
+
+impl TranslationUnit {
+  /// Construct a translation unit from an iterator.
+  ///
+  /// # Errors
+  ///
+  /// `None` if the iterator yields no value.
+  pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = ExternalDeclaration> {
+    NonEmpty::from_iter(iter).map(TranslationUnit)
+  }
+}
 
 impl IntoIterator for TranslationUnit {
   type IntoIter = <NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
