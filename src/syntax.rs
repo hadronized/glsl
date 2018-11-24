@@ -3,7 +3,7 @@
 //! This module exports all the grammar syntax that defines GLSL. You’ll be handling ASTs
 //! representing your GLSL source.
 //!
-//! The most external form of a GLSL parsed AST is [`TranslationUnit`] (a shader). Some part of the
+//! The most external form of a GLSL parsed AST is [`nranslationUnit`] (a shader). Some part of the
 //! tree are *boxed*. This is due to two facts
 //!
 //! - Recursion is used, hence we need a way to give our types a static size.
@@ -24,6 +24,33 @@ use std::iter::{FromIterator, once};
 /// A non-empty [`Vec`]. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
+
+impl<T> IntoIterator for NonEmpty<T> {
+  type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+  type Item = T;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.into_iter()
+  }
+}
+
+impl<'a, T> IntoIterator for &'a NonEmpty<T> {
+  type IntoIter = <&'a Vec<T> as IntoIterator>::IntoIter;
+  type Item = &'a T;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.iter()
+  }
+}
+
+impl<'a, T> IntoIterator for &'a mut NonEmpty<T> {
+  type IntoIter = <&'a mut Vec<T> as IntoIterator>::IntoIter;
+  type Item = &'a mut T;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.iter_mut()
+  }
+}
 
 /// Error that might occur when creating a new [`Identifier`].
 #[derive(Debug)]
@@ -680,6 +707,33 @@ pub enum AssignmentOp {
 /// Starting rule.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TranslationUnit(pub NonEmpty<ExternalDeclaration>);
+
+impl IntoIterator for TranslationUnit {
+  type IntoIter = <NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
+  type Item = ExternalDeclaration;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.0.into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a TranslationUnit {
+  type IntoIter = <&'a NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
+  type Item = &'a ExternalDeclaration;
+
+  fn into_iter(self) -> Self::IntoIter {
+    (&self.0).into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a mut TranslationUnit {
+  type IntoIter = <&'a mut NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
+  type Item = &'a mut ExternalDeclaration;
+
+  fn into_iter(self) -> Self::IntoIter {
+    (&mut self.0).into_iter()
+  }
+}
 
 /// External declaration.
 #[derive(Clone, Debug, PartialEq)]
