@@ -1,3 +1,10 @@
+## 0.13.3
+
+> Wed 24nd of November 2018
+
+  - Add `NonEmpty::from_iter` and `TranslationUnit::from_iter`.
+  - Implement `IntoIterator` for `NonEmpty` and `TranslationUnit`.
+
 ## 0.13.2
 
 > Wed 22nd of November 2018
