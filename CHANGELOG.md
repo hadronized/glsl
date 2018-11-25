@@ -1,3 +1,10 @@
+## 0.13.4
+
+> Wed 25nd of November 2018
+
+  - Add `NonEmpty::push` and `NonEmpty::pop`.
+  - Implement `Deref` and `DerefMut` for `TranslationUnit`.
+
 ## 0.13.3
 
 > Wed 24nd of November 2018
