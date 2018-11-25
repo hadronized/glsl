@@ -20,6 +20,7 @@
 
 use std::fmt;
 use std::iter::{FromIterator, once};
+use std::ops::{Deref, DerefMut};
 
 /// A non-empty [`Vec`]. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
@@ -38,6 +39,24 @@ impl<T> NonEmpty<T> {
       None
     } else {
       Some(NonEmpty(vec))
+    }
+  }
+
+  /// Move a new item at the end of the non-empty.
+  pub fn push(&mut self, item: T) {
+    self.0.push(item);
+  }
+
+  /// Move out the last element of the non-empty.
+  ///
+  /// # Errors
+  ///
+  /// This function returns `None` if called on a non-empty that contains a single element.
+  pub fn pop(&mut self) -> Option<T> {
+    if self.0.len() == 1 {
+      None
+    } else {
+      self.0.pop()
     }
   }
 }
@@ -66,6 +85,12 @@ impl<'a, T> IntoIterator for &'a mut NonEmpty<T> {
 
   fn into_iter(self) -> Self::IntoIter {
     self.0.iter_mut()
+  }
+}
+
+impl<T> Extend<T> for NonEmpty<T> {
+  fn extend<I>(&mut self, iter: I) where I: IntoIterator<Item = T> {
+    self.0.extend(iter);
   }
 }
 
@@ -736,30 +761,26 @@ impl TranslationUnit {
   }
 }
 
+impl Deref for TranslationUnit {
+  type Target = NonEmpty<ExternalDeclaration>;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+impl DerefMut for TranslationUnit {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.0
+  }
+}
+
 impl IntoIterator for TranslationUnit {
   type IntoIter = <NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
   type Item = ExternalDeclaration;
 
   fn into_iter(self) -> Self::IntoIter {
     self.0.into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a TranslationUnit {
-  type IntoIter = <&'a NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
-  type Item = &'a ExternalDeclaration;
-
-  fn into_iter(self) -> Self::IntoIter {
-    (&self.0).into_iter()
-  }
-}
-
-impl<'a> IntoIterator for &'a mut TranslationUnit {
-  type IntoIter = <&'a mut NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
-  type Item = &'a mut ExternalDeclaration;
-
-  fn into_iter(self) -> Self::IntoIter {
-    (&mut self.0).into_iter()
   }
 }
 
