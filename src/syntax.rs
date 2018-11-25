@@ -794,6 +794,24 @@ impl IntoIterator for TranslationUnit {
   }
 }
 
+impl<'a> IntoIterator for &'a TranslationUnit {
+  type IntoIter = <&'a NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
+  type Item = &'a ExternalDeclaration;
+
+  fn into_iter(self) -> Self::IntoIter {
+    (&self.0).into_iter()
+  }
+}
+
+impl<'a> IntoIterator for &'a mut TranslationUnit {
+  type IntoIter = <&'a mut NonEmpty<ExternalDeclaration> as IntoIterator>::IntoIter;
+  type Item = &'a mut ExternalDeclaration;
+
+  fn into_iter(self) -> Self::IntoIter {
+    (&mut self.0).into_iter()
+  }
+}
+
 /// External declaration.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExternalDeclaration {

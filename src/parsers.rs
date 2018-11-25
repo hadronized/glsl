@@ -2160,6 +2160,10 @@ mod tests {
     assert_eq!(type_specifier_non_array(&b"uimage2DMSArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImage2DMSArray));
     assert_eq!(type_specifier_non_array(&b"usamplerCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::USamplerCubeArray));
     assert_eq!(type_specifier_non_array(&b"uimageCubeArray"[..]), IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::UImageCubeArray));
+    assert_eq!(type_specifier_non_array(
+      &b"ReturnType"[..]),
+      IResult::Done(&b""[..], syntax::TypeSpecifierNonArray::TypeName(syntax::TypeName::new("ReturnType").unwrap()))
+    );
   }
 
   #[test]
