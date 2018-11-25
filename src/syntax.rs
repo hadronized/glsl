@@ -137,6 +137,11 @@ impl Identifier {
       Ok(Identifier(name))
     }
   }
+
+  /// Get the string representation of the identifier.
+  pub fn as_str(&self) -> &str {
+    &self.0
+  }
 }
 
 impl<'a> From<&'a str> for Identifier {
@@ -172,6 +177,11 @@ impl TypeName {
     // build as identifier and unwrap into type name
     let Identifier(tn) = Identifier::new(name)?;
     Ok(TypeName(tn))
+  }
+
+  /// Get the string representation of the type name.
+  pub fn as_str(&self) -> &str {
+    &self.0
   }
 }
 
