@@ -3,7 +3,7 @@
 //! This module exports all the grammar syntax that defines GLSL. You’ll be handling ASTs
 //! representing your GLSL source.
 //!
-//! The most external form of a GLSL parsed AST is [`nranslationUnit`] (a shader). Some part of the
+//! The most external form of a GLSL parsed AST is [`TranslationUnit`] (a shader). Some part of the
 //! tree are *boxed*. This is due to two facts
 //!
 //! - Recursion is used, hence we need a way to give our types a static size.
