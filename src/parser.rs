@@ -40,6 +40,35 @@ pub enum ParseResult<T> {
   Incomplete(Needed)
 }
 
+impl<T> ParseResult<T> {
+  /// Returns true if the [`ParseResult`] is [`ParseResult::Ok`].
+  pub fn is_ok(&self) -> bool {
+    if let ParseResult::Ok(_) = *self {
+      true
+    } else {
+      false
+    }
+  }
+
+  /// Returns true if the [`ParseResult`] is [`ParseResult::Err`].
+  pub fn is_err(&self) -> bool {
+    if let ParseResult::Err(_) = *self {
+      true
+    } else {
+      false
+    }
+  }
+
+  /// Returns true if the [`ParseResult`] is [`ParseResult::Incomplete`].
+  pub fn is_incomplete(&self) -> bool {
+    if let ParseResult::Incomplete(_) = *self {
+      true
+    } else {
+      false
+    }
+  }
+}
+
 /// Run a parser over a byte slice.
 fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
     where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
