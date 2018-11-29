@@ -1,5 +1,9 @@
 [workspace]
 
 members = [
-  "glsl"
+  "glsl",
+  "glsl-quasiquote"
 ]
+
+[patch.crates-io]
+glsl = { path = "./glsl" }
