@@ -1,6 +1,6 @@
 extern crate glsl;
 
-use glsl::parser::{Parse, ParseResult};
+use glsl::parser::Parse;
 use glsl::syntax::TranslationUnit;
 
 #[test]
