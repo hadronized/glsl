@@ -50,6 +50,14 @@
 //! extern crate glsl;
 //! use glsl_quasiquote::glsl;
 //! ```
+//!
+//! # Special warnings and considerations
+//!
+//! Because of the nature of the Rust tokenizer, dots (`.`) at the beginning of a token is not part
+//! of the token. For instance, `.3` is reinterpreted as `.` and `3` (two tokens). This will lead
+//! to incorrect parsing if you try to represent the number `0.3` with `.3`. While accepted by
+//! [glsl](https://crates.io/crates/glsl), this is not accepted by this crate. This limitation is
+//! due to how Rust tokenizes input in procedural macro and is very unlikely to change.
 
 extern crate glsl;
 extern crate proc_macro;

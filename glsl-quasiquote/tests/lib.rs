@@ -84,3 +84,14 @@ fn typed_return() {
     }
   };
 }
+
+#[test]
+fn dot_expr() {
+  let _ = glsl!{
+    void main() {
+      let x = foo.xyz;
+      let y = 1.;
+      //let z = .3; // this won’t work
+    }
+  };
+}
