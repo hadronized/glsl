@@ -91,7 +91,7 @@ fn dot_expr() {
     void main() {
       let x = foo.xyz;
       let y = 1.;
-      //let z = .3; // this won’t work
+      let z = .3;
     }
   };
 }

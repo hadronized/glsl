@@ -69,6 +69,7 @@ use glsl::syntax;
 use proc_macro2::TokenStream;
 use std::iter::FromIterator;
 
+use faithful_display::as_faithful_display;
 use tokenize::Tokenize;
 
 mod faithful_display;
@@ -95,11 +96,8 @@ pub fn glsl(mut input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     }
   }
 
-  // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
-  eprintln!("--> {}", faithful_display::as_faithful_display(&input));
-
   // annotation detection done, we can go on normally
-  let s = format!("{}", input);
+  let s = format!("{}", as_faithful_display(&input));
   let parsed: ParseResult<syntax::TranslationUnit> = Parse::parse_str(s.as_str());
 
   if let ParseResult::Ok(mut tu) = parsed {
