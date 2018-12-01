@@ -71,6 +71,7 @@ use std::iter::FromIterator;
 
 use tokenize::Tokenize;
 
+mod faithful_display;
 mod quoted;
 mod tokenize;
 
@@ -93,6 +94,9 @@ pub fn glsl(mut input: proc_macro::TokenStream) -> proc_macro::TokenStream {
       None => break
     }
   }
+
+  // TESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTESTTEST
+  eprintln!("--> {}", faithful_display::as_faithful_display(&input));
 
   // annotation detection done, we can go on normally
   let s = format!("{}", input);
