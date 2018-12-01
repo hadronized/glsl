@@ -62,23 +62,23 @@
 extern crate glsl;
 extern crate proc_macro;
 extern crate proc_macro2;
+extern crate proc_macro_faithful_display;
 #[macro_use] extern crate quote;
 
 use glsl::parser::{Parse, ParseResult};
 use glsl::syntax;
 use proc_macro2::TokenStream;
+use proc_macro_faithful_display::faithful_display;
 
-use faithful_display::as_faithful_display;
 use tokenize::Tokenize;
 
-mod faithful_display;
 mod quoted;
 mod tokenize;
 
 /// Create a [`TranslationUnit`].
 #[proc_macro]
 pub fn glsl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  let s = format!("{}", as_faithful_display(&input));
+  let s = format!("{}", faithful_display(&input));
   let parsed: ParseResult<syntax::TranslationUnit> = Parse::parse_str(s.as_str());
 
   if let ParseResult::Ok(tu) = parsed {
