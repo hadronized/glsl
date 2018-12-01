@@ -23,4 +23,5 @@ proc-macro = true
 [dependencies]
 glsl = "0.13"
 proc-macro2 = "0.4"
+proc-macro-faithful-display = "0.1"
 quote = "0.6"
