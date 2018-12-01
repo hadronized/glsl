@@ -6,6 +6,7 @@
 //! This module provides an implementation of [`Display`] that respects the input’s formatting.
 
 use std::fmt::{self, Display, Write};
+use std::iter::FromIterator;
 use proc_macro::{Delimiter, Group, Ident, LineColumn, Literal, Punct, TokenStream, TokenTree};
 
 pub trait FaithfulDisplay {
@@ -96,11 +97,17 @@ pub fn as_faithful_display<'a>(stream: &'a TokenStream) -> impl Display + 'a {
   impl<'a> fmt::Display for D<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
       // get the first span, if any
-      let first =
-        self.0.clone().into_iter().next() // ewww, clone
-        .map(|tree| tree.span().start()).unwrap_or(LineColumn { line:0, column: 0 });
+      let mut iter = self.0.clone().into_iter();
+      let first = iter.next();
 
-      self.0.clone().faithful_fmt(f, first).map(|_| ())
+      if let Some(tree) = first {
+        let first_line_col = tree.span().start();
+        let line_col = tree.faithful_fmt(f, first_line_col)?;
+
+        TokenStream::from_iter(iter).faithful_fmt(f, line_col).map(|_| ())
+      } else {
+        Ok(())
+      }
     }
   }
 

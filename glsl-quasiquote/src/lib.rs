@@ -67,7 +67,6 @@ extern crate proc_macro2;
 use glsl::parser::{Parse, ParseResult};
 use glsl::syntax;
 use proc_macro2::TokenStream;
-use std::iter::FromIterator;
 
 use faithful_display::as_faithful_display;
 use tokenize::Tokenize;
@@ -78,92 +77,17 @@ mod tokenize;
 
 /// Create a [`TranslationUnit`].
 #[proc_macro]
-pub fn glsl(mut input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  // prior to parsing, we try to detect annotations
-  let mut code = Vec::new();
-
-  loop {
-    let (pp, input_rest) = recognize_pragma(input);
-
-    input = input_rest;
-
-    match pp {
-      Some(pp) => {
-        code.push(syntax::ExternalDeclaration::Preprocessor(pp));
-      }
-
-      None => break
-    }
-  }
-
-  // annotation detection done, we can go on normally
+pub fn glsl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let s = format!("{}", as_faithful_display(&input));
   let parsed: ParseResult<syntax::TranslationUnit> = Parse::parse_str(s.as_str());
 
-  if let ParseResult::Ok(mut tu) = parsed {
-    // add the eventual annotations
-    code.append(&mut (tu.0).0);
-
+  if let ParseResult::Ok(tu) = parsed {
     // create the stream and return it
     let mut stream = TokenStream::new();
-    syntax::TranslationUnit(syntax::NonEmpty(code)).tokenize(&mut stream);
+    tu.tokenize(&mut stream);
 
     stream.into()
   } else {
     panic!("GLSL error: {:?}", parsed);
   }
 }
-
-// Recognize a # pragma.
-fn recognize_pragma(
-  input: proc_macro::TokenStream
-) -> (Option<syntax::Preprocessor>, proc_macro::TokenStream) {
-  let mut iter = input.into_iter().peekable();
-
-  // get the span info on the dash, if any
-  let dash_start = iter.peek().and_then(|token| {
-    match token {
-      proc_macro::TokenTree::Punct(ref dash_p) if dash_p.as_char() == '#' => {
-        Some(dash_p.span().start())
-      }
-
-      _ => None
-    }
-  });
-
-  match dash_start {
-    Some(ref dash_start) => {
-      // drop the dash
-      iter.next().unwrap();
-
-      let mut pragma_tokens = Vec::new();
-
-      loop {
-        // peek the next token and check whether it belongs to the same stream (same line)
-        let belong_to_stream = iter.peek().map(|peeked| peeked.span().start().line == dash_start.line).unwrap_or(false);
-
-        if belong_to_stream {
-          let token = iter.next().unwrap(); // safe because of peeked
-          pragma_tokens.push(token);
-        } else {
-          // the token is on a different line; abort mission, please.
-          break;
-        }
-      }
-
-      let pragma_stream = proc_macro::TokenStream::from_iter(pragma_tokens);
-      let content_str = format!("#{}\n", pragma_stream);
-
-      match Parse::parse_str(content_str.as_str()) {
-        ParseResult::Ok(pp) => {
-          (Some(pp), proc_macro::TokenStream::from_iter(iter))
-        }
-
-        res => panic!("cannot parse GLSL annotation: {:?}", res)
-      }
-    }
-
-    _ => (None, proc_macro::TokenStream::from_iter(iter))
-  }
-}
-
