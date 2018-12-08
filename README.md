@@ -1,11 +1,9 @@
-# GLL 450 parser
+# OpenGL Shading Language
 
-[![Build Status](https://travis-ci.org/phaazon/glsl.svg?branch=master)](https://travis-ci.org/phaazon/glsl)
 [![crates.io](https://img.shields.io/crates/v/glsl.svg)](https://crates.io/crates/glsl)
+[![crates.io](https://img.shields.io/crates/v/glsl-quasiquote.svg)](https://crates.io/crates/glsl-quasiquote)
 
-This is a [GLSL450](https://www.khronos.org/registry/OpenGL/specs/gl/GLSLangSpec.4.50.pdf) parser
-which aims is to parse a GLSL450-formatted source into an in-memory representation (AST). It
-strictly follows the grammar rules defined in the official GLSL 450 specifications.
+This repository holds the [glsl] and [glsl-quasiquote] projects.
 
-Currently, the parser expects the input source to be `&[u8]`, which provides a pretty poor
-experience in error reporting. This is a serious issue and is being worked on.
+[glsl]: ./glsl
+[glsl-quasiquote]: ./glsl-quasiquote
