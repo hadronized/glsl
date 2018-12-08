@@ -1,4 +1,11 @@
-## 0.3
+## 0.3.1
+
+> Sun 9th of December 2018
+
+  - Fix [a nasty bug](https://github.com/phaazon/glsl/issues/60) that was causing valid code to
+    break.
+
+# 0.3
 
 > Wed 21th of November 2018
 
