@@ -1,3 +1,14 @@
+## 0.13.5
+
+> Sun 9th of December 2018
+
+  - Add the SPIR-V transpiler. Currently, it’s feature-gated and *very* experimental. Feel free to
+    try and provide feedback about it.
+  - Add simple accessors for `ParseResult`.
+  - Fix a typo in the documentation of syntax.
+  - Add some unit and integration tests.
+  - Add `Identifier::as_str` and `TypeName::as_str`
+
 ## 0.13.4
 
 > Wed 25nd of November 2018
