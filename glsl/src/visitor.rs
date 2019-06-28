@@ -66,7 +66,7 @@
 //! [`Host::visit`]: visitor::Host::visit
 //! [`Visitor`]: visitor::Visitor
 
-use syntax;
+use crate::syntax;
 
 /// Visit strategy after having visited an AST node.
 ///
@@ -744,7 +744,7 @@ impl Host for syntax::Expr {
 
         syntax::Expr::FunCall(ref mut fi, ref mut params) => {
           fi.visit(visitor);
-          
+
           for param in params {
             param.visit(visitor);
           }
