@@ -20,11 +20,6 @@ maintenance = { status = "passively-maintained" }
 [features]
 spirv = ["shaderc"]
 
-[dependencies.nom]
-version = "3.2"
-default-features = true
-features = ["verbose-errors"]
-
-[dependencies.shaderc]
-version = "0.3"
-optional = true
+[dependencies]
+nom = { version = "3.2", features = ["verbose-errors"] }
+shaderc = { version = "0.3", optional = true }
