@@ -11,6 +11,8 @@ repository = "https://github.com/phaazon/glsl"
 documentation = "https://docs.rs/glsl"
 readme = "README.md"
 
+edition = "2018"
+
 [badges]
 travis-ci = { repository = "phaazon/glsl", branch = "master" }
 is-it-maintained-issue-resolution = { repository = "phaazon/glsl" }
@@ -21,5 +23,5 @@ maintenance = { status = "passively-maintained" }
 spirv = ["shaderc"]
 
 [dependencies]
-nom = { version = "3.2", features = ["verbose-errors"] }
+nom = { version = "5" }
 shaderc = { version = "0.3", optional = true }

@@ -9,107 +9,54 @@
 //! [`Parse`]: parser::Parse
 //! [`ParseResult`]: parser::ParseResult
 
-use nom::{Err as NomErr, ErrorKind, IResult, Needed};
+use nom::{IResult, Needed};
+use nom::error::{Err as NomErr, ErrorKind};
 use std::fmt;
 use std::str::{from_utf8_unchecked};
 
-use syntax;
+use crate::syntax;
 
 /// A parse error. It contains an [`ErrorKind`] along with a [`String`] giving information on the reason
 /// why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
-  kind: ErrorKind,
-  info: String
+  pub info: String
 }
 
 impl fmt::Display for ParseError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    write!(f, "error ({:?}): {}", self.kind, self.info)
+    write!(f, "error: {}", self.info)
   }
 }
 
-/// Parse result. It can either be parsed, incomplete or errored.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ParseResult<T> {
-  /// The source was successfully parsed.
-  Ok(T),
-  /// The parser failed with a [`ParseError`].
-  Err(ParseError),
-  /// More data is required to go on.
-  Incomplete(Needed)
-}
-
-impl<T> ParseResult<T> {
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Ok`].
-  pub fn is_ok(&self) -> bool {
-    if let ParseResult::Ok(_) = *self {
-      true
-    } else {
-      false
-    }
-  }
-
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Err`].
-  pub fn is_err(&self) -> bool {
-    if let ParseResult::Err(_) = *self {
-      true
-    } else {
-      false
-    }
-  }
-
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Incomplete`].
-  pub fn is_incomplete(&self) -> bool {
-    if let ParseResult::Incomplete(_) = *self {
-      true
-    } else {
-      false
-    }
-  }
-}
+/// Parse result.
+pub type ParseResult<T> = Result<T, ParseError>;
 
 /// Run a parser over a byte slice.
-fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
-    where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
+fn run_parser<P, T>(
+  source: &[u8],
+  parser: P
+) -> ParseResult<T>
+where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
   match parser(source) {
-    IResult::Done(i, x) => {
-      if i.is_empty() {
-        ParseResult::Ok(x)
-      } else {
-        let kind = ErrorKind::Custom(0); // FIXME: use our own error kind
-        let msg = unsafe { from_utf8_unchecked(i).to_owned() };
-        let info = msg.lines().next().unwrap_or("").to_owned();
-        ParseResult::Err(ParseError { kind, info })
-      }
-    },
-    IResult::Error(err) => match err {
-      NomErr::Code(k) => ParseResult::Err(ParseError { kind: k, info: String::new() }),
-      NomErr::Node(kind, trace) => {
-        let info = format!("{:#?}", trace);
-        ParseResult::Err(ParseError { kind, info })
-      },
-      NomErr::Position(kind, p) => {
-        let msg = unsafe { from_utf8_unchecked(p).to_owned() };
-        let info = msg.lines().next().unwrap_or("").to_owned();
+    Ok((_, x)) => {
+      ParseResult::Ok(x)
+    }
 
-        ParseResult::Err(ParseError { kind, info })
-      },
-      NomErr::NodePosition(kind, p, trace) => {
-        let p_msg = unsafe { from_utf8_unchecked(p) };
-        let info = format!("{}: {:#?}", p_msg, trace);
-
-        ParseResult::Err(ParseError { kind, info })
+    Err(e) => match e {
+      NomErr::Incomplete(_) => {
+        Err(ParseError { info: "incomplete parser".to_owned() })
       }
-    },
-    IResult::Incomplete(n) => ParseResult::Incomplete(n)
+
+      NomErr::Error(err) | NomErr::Failure(err) => {
+        let info = convert_error(err)
   }
 }
 
 /// Class of types that can be parsed.
 ///
 /// This trait exposes two methods:
-/// 
+///
 ///   - [`Parse::parse`], that runs on bytes.
 ///   - [`Parse::parse_str`], a convenient function that runs on strings.
 ///

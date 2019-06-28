@@ -34,10 +34,7 @@
 //! [`TranslationUnit`]: crate::syntax::TranslationUnit
 //! [`Visitor`]: crate::visitor::Visitor
 
-#[macro_use] extern crate nom;
-#[cfg(feature = "spirv")] extern crate shaderc;
-
-pub mod parser;
+//pub mod parser;
 mod parsers;
 pub mod syntax;
 pub mod transpiler;

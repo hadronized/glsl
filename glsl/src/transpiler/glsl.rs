@@ -31,14 +31,15 @@
 //! [`transpiler`]: crate::transpiler
 
 use std::fmt::Write;
-use syntax;
+
+use crate::syntax;
 
 pub fn show_identifier<F>(f: &mut F, i: &syntax::Identifier) where F: Write {
   let _ = f.write_str(&i.0);
 }
 
 pub fn show_type_name<F>(f: &mut F, t: &syntax::TypeName) where F: Write {
-  let _ = f.write_str(&t.0); 
+  let _ = f.write_str(&t.0);
 }
 
 pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonArray) where F: Write {
@@ -408,7 +409,7 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
     syntax::Expr::FunCall(ref fun, ref args) => {
       show_function_identifier(f, &fun);
       let _ = f.write_str("(");
-      
+
       if !args.is_empty() {
         let mut args_iter = args.iter();
         let first = args_iter.next().unwrap();
