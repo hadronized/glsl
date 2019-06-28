@@ -4,112 +4,71 @@
 //! input source into an AST. The AST is defined in the [`syntax`] module.
 //!
 //! You want to use the [`Parse`]’s methods to get starting with parsing and pattern match on
-//! [`ParseResult`].
+//! [`ParserResult`].
 //!
 //! [`Parse`]: parser::Parse
-//! [`ParseResult`]: parser::ParseResult
+//! [`ParserResult`]: parser::ParserResult
 
-use nom::{Err as NomErr, ErrorKind, IResult, Needed};
+use nom::Err as NomErr;
+use nom::error::{VerboseError, convert_error};
 use std::fmt;
-use std::str::{from_utf8_unchecked};
+use std::str::from_utf8;
 
-use syntax;
+use crate::parsers::ParserResult;
+use crate::syntax;
 
 /// A parse error. It contains an [`ErrorKind`] along with a [`String`] giving information on the reason
 /// why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
-  kind: ErrorKind,
-  info: String
+  pub info: String
 }
 
 impl fmt::Display for ParseError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-    write!(f, "error ({:?}): {}", self.kind, self.info)
-  }
-}
-
-/// Parse result. It can either be parsed, incomplete or errored.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ParseResult<T> {
-  /// The source was successfully parsed.
-  Ok(T),
-  /// The parser failed with a [`ParseError`].
-  Err(ParseError),
-  /// More data is required to go on.
-  Incomplete(Needed)
-}
-
-impl<T> ParseResult<T> {
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Ok`].
-  pub fn is_ok(&self) -> bool {
-    if let ParseResult::Ok(_) = *self {
-      true
-    } else {
-      false
-    }
-  }
-
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Err`].
-  pub fn is_err(&self) -> bool {
-    if let ParseResult::Err(_) = *self {
-      true
-    } else {
-      false
-    }
-  }
-
-  /// Returns true if the [`ParseResult`] is [`ParseResult::Incomplete`].
-  pub fn is_incomplete(&self) -> bool {
-    if let ParseResult::Incomplete(_) = *self {
-      true
-    } else {
-      false
-    }
+    write!(f, "error: {}", self.info)
   }
 }
 
 /// Run a parser over a byte slice.
-fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
-    where P: FnOnce(&[u8]) -> IResult<&[u8], T> {
+pub(crate) fn run_parser<P, T>(
+  source: &[u8],
+  parser: P
+) -> Result<T, ParseError>
+where P: FnOnce(&[u8]) -> ParserResult<&[u8], T> {
   match parser(source) {
-    IResult::Done(i, x) => {
-      if i.is_empty() {
-        ParseResult::Ok(x)
-      } else {
-        let kind = ErrorKind::Custom(0); // FIXME: use our own error kind
-        let msg = unsafe { from_utf8_unchecked(i).to_owned() };
-        let info = msg.lines().next().unwrap_or("").to_owned();
-        ParseResult::Err(ParseError { kind, info })
-      }
-    },
-    IResult::Error(err) => match err {
-      NomErr::Code(k) => ParseResult::Err(ParseError { kind: k, info: String::new() }),
-      NomErr::Node(kind, trace) => {
-        let info = format!("{:#?}", trace);
-        ParseResult::Err(ParseError { kind, info })
-      },
-      NomErr::Position(kind, p) => {
-        let msg = unsafe { from_utf8_unchecked(p).to_owned() };
-        let info = msg.lines().next().unwrap_or("").to_owned();
+    Ok((_, x)) => {
+      Ok(x)
+    }
 
-        ParseResult::Err(ParseError { kind, info })
-      },
-      NomErr::NodePosition(kind, p, trace) => {
-        let p_msg = unsafe { from_utf8_unchecked(p) };
-        let info = format!("{}: {:#?}", p_msg, trace);
-
-        ParseResult::Err(ParseError { kind, info })
+    Err(e) => match e {
+      NomErr::Incomplete(_) => {
+        Err(ParseError { info: "incomplete parser".to_owned() })
       }
-    },
-    IResult::Incomplete(n) => ParseResult::Incomplete(n)
+
+      NomErr::Error(err) | NomErr::Failure(err) => {
+        let ve = str_verbose_error(err).ok_or(ParseError { info: "non-UTF-8".to_owned() })?;
+        let s = from_utf8(source).map_err(|_| ParseError { info: "non-UTF-8".to_owned() })?;
+        let info = convert_error(s, ve);
+        Err(ParseError { info })
+      }
+    }
   }
+}
+
+// Transform a VerboseError<&[u8]> into a VerboseError<&str>, if possible.
+fn str_verbose_error(ve: VerboseError<&[u8]>) -> Option<VerboseError<&str>> {
+  let errors = ve.errors.into_iter()
+    .map(|(i, kind)| from_utf8(i).map(|s| (s, kind)))
+    .collect::<Result<_, _>>().ok()?;
+
+  Some(VerboseError { errors })
 }
 
 /// Class of types that can be parsed.
 ///
 /// This trait exposes two methods:
-/// 
+///
 ///   - [`Parse::parse`], that runs on bytes.
 ///   - [`Parse::parse_str`], a convenient function that runs on strings.
 ///
@@ -119,10 +78,10 @@ fn run_parser<P, T>(source: &[u8], parser: P) -> ParseResult<T>
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {
   /// Parse from a byte slice.
-  fn parse<B>(source: B) -> ParseResult<Self> where B: AsRef<[u8]>;
+  fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<[u8]>;
 
   /// Parse from a string.
-  fn parse_str<S>(source: S) -> ParseResult<Self> where S: AsRef<str> {
+  fn parse_str<S>(source: S) -> Result<Self, ParseError> where S: AsRef<str> {
     let s = source.as_ref().as_bytes();
     Self::parse(s)
   }
@@ -132,7 +91,7 @@ pub trait Parse: Sized {
 macro_rules! impl_parse {
   ($type_name:ty, $parser_name:ident) => {
     impl Parse for $type_name {
-      fn parse<B>(source: B) -> ParseResult<Self> where B: AsRef<[u8]> {
+      fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<[u8]> {
         run_parser(source.as_ref(), $crate::parsers::$parser_name)
       }
     }
@@ -180,4 +139,3 @@ impl_parse!(syntax::PreprocessorVersionProfile, pp_version_profile);
 impl_parse!(syntax::PreprocessorExtensionName, pp_extension_name);
 impl_parse!(syntax::PreprocessorExtensionBehavior, pp_extension_behavior);
 impl_parse!(syntax::PreprocessorExtension, pp_extension);
-
