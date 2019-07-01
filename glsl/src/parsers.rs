@@ -8,8 +8,11 @@
 use nom::{
   Err as NomErr, IResult, ParseTo, alt, call, char, complete, delimited, do_parse, eat_separator, many0, many1, map, named, not, one_of, opt, peek, preceded, recognize, sep, tag, take_until, take_while1, terminated, try_parse, value, verify, ws
 };
+use nom::branch;
+use nom::bits::complete;
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::character::complete::{digit1, multispace0};
+use nom::sequence;
 use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
 use std::str::{from_utf8_unchecked};
 use std::num::ParseIntError;
@@ -29,12 +32,25 @@ named!(pub comment,
              multispace0)
 );
 
+pub fn comment(i: &[u8]) -> ParserResult<&[u8], &[u8]> {
+  sequence::delimited(
+    multispace0,
+    branch::alt((
+      sequence::preceded(complete::tag("//", 2), complete::take_until("\n")),
+      sequence::delimitedsamerjaiautrechoseafoutre
+
+    )),
+    multispace0
+  )
+}
+
+
 /// Parse an alphanumeric separator. An alphanumeric separator is a char used to separate
 /// alphanumeric tokens. For instance, "in vec3 x" contains three alphanumeric tokens, while
 /// "int x = 3, y, z = 12;" contains six alphanumeric tokens ('=', ',' and ';' are separators).
 ///
 /// Whitespace are also considered such separators.
-named!(pub alphasep(&[u8]) -> char, peek!(one_of!(" \t\n,;:.<>{}[]()+-%*/=^?\"'")));
+named!(pub alphasep<&[u8], char>, peek!(one_of!(" \t\n,;:.<>{}[]()+-%*/=^?\"'")));
 
 /// Parse a tag followed by an alphanumeric separator.
 macro_rules! atag {
@@ -66,7 +82,7 @@ fn bytes_to_string(bytes: &[u8]) -> String {
 }
 
 /// Parse an identifier (raw version).
-named!(identifier_str,
+named!(identifier_str<&[u8], &[u8], VerboseError<&[u8]>>,
   bl!(do_parse!(
     name: verify!(take_while1!(identifier_pred), verify_identifier) >>
     (name)
@@ -74,13 +90,13 @@ named!(identifier_str,
 );
 
 /// Parse a string that could be used as an identifier.
-named!(pub string<&[u8], String>, map!(identifier_str, bytes_to_string));
+named!(pub string<&[u8], String, VerboseError<&[u8]>>, map!(identifier_str, bytes_to_string));
 
 /// Parse an identifier.
-named!(pub identifier<&[u8], syntax::Identifier>, map!(identifier_str, |b| syntax::Identifier(bytes_to_string(b))));
+named!(pub identifier<&[u8], syntax::Identifier, VerboseError<&[u8]>>, map!(identifier_str, |b| syntax::Identifier(bytes_to_string(b))));
 
 /// Parse a type name.
-named!(pub type_name<&[u8], syntax::TypeName>, map!(identifier_str, |b| syntax::TypeName(bytes_to_string(b))));
+named!(pub type_name<&[u8], syntax::TypeName, VerboseError<&[u8]>>, map!(identifier_str, |b| syntax::TypeName(bytes_to_string(b))));
 
 #[inline]
 fn identifier_pred(c: u8) -> bool {
@@ -94,7 +110,7 @@ fn verify_identifier(s: &[u8]) -> bool {
 }
 
 /// Parse a non-empty list of identifiers, delimited by comma (,).
-named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
+named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: identifier >>
     rest: many0!(do_parse!(char!(',') >> i: bl!(identifier) >> (i))) >>
@@ -108,7 +124,7 @@ named!(nonempty_identifiers<&[u8], Vec<syntax::Identifier>>,
 );
 
 /// Parse a non-empty list of type names, delimited by comma (,).
-named!(nonempty_type_names<&[u8], Vec<syntax::TypeName>>,
+named!(nonempty_type_names<&[u8], Vec<syntax::TypeName>, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: type_name >>
     rest: many0!(do_parse!(char!(',') >> i: bl!(type_name) >> (i))) >>
@@ -254,8 +270,8 @@ pub fn type_specifier_non_struct(i: &[u8]) -> ParserResult<&[u8], syntax::TypeSp
 }
 
 /// Parse a type specifier (non-array version).
-named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
-  alt!(
+named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray, VerboseError<&[u8]>>,
+  alt!(>
     type_specifier_non_struct |
     map!(struct_specifier, syntax::TypeSpecifierNonArray::Struct) |
     map!(type_name, syntax::TypeSpecifierNonArray::TypeName)
@@ -263,15 +279,15 @@ named!(pub type_specifier_non_array<&[u8], syntax::TypeSpecifierNonArray>,
 );
 
 /// Parse a type specifier.
-named!(pub type_specifier<&[u8], syntax::TypeSpecifier>,
+named!(pub type_specifier<&[u8], syntax::TypeSpecifier, VerboseError<&[u8]>>,
   map!(ws!(pair!(type_specifier_non_array, opt!(array_specifier))), |(ty, array_specifier)|
     syntax::TypeSpecifier { ty, array_specifier }));
 
 /// Parse the void type.
-named!(pub void<&[u8], ()>, value!((), atag!("void")));
+named!(pub void<&[u8], (), VerboseError<&[u8]>>, value!((), atag!("void")));
 
 /// Parse a digit that precludes a leading 0.
-named!(nonzero_digits, verify!(digit1, |s:&[u8]| s[0] != b'0'));
+named!(nonzero_digits<&[u8], (), VerboseError<&[u8]>>, verify!(digit1, |s:&[u8]| s[0] != b'0'));
 
 #[inline]
 fn is_octal(s: &[u8]) -> bool {
@@ -289,7 +305,7 @@ fn alphanumeric_no_u(c: u8) -> bool {
 }
 
 /// Parse an hexadecimal literal.
-named!(hexadecimal_lit<Result<u32, ParseIntError>>,
+named!(hexadecimal_lit<Result<u32, ParseIntError>, (), VerboseError<&[u8]>>,
   do_parse!(
     alt!(tag!("0x") | tag!("0X")) >>
     i: verify!(take_while1!(alphanumeric_no_u), all_hexa) >>
@@ -298,14 +314,14 @@ named!(hexadecimal_lit<Result<u32, ParseIntError>>,
 );
 
 /// Parse an octal literal.
-named!(octal_lit<Result<u32, ParseIntError>>,
+named!(octal_lit<Result<u32, ParseIntError>, (), VerboseError<&[u8]>>,
   do_parse!(
     i: verify!(take_while1!(alphanumeric_no_u), is_octal) >>
     (u32::from_str_radix(bytes_to_str(i), 8))
   )
 );
 
-named!(decimal_lit<Result<u32, ParseIntError>>,
+named!(decimal_lit<Result<u32, ParseIntError>, (), VerboseError<&[u8]>>,
   do_parse!(
     i: nonzero_digits >>
     (bytes_to_str(i).parse::<u32>())
@@ -331,7 +347,7 @@ named!(decimal_lit<Result<u32, ParseIntError>>,
 ///     bit pattern cannot fit in 32 bits. The bit pattern of the
 ///     literal is always used unmodified. So a signed literal whose
 ///     bit pattern includes a set sign bit creates a negative value."
-named!(pub integral_lit_try<Result<u32, ParseIntError>>,
+named!(pub integral_lit_try<Result<u32, ParseIntError>, (), VerboseError<&[u8]>>,
   do_parse!(
     sign: opt!(char!('-')) >>
     i: alt!(
@@ -367,10 +383,10 @@ pub fn integral_lit(i: &[u8]) -> ParserResult<&[u8], i32> {
 }
 
 /// Parse the unsigned suffix.
-named!(unsigned_suffix<&[u8], char>, alt!(char!('u') | char!('U')));
+named!(unsigned_suffix<&[u8], char, VerboseError<&[u8]>>, alt!(char!('u') | char!('U')));
 
 /// Parse a literal unsigned string.
-named!(pub unsigned_lit<&[u8], u32>,
+named!(pub unsigned_lit<&[u8], u32, VerboseError<&[u8]>>,
   do_parse!(
     i: integral_lit >>
     unsigned_suffix >>
@@ -379,15 +395,15 @@ named!(pub unsigned_lit<&[u8], u32>,
 );
 
 /// Parse a floating point suffix.
-named!(float_suffix,
-  alt!(
+named!(float_suffix<&[u8], (), VerboseError<&[u8]>>,
+  alt!(>
     tag!("f") |
     tag!("F")
   )
 );
 
 /// Parse a double point suffix.
-named!(double_suffix,
+named!(double_suffix<&[u8], (), VerboseError<&[u8]>>,
   alt!(
     tag!("lf") |
     tag!("LF")
@@ -396,7 +412,7 @@ named!(double_suffix,
 
 
 /// Parse the exponent part of a floating point literal.
-named!(floating_exponent<&[u8], ()>,
+named!(floating_exponent<&[u8], (), VerboseError<&[u8]>>,
   do_parse!(
     alt!(char!('e') | char!('E')) >>
     opt!(alt!(char!('+') | char!('-'))) >>
@@ -406,7 +422,7 @@ named!(floating_exponent<&[u8], ()>,
 );
 
 /// Parse the fractional constant part of a floating point literal.
-named!(floating_frac<&[u8], ()>,
+named!(floating_frac<&[u8], (), VerboseError<&[u8]>>,
   alt!(
     do_parse!(char!('.') >> digit1 >> (())) |
     do_parse!(digit1 >> tag!(".") >> digit1 >> (())) |
@@ -415,10 +431,10 @@ named!(floating_frac<&[u8], ()>,
 );
 
 /// Parse the « middle » part of a floating value – i.e. fractional and exponential parts.
-named!(floating_middle, recognize!(preceded!(floating_frac, opt!(floating_exponent))));
+named!(floating_middle<&[u8], (), VerboseError<&[u8]>>, recognize!(preceded!(floating_frac, opt!(floating_exponent))));
 
 /// Parse a float literal string.
-named!(pub float_lit<&[u8], f32>,
+named!(pub float_lit<&[u8], f32, VerboseError<&[u8]>>,
   do_parse!(
     sign: bl!(opt!(char!('-'))) >>
     f: floating_middle >>
@@ -442,7 +458,7 @@ named!(pub float_lit<&[u8], f32>,
 );
 
 /// Parse a double literal string.
-named!(pub double_lit<&[u8], f64>,
+named!(pub double_lit<&[u8], f64, VerboseError<&[u8]>>,
   do_parse!(
     sign: bl!(opt!(char!('-'))) >>
     f: floating_middle >>
@@ -467,7 +483,7 @@ named!(pub double_lit<&[u8], f64>,
 );
 
 /// Parse a constant boolean.
-named!(pub bool_lit<&[u8], bool>,
+named!(pub bool_lit<&[u8], bool, VerboseError<&[u8]>>,
   alt!(
     value!(true, atag!("true")) |
     value!(false, atag!("false"))
@@ -475,7 +491,7 @@ named!(pub bool_lit<&[u8], bool>,
 );
 
 /// Parse a unary operator.
-named!(pub unary_op<&[u8], syntax::UnaryOp>,
+named!(pub unary_op<&[u8], syntax::UnaryOp, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::UnaryOp::Inc, tag!("++")) |
     value!(syntax::UnaryOp::Dec, tag!("--")) |
@@ -487,7 +503,7 @@ named!(pub unary_op<&[u8], syntax::UnaryOp>,
 );
 
 /// Parse an identifier with an optional array specifier.
-named!(arrayed_identifier<&[u8], syntax::ArrayedIdentifier>,
+named!(arrayed_identifier<&[u8], syntax::ArrayedIdentifier, VerboseError<&[u8]>>,
   do_parse!(
     i: identifier >>
     a: opt!(array_specifier) >>
@@ -496,7 +512,7 @@ named!(arrayed_identifier<&[u8], syntax::ArrayedIdentifier>,
 );
 
 /// Parse a struct field declaration.
-named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
+named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     qual: opt!(type_qualifier) >>
     ty: type_specifier >>
@@ -521,7 +537,7 @@ named!(pub struct_field_specifier<&[u8], syntax::StructFieldSpecifier>,
 );
 
 /// Parse a struct.
-named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
+named!(pub struct_specifier<&[u8], syntax::StructSpecifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("struct") >>
     name: opt!(type_name) >>
@@ -531,7 +547,7 @@ named!(pub struct_specifier<&[u8], syntax::StructSpecifier>,
 );
 
 /// Parse a storage qualifier subroutine rule with a list of type names.
-named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
+named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("subroutine") >>
     identifiers: delimited!(char!('('),
@@ -542,7 +558,7 @@ named!(pub storage_qualifier_subroutine_list<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a storage qualifier subroutine rule.
-named!(pub storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
+named!(pub storage_qualifier_subroutine<&[u8], syntax::StorageQualifier, VerboseError<&[u8]>>,
   alt!(
     storage_qualifier_subroutine_list |
     value!(syntax::StorageQualifier::Subroutine(Vec::new()), atag!("subroutine"))
@@ -550,7 +566,7 @@ named!(pub storage_qualifier_subroutine<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a storage qualifier.
-named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
+named!(pub storage_qualifier<&[u8], syntax::StorageQualifier, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::StorageQualifier::Const, atag!("const")) |
     value!(syntax::StorageQualifier::InOut, atag!("inout")) |
@@ -572,7 +588,7 @@ named!(pub storage_qualifier<&[u8], syntax::StorageQualifier>,
 );
 
 /// Parse a layout qualifier.
-named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
+named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("layout") >>
     x: delimited!(char!('('), layout_qualifier_inner, char!(')')) >>
@@ -580,7 +596,7 @@ named!(pub layout_qualifier<&[u8], syntax::LayoutQualifier>,
   ))
 );
 
-named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
+named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: layout_qualifier_spec >>
     rest: many0!(do_parse!(char!(',') >> x: bl!(layout_qualifier_spec) >> (x))) >>
@@ -594,7 +610,7 @@ named!(layout_qualifier_inner<&[u8], syntax::LayoutQualifier>,
   ))
 );
 
-named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
+named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::LayoutQualifierSpec::Shared, atag!("shared")) |
     bl!(do_parse!(
@@ -608,7 +624,7 @@ named!(layout_qualifier_spec<&[u8], syntax::LayoutQualifierSpec>,
 );
 
 /// Parse a precision qualifier.
-named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
+named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::PrecisionQualifier::High, atag!("highp")) |
     value!(syntax::PrecisionQualifier::Medium, atag!("mediump")) |
@@ -617,7 +633,7 @@ named!(pub precision_qualifier<&[u8], syntax::PrecisionQualifier>,
 );
 
 /// Parse an interpolation qualifier.
-named!(pub interpolation_qualifier<&[u8], syntax::InterpolationQualifier>,
+named!(pub interpolation_qualifier<&[u8], syntax::InterpolationQualifier, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::InterpolationQualifier::Smooth, atag!("smooth")) |
     value!(syntax::InterpolationQualifier::Flat, atag!("flat")) |
@@ -626,15 +642,15 @@ named!(pub interpolation_qualifier<&[u8], syntax::InterpolationQualifier>,
 );
 
 /// Parse an invariant qualifier.
-named!(pub invariant_qualifier<&[u8], ()>,
+named!(pub invariant_qualifier<&[u8], (), VerboseError<&[u8]>>,
   value!((), atag!("invariant")));
 
 /// Parse a precise qualifier.
-named!(pub precise_qualifier<&[u8], ()>,
+named!(pub precise_qualifier<&[u8], (), VerboseError<&[u8]>>,
   value!((), atag!("precise")));
 
 /// Parse a type qualifier.
-named!(pub type_qualifier<&[u8], syntax::TypeQualifier>,
+named!(pub type_qualifier<&[u8], syntax::TypeQualifier, VerboseError<&[u8]>>,
   do_parse!(
     qualifiers: many1!(bl!(type_qualifier_spec)) >>
     (syntax::TypeQualifier { qualifiers: syntax::NonEmpty(qualifiers) })
@@ -642,7 +658,7 @@ named!(pub type_qualifier<&[u8], syntax::TypeQualifier>,
 );
 
 /// Parse a type qualifier spec.
-named!(pub type_qualifier_spec<&[u8], syntax::TypeQualifierSpec>,
+named!(pub type_qualifier_spec<&[u8], syntax::TypeQualifierSpec, VerboseError<&[u8]>>,
   alt!(
     map!(storage_qualifier, syntax::TypeQualifierSpec::Storage) |
     map!(layout_qualifier, syntax::TypeQualifierSpec::Layout) |
@@ -654,7 +670,7 @@ named!(pub type_qualifier_spec<&[u8], syntax::TypeQualifierSpec>,
 );
 
 /// Parse a fully specified type.
-named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
+named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType, VerboseError<&[u8]>>,
   bl!(do_parse!(
     qualifier: opt!(type_qualifier) >>
     ty: type_specifier >>
@@ -664,7 +680,7 @@ named!(pub fully_specified_type<&[u8], syntax::FullySpecifiedType>,
 );
 
 /// Parse an array specifier with no size information.
-named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
+named!(pub array_specifier<&[u8], syntax::ArraySpecifier, VerboseError<&[u8]>>,
   alt!(
     bl!(do_parse!(char!('[') >> char!(']') >> (syntax::ArraySpecifier::Unsized))) |
     bl!(do_parse!(char!('[') >> e: cond_expr >> char!(']') >> (syntax::ArraySpecifier::ExplicitlySized(Box::new(e)))))
@@ -672,7 +688,7 @@ named!(pub array_specifier<&[u8], syntax::ArraySpecifier>,
 );
 
 /// Parse a primary expression.
-named!(pub primary_expr<&[u8], syntax::Expr>,
+named!(pub primary_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   alt!(
     parens_expr |
     map!(double_lit, syntax::Expr::DoubleConst) |
@@ -685,7 +701,7 @@ named!(pub primary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a postfix expression.
-named!(pub postfix_expr<&[u8], syntax::Expr>,
+named!(pub postfix_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   do_parse!(
     e: alt!(function_call | primary_expr) >>
     pfe: call!(postfix_part, e) >>
@@ -711,7 +727,7 @@ fn postfix_part(i: &[u8], e: syntax::Expr) -> ParserResult<&[u8], syntax::Expr> 
 }
 
 /// Parse a unary expression.
-named!(pub unary_expr<&[u8], syntax::Expr>,
+named!(pub unary_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   alt!(
     do_parse!(
       op: unary_op >>
@@ -724,13 +740,13 @@ named!(pub unary_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an expression between parens.
-named!(pub parens_expr<&[u8], syntax::Expr>, bl!(delimited!(char!('('), bl!(expr), char!(')'))));
+named!(pub parens_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>, bl!(delimited!(char!('('), bl!(expr), char!(')'))));
 
 /// Parse a dot field selection identifier.
-named!(pub dot_field_selection<&[u8], syntax::Identifier>, preceded!(char!('.'), identifier));
+named!(pub dot_field_selection<&[u8], syntax::Identifier, VerboseError<&[u8]>>, preceded!(char!('.'), identifier));
 
 /// Parse a declaration.
-named!(pub declaration<&[u8], syntax::Declaration>,
+named!(pub declaration<&[u8], syntax::Declaration, VerboseError<&[u8]>>,
   alt!(
     map!(terminated!(function_prototype, char!(';')), syntax::Declaration::FunctionPrototype) |
     map!(terminated!(init_declarator_list, char!(';')), syntax::Declaration::InitDeclaratorList) |
@@ -741,7 +757,7 @@ named!(pub declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a precision declaration.
-named!(pub precision_declaration<&[u8], syntax::Declaration>,
+named!(pub precision_declaration<&[u8], syntax::Declaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("precision") >>
     qual: precision_qualifier >>
@@ -753,7 +769,7 @@ named!(pub precision_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a block declaration.
-named!(pub block_declaration<&[u8], syntax::Declaration>,
+named!(pub block_declaration<&[u8], syntax::Declaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     qual: type_qualifier >>
     name: identifier >>
@@ -781,7 +797,7 @@ named!(pub block_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a global declaration.
-named!(pub global_declaration<&[u8], syntax::Declaration>,
+named!(pub global_declaration<&[u8], syntax::Declaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     qual: type_qualifier >>
     identifiers: many0!(bl!(do_parse!(char!(',') >> i: identifier >> (i)))) >>
@@ -790,7 +806,7 @@ named!(pub global_declaration<&[u8], syntax::Declaration>,
 );
 
 /// Parse a function prototype.
-named!(pub function_prototype<&[u8], syntax::FunctionPrototype>,
+named!(pub function_prototype<&[u8], syntax::FunctionPrototype, VerboseError<&[u8]>>,
   bl!(do_parse!(
     fp: function_declarator >>
     char!(')') >>
@@ -799,7 +815,7 @@ named!(pub function_prototype<&[u8], syntax::FunctionPrototype>,
 );
 
 /// Parse an init declarator list.
-named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList>,
+named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: single_declaration >>
     rest: many0!(bl!(do_parse!(
@@ -821,7 +837,7 @@ named!(pub init_declarator_list<&[u8], syntax::InitDeclaratorList>,
 
 
 /// Parse a single declaration.
-named!(pub single_declaration<&[u8], syntax::SingleDeclaration>,
+named!(pub single_declaration<&[u8], syntax::SingleDeclaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     ty: fully_specified_type >>
     a: alt!(
@@ -849,7 +865,7 @@ named!(pub single_declaration<&[u8], syntax::SingleDeclaration>,
 );
 
 /// Parse an initializer.
-named!(pub initializer<&[u8], syntax::Initializer>,
+named!(pub initializer<&[u8], syntax::Initializer, VerboseError<&[u8]>>,
   alt!(
     map!(assignment_expr, |e| syntax::Initializer::Simple(Box::new(e))) |
     bl!(do_parse!(
@@ -864,7 +880,7 @@ named!(pub initializer<&[u8], syntax::Initializer>,
 );
 
 /// Parse an initializer list.
-named!(pub initializer_list<&[u8], Vec<syntax::Initializer>>,
+named!(pub initializer_list<&[u8], Vec<syntax::Initializer>, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: initializer >>
     rest: many0!(bl!(do_parse!(char!(',') >> ini: initializer >> (ini)))) >>
@@ -877,14 +893,14 @@ named!(pub initializer_list<&[u8], Vec<syntax::Initializer>>,
   ))
 );
 
-named!(function_declarator<&[u8], syntax::FunctionPrototype>,
+named!(function_declarator<&[u8], syntax::FunctionPrototype, VerboseError<&[u8]>>,
   alt!(
     function_header_with_parameters |
     map!(function_header, |(ret_ty, fun_name)| syntax::FunctionPrototype { ty: ret_ty, name: fun_name, parameters: Vec::new() })
   )
 );
 
-named!(function_header<&[u8], (syntax::FullySpecifiedType, syntax::Identifier)>,
+named!(function_header<&[u8], (syntax::FullySpecifiedType, syntax::Identifier), VerboseError<&[u8]>>,
   bl!(do_parse!(
     ret_ty: fully_specified_type >>
     fun_name: identifier >>
@@ -893,7 +909,7 @@ named!(function_header<&[u8], (syntax::FullySpecifiedType, syntax::Identifier)>,
   ))
 );
 
-named!(function_header_with_parameters<&[u8], syntax::FunctionPrototype>,
+named!(function_header_with_parameters<&[u8], syntax::FunctionPrototype, VerboseError<&[u8]>>,
   bl!(do_parse!(
     header: function_header >>
     first_param: function_parameter_declaration >>
@@ -911,10 +927,10 @@ named!(function_header_with_parameters<&[u8], syntax::FunctionPrototype>,
   ))
 );
 
-named!(function_parameter_declaration<&[u8], syntax::FunctionParameterDeclaration>,
+named!(function_parameter_declaration<&[u8], syntax::FunctionParameterDeclaration, VerboseError<&[u8]>>,
   alt!(function_parameter_declaration_named | function_parameter_declaration_unnamed));
 
-named!(function_parameter_declaration_named<&[u8], syntax::FunctionParameterDeclaration>,
+named!(function_parameter_declaration_named<&[u8], syntax::FunctionParameterDeclaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     ty_qual: opt!(type_qualifier) >>
     fpd: function_parameter_declarator >>
@@ -922,7 +938,7 @@ named!(function_parameter_declaration_named<&[u8], syntax::FunctionParameterDecl
   ))
 );
 
-named!(function_parameter_declaration_unnamed<&[u8], syntax::FunctionParameterDeclaration>,
+named!(function_parameter_declaration_unnamed<&[u8], syntax::FunctionParameterDeclaration, VerboseError<&[u8]>>,
   bl!(do_parse!(
     ty_qual: opt!(type_qualifier) >>
     ty_spec: type_specifier >>
@@ -930,7 +946,7 @@ named!(function_parameter_declaration_unnamed<&[u8], syntax::FunctionParameterDe
   ))
 );
 
-named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>,
+named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator, VerboseError<&[u8]>>,
   bl!(do_parse!(
     ty: type_specifier >>
     name: identifier >>
@@ -943,14 +959,14 @@ named!(function_parameter_declarator<&[u8], syntax::FunctionParameterDeclarator>
 );
 
 /// Parse a function call.
-named!(pub function_call<&[u8], syntax::Expr>,
+named!(pub function_call<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   alt!(
     function_call_header_no_parameter |
     function_call_header_with_parameters
   )
 );
 
-named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
+named!(function_call_header_no_parameter<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     fi: function_call_header >>
     opt!(void) >>
@@ -960,7 +976,7 @@ named!(function_call_header_no_parameter<&[u8], syntax::Expr>,
   ))
 );
 
-named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
+named!(function_call_header_with_parameters<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     fi: function_call_header >>
     first_arg: assignment_expr >>
@@ -975,7 +991,7 @@ named!(function_call_header_with_parameters<&[u8], syntax::Expr>,
   ))
 );
 
-named!(function_call_header<&[u8], syntax::FunIdentifier>,
+named!(function_call_header<&[u8], syntax::FunIdentifier, VerboseError<&[u8]>>,
   bl!(do_parse!(
     fi: function_identifier >>
     char!('(') >>
@@ -984,7 +1000,7 @@ named!(function_call_header<&[u8], syntax::FunIdentifier>,
 );
 
 /// Parse a function identifier just behind a function list argument.
-named!(pub function_identifier<&[u8], syntax::FunIdentifier>,
+named!(pub function_identifier<&[u8], syntax::FunIdentifier, VerboseError<&[u8]>>,
   alt!(
     do_parse!(
       i: identifier >>
@@ -1001,7 +1017,7 @@ named!(pub function_identifier<&[u8], syntax::FunIdentifier>,
 );
 
 /// Parse the most general expression.
-named!(pub expr<&[u8], syntax::Expr>,
+named!(pub expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     first: assignment_expr >>
     a: alt!(
@@ -1017,7 +1033,7 @@ named!(pub expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an assignment expression.
-named!(pub assignment_expr<&[u8], syntax::Expr>,
+named!(pub assignment_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   alt!(
     bl!(do_parse!(
       e: unary_expr >>
@@ -1031,7 +1047,7 @@ named!(pub assignment_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an assignment operator.
-named!(pub assignment_op<&[u8], syntax::AssignmentOp>,
+named!(pub assignment_op<&[u8], syntax::AssignmentOp, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::AssignmentOp::Equal, char!('=')) |
     value!(syntax::AssignmentOp::Mult, tag!("*=")) |
@@ -1048,7 +1064,7 @@ named!(pub assignment_op<&[u8], syntax::AssignmentOp>,
 );
 
 /// Parse a conditional expression.
-named!(pub cond_expr<&[u8], syntax::Expr>,
+named!(pub cond_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: logical_or_expr >>
     e: alt!(
@@ -1067,7 +1083,7 @@ named!(pub cond_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical OR expression.
-named!(pub logical_or_expr<&[u8], syntax::Expr>,
+named!(pub logical_or_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: logical_xor_expr >>
     n: alt!(
@@ -1083,7 +1099,7 @@ named!(pub logical_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical XOR expression.
-named!(pub logical_xor_expr<&[u8], syntax::Expr>,
+named!(pub logical_xor_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: logical_and_expr >>
     n: alt!(
@@ -1099,7 +1115,7 @@ named!(pub logical_xor_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a logical AND expression.
-named!(pub logical_and_expr<&[u8], syntax::Expr>,
+named!(pub logical_and_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: inclusive_or_expr >>
     n: alt!(
@@ -1115,7 +1131,7 @@ named!(pub logical_and_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise OR expression.
-named!(pub inclusive_or_expr<&[u8], syntax::Expr>,
+named!(pub inclusive_or_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: exclusive_or_expr >>
     n: alt!(
@@ -1131,7 +1147,7 @@ named!(pub inclusive_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise XOR expression.
-named!(pub exclusive_or_expr<&[u8], syntax::Expr>,
+named!(pub exclusive_or_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: and_expr >>
     n: alt!(
@@ -1147,7 +1163,7 @@ named!(pub exclusive_or_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a bitwise AND expression.
-named!(pub and_expr<&[u8], syntax::Expr>,
+named!(pub and_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: equality_expr >>
     n: alt!(
@@ -1163,7 +1179,7 @@ named!(pub and_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an equality expression.
-named!(pub equality_expr<&[u8], syntax::Expr>,
+named!(pub equality_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: rel_expr >>
     n: alt!(
@@ -1182,7 +1198,7 @@ named!(pub equality_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a relational expression.
-named!(pub rel_expr<&[u8], syntax::Expr>,
+named!(pub rel_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: shift_expr >>
     n: alt!(
@@ -1203,7 +1219,7 @@ named!(pub rel_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a shift expression.
-named!(pub shift_expr<&[u8], syntax::Expr>,
+named!(pub shift_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: additive_expr >>
     n: alt!(
@@ -1222,7 +1238,7 @@ named!(pub shift_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse an additive expression.
-named!(pub additive_expr<&[u8], syntax::Expr>,
+named!(pub additive_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: multiplicative_expr >>
     n: alt!(
@@ -1241,7 +1257,7 @@ named!(pub additive_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a multiplicative expression.
-named!(pub multiplicative_expr<&[u8], syntax::Expr>,
+named!(pub multiplicative_expr<&[u8], syntax::Expr, VerboseError<&[u8]>>,
   bl!(do_parse!(
     a: unary_expr >>
     n: alt!(
@@ -1261,7 +1277,7 @@ named!(pub multiplicative_expr<&[u8], syntax::Expr>,
 );
 
 /// Parse a simple statement.
-named!(pub simple_statement<&[u8], syntax::SimpleStatement>,
+named!(pub simple_statement<&[u8], syntax::SimpleStatement, VerboseError<&[u8]>>,
   alt!(
     map!(jump_statement, syntax::SimpleStatement::Jump) |
     map!(iteration_statement, syntax::SimpleStatement::Iteration) |
@@ -1274,7 +1290,7 @@ named!(pub simple_statement<&[u8], syntax::SimpleStatement>,
 );
 
 /// Parse an expression statement.
-named!(pub expr_statement<&[u8], syntax::ExprStatement>,
+named!(pub expr_statement<&[u8], syntax::ExprStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     e: opt!(expr) >>
     char!(';') >>
@@ -1283,7 +1299,7 @@ named!(pub expr_statement<&[u8], syntax::ExprStatement>,
 );
 
 /// Parse a selection statement.
-named!(pub selection_statement<&[u8], syntax::SelectionStatement>,
+named!(pub selection_statement<&[u8], syntax::SelectionStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("if") >>
     char!('(') >>
@@ -1297,7 +1313,7 @@ named!(pub selection_statement<&[u8], syntax::SelectionStatement>,
   ))
 );
 
-named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
+named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     st: statement >>
     r: alt!(
@@ -1314,7 +1330,7 @@ named!(selection_rest_statement<&[u8], syntax::SelectionRestStatement>,
 );
 
 /// Parse a switch statement.
-named!(pub switch_statement<&[u8], syntax::SwitchStatement>,
+named!(pub switch_statement<&[u8], syntax::SwitchStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("switch") >>
     char!('(') >>
@@ -1329,7 +1345,7 @@ named!(pub switch_statement<&[u8], syntax::SwitchStatement>,
 );
 
 /// Parse a case label.
-named!(pub case_label<&[u8], syntax::CaseLabel>,
+named!(pub case_label<&[u8], syntax::CaseLabel, VerboseError<&[u8]>>,
   alt!(
     bl!(do_parse!(
       atag!("case") >>
@@ -1346,7 +1362,7 @@ named!(pub case_label<&[u8], syntax::CaseLabel>,
 );
 
 /// Parse an iteration statement.
-named!(pub iteration_statement<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement<&[u8], syntax::IterationStatement, VerboseError<&[u8]>>,
   alt!(
     iteration_statement_while |
     iteration_statement_do_while |
@@ -1354,7 +1370,7 @@ named!(pub iteration_statement<&[u8], syntax::IterationStatement>,
   )
 );
 
-named!(pub iteration_statement_while<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_while<&[u8], syntax::IterationStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("while") >>
     char!('(') >>
@@ -1365,7 +1381,7 @@ named!(pub iteration_statement_while<&[u8], syntax::IterationStatement>,
   ))
 );
 
-named!(pub iteration_statement_do_while<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_do_while<&[u8], syntax::IterationStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("do") >>
     st: statement >>
@@ -1378,7 +1394,7 @@ named!(pub iteration_statement_do_while<&[u8], syntax::IterationStatement>,
   ))
 );
 
-named!(pub iteration_statement_for<&[u8], syntax::IterationStatement>,
+named!(pub iteration_statement_for<&[u8], syntax::IterationStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("for") >>
     char!('(') >>
@@ -1390,14 +1406,14 @@ named!(pub iteration_statement_for<&[u8], syntax::IterationStatement>,
   ))
 );
 
-named!(iteration_statement_for_init_statement<&[u8], syntax::ForInitStatement>,
+named!(iteration_statement_for_init_statement<&[u8], syntax::ForInitStatement, VerboseError<&[u8]>>,
   alt!(
     map!(expr_statement, syntax::ForInitStatement::Expression) |
     map!(declaration, |d| syntax::ForInitStatement::Declaration(Box::new(d)))
   )
 );
 
-named!(iteration_statement_for_rest_statement<&[u8], syntax::ForRestStatement>,
+named!(iteration_statement_for_rest_statement<&[u8], syntax::ForRestStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     cond: opt!(condition) >>
     char!(';') >>
@@ -1407,7 +1423,7 @@ named!(iteration_statement_for_rest_statement<&[u8], syntax::ForRestStatement>,
 );
 
 /// Parse a jump statement.
-named!(pub jump_statement<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement<&[u8], syntax::JumpStatement, VerboseError<&[u8]>>,
   alt!(
     jump_statement_continue |
     jump_statement_break |
@@ -1416,19 +1432,19 @@ named!(pub jump_statement<&[u8], syntax::JumpStatement>,
   )
 );
 
-named!(pub jump_statement_continue<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_continue<&[u8], syntax::JumpStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(atag!("continue") >> char!(';') >> (syntax::JumpStatement::Continue)))
 );
 
-named!(pub jump_statement_break<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_break<&[u8], syntax::JumpStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(atag!("break") >> char!(';') >> (syntax::JumpStatement::Break)))
 );
 
-named!(pub jump_statement_discard<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_discard<&[u8], syntax::JumpStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(atag!("discard") >> char!(';') >> (syntax::JumpStatement::Discard)))
 );
 
-named!(pub jump_statement_return<&[u8], syntax::JumpStatement>,
+named!(pub jump_statement_return<&[u8], syntax::JumpStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     atag!("return") >>
     e: expr >>
@@ -1438,14 +1454,14 @@ named!(pub jump_statement_return<&[u8], syntax::JumpStatement>,
 );
 
 /// Parse a condition.
-named!(pub condition<&[u8], syntax::Condition>,
+named!(pub condition<&[u8], syntax::Condition, VerboseError<&[u8]>>,
   alt!(
     map!(expr, |e| syntax::Condition::Expr(Box::new(e))) |
     condition_assignment
   )
 );
 
-named!(condition_assignment<&[u8], syntax::Condition>,
+named!(condition_assignment<&[u8], syntax::Condition, VerboseError<&[u8]>>,
   bl!(do_parse!(
     ty: fully_specified_type >>
     id: identifier >>
@@ -1456,7 +1472,7 @@ named!(condition_assignment<&[u8], syntax::Condition>,
 );
 
 /// Parse a statement.
-named!(pub statement<&[u8], syntax::Statement>,
+named!(pub statement<&[u8], syntax::Statement, VerboseError<&[u8]>>,
   alt!(
     map!(compound_statement, |c| syntax::Statement::Compound(Box::new(c))) |
     map!(simple_statement, |s| syntax::Statement::Simple(Box::new(s)))
@@ -1464,7 +1480,7 @@ named!(pub statement<&[u8], syntax::Statement>,
 );
 
 /// Parse a compound statement.
-named!(pub compound_statement<&[u8], syntax::CompoundStatement>,
+named!(pub compound_statement<&[u8], syntax::CompoundStatement, VerboseError<&[u8]>>,
   bl!(do_parse!(
     char!('{') >>
     stl: many0!(statement) >>
@@ -1474,7 +1490,7 @@ named!(pub compound_statement<&[u8], syntax::CompoundStatement>,
 );
 
 /// Parse a function definition.
-named!(pub function_definition<&[u8], syntax::FunctionDefinition>,
+named!(pub function_definition<&[u8], syntax::FunctionDefinition, VerboseError<&[u8]>>,
   bl!(do_parse!(
     prototype: function_prototype >>
     st: compound_statement >>
@@ -1483,7 +1499,7 @@ named!(pub function_definition<&[u8], syntax::FunctionDefinition>,
 );
 
 /// Parse an external declaration.
-named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
+named!(pub external_declaration<&[u8], syntax::ExternalDeclaration, VerboseError<&[u8]>>,
   alt!(
     map!(preprocessor, syntax::ExternalDeclaration::Preprocessor) |
     map!(function_definition, syntax::ExternalDeclaration::FunctionDefinition) |
@@ -1492,12 +1508,12 @@ named!(pub external_declaration<&[u8], syntax::ExternalDeclaration>,
 );
 
 /// Parse a translation unit (entry point).
-named!(pub translation_unit<&[u8], syntax::TranslationUnit>,
+named!(pub translation_unit<&[u8], syntax::TranslationUnit, VerboseError<&[u8]>>,
   map!(many1!(external_declaration), |v| syntax::TranslationUnit(syntax::NonEmpty(v)))
 );
 
 /// Parse a preprocessor command.
-named!(pub preprocessor<&[u8], syntax::Preprocessor>,
+named!(pub preprocessor<&[u8], syntax::Preprocessor, VerboseError<&[u8]>>,
   bl!(alt!(
     map!(pp_define, syntax::Preprocessor::Define) |
     map!(pp_version, syntax::Preprocessor::Version) |
@@ -1506,12 +1522,12 @@ named!(pub preprocessor<&[u8], syntax::Preprocessor>,
 );
 
 /// Parse a #version number.
-named!(pub pp_version_number<&[u8], u16>,
+named!(pub pp_version_number<&[u8], u16, VerboseError<&[u8]>>,
   map!(digit1, |i| i.parse_to().unwrap())
 );
 
 /// Parse a #version profile.
-named!(pub pp_version_profile<&[u8], syntax::PreprocessorVersionProfile>,
+named!(pub pp_version_profile<&[u8], syntax::PreprocessorVersionProfile, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::PreprocessorVersionProfile::Core, tag!("core")) |
     value!(syntax::PreprocessorVersionProfile::Compatibility, tag!("compatibility")) |
@@ -1519,7 +1535,7 @@ named!(pub pp_version_profile<&[u8], syntax::PreprocessorVersionProfile>,
   )
 );
 
-named!(ppws_, eat_separator!(" \t"));
+named!(ppws_<&[u8], &[u8], VerboseError<&[u8]>>, eat_separator!(" \t"));
 
 // Eating separator in preprocessor lines.
 macro_rules! ppws {
@@ -1529,7 +1545,7 @@ macro_rules! ppws {
 }
 
 /// Parse a #define
-named!(pub pp_define<&[u8], syntax::PreprocessorDefine>,
+named!(pub pp_define<&[u8], syntax::PreprocessorDefine, VerboseError<&[u8]>>,
   ppws!(do_parse!(
     char!('#') >>
       tag!("define") >>
@@ -1546,7 +1562,7 @@ named!(pub pp_define<&[u8], syntax::PreprocessorDefine>,
 
 
 /// Parse a #version.
-named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
+named!(pub pp_version<&[u8], syntax::PreprocessorVersion, VerboseError<&[u8]>>,
   ppws!(do_parse!(
     char!('#') >>
     tag!("version") >>
@@ -1562,7 +1578,7 @@ named!(pub pp_version<&[u8], syntax::PreprocessorVersion>,
 );
 
 /// Parse an #extension name.
-named!(pub pp_extension_name<&[u8], syntax::PreprocessorExtensionName>,
+named!(pub pp_extension_name<&[u8], syntax::PreprocessorExtensionName, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::PreprocessorExtensionName::All, tag!("all")) |
     map!(string, syntax::PreprocessorExtensionName::Specific)
@@ -1570,7 +1586,7 @@ named!(pub pp_extension_name<&[u8], syntax::PreprocessorExtensionName>,
 );
 
 /// Parse an #extension behavior.
-named!(pub pp_extension_behavior<&[u8], syntax::PreprocessorExtensionBehavior>,
+named!(pub pp_extension_behavior<&[u8], syntax::PreprocessorExtensionBehavior, VerboseError<&[u8]>>,
   alt!(
     value!(syntax::PreprocessorExtensionBehavior::Require, tag!("require")) |
     value!(syntax::PreprocessorExtensionBehavior::Enable, tag!("enable")) |
@@ -1580,7 +1596,7 @@ named!(pub pp_extension_behavior<&[u8], syntax::PreprocessorExtensionBehavior>,
 );
 
 /// Parse an #extension.
-named!(pub pp_extension<&[u8], syntax::PreprocessorExtension>,
+named!(pub pp_extension<&[u8], syntax::PreprocessorExtension, VerboseError<&[u8]>>,
   ppws!(do_parse!(
     char!('#') >>
     tag!("extension") >>
