@@ -46,7 +46,7 @@ pub fn comments(i: &[u8]) -> ParserResult<&[u8], &[u8]> {
 
 /// In-between token parser (spaces and comments).
 fn blank(i: &[u8]) -> ParserResult<&[u8], ()> {
-  value((), comments)(i)
+  value((), preceded(multispace0, comments))(i)
 }
 
 // Turn a &[u8] into a &str.
@@ -1678,9 +1678,9 @@ mod tests {
     assert_eq!(integral_lit(&b"0x9ABCDEF"[..]), Ok((&b""[..], 0x9ABCDEF)));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), Ok((&b""[..], 0x9abcdef)));
     assert_eq!(integral_lit(&b"0x9abcdef"[..]), Ok((&b""[..], 0x9abcdef)));
-    assert!(integral_lit(&b"\n1"[..]).is_err());
-    assert!(integral_lit(&b"\n0x1"[..]).is_err());
-    assert!(integral_lit(&b"\n01"[..]).is_err());
+    assert!(integral_lit(&b"1"[..]).is_err());
+    assert!(integral_lit(&b"0x1"[..]).is_err());
+    assert!(integral_lit(&b"01"[..]).is_err());
     assert!(integral_lit(&b"0xfffffffff"[..]).is_err());
     assert_eq!(integral_lit(&b"0xffffffff"[..]), Ok((&b""[..], 0xffffffffu32 as i32)));
   }
@@ -1854,7 +1854,7 @@ mod tests {
   fn parse_array_specifier_unsized() {
     assert_eq!(array_specifier(&b"[]"[..]), Ok((&b""[..], syntax::ArraySpecifier::Unsized)));
     assert_eq!(array_specifier(&b"[ ]"[..]), Ok((&b""[..], syntax::ArraySpecifier::Unsized)));
-    assert_eq!(array_specifier(&b"  [\n]"[..]), Ok((&b""[..], syntax::ArraySpecifier::Unsized)));
+    assert_eq!(array_specifier(&b"[\n]"[..]), Ok((&b""[..], syntax::ArraySpecifier::Unsized)));
   }
 
   #[test]
@@ -1922,9 +1922,9 @@ mod tests {
     };
 
     assert_eq!(layout_qualifier(&b"layout (std430)"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b" layout  (std430   )"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b" layout \n\t (  std430  )"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b" layout(std430)"[..]), Ok((&b""[..], expected)));
+    assert_eq!(layout_qualifier(&b"layout  (std430   )"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(layout_qualifier(&b"layout \n\t (  std430  )"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(layout_qualifier(&b"layout(std430)"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -1934,8 +1934,8 @@ mod tests {
     };
 
     assert_eq!(layout_qualifier(&b"layout (shared)"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b"   layout ( shared )"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b"   layout(shared)"[..]), Ok((&b""[..], expected)));
+    assert_eq!(layout_qualifier(&b"layout ( shared )"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(layout_qualifier(&b"layout(shared)"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -1947,7 +1947,7 @@ mod tests {
 
     assert_eq!(layout_qualifier(&b"layout (shared, std140, max_vertices = 3)"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(layout_qualifier(&b"layout(shared,std140,max_vertices=3)"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(layout_qualifier(&b"   layout\n\n\t (    shared , std140, max_vertices= 3)"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(layout_qualifier(&b"layout\n\n\t (    shared , std140, max_vertices= 3)"[..]), Ok((&b""[..], expected.clone())));
   }
 
   #[test]
@@ -1962,7 +1962,7 @@ mod tests {
     let expected = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![storage_qual, layout_qual]) };
 
     assert_eq!(type_qualifier(&b"const layout (shared, std140, max_vertices = 3)"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(type_qualifier(&b"    const layout(shared,std140,max_vertices=3)"[..]), Ok((&b""[..], expected)));
+    assert_eq!(type_qualifier(&b"const layout(shared,std140,max_vertices=3)"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -1977,7 +1977,7 @@ mod tests {
     };
 
     assert_eq!(struct_field_specifier(&b"vec4 foo;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(struct_field_specifier(&b"  vec4     foo ; "[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(struct_field_specifier(&b"vec4     foo ; "[..]), Ok((&b""[..], expected.clone())));
   }
 
   #[test]
@@ -1992,7 +1992,7 @@ mod tests {
     };
 
     assert_eq!(struct_field_specifier(&b"S0238_3 x;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(struct_field_specifier(&b"  S0238_3     x ; "[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(struct_field_specifier(&b"S0238_3     x ;"[..]), Ok((&b""[..], expected.clone())));
   }
 
   #[test]
@@ -2007,7 +2007,7 @@ mod tests {
     };
 
     assert_eq!(struct_field_specifier(&b"vec4 foo, bar, zoo;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(struct_field_specifier(&b"  vec4     foo , bar  , zoo ; "[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(struct_field_specifier(&b"vec4     foo , bar  , zoo ;"[..]), Ok((&b""[..], expected.clone())));
   }
 
   #[test]
@@ -2026,7 +2026,7 @@ mod tests {
     };
 
     assert_eq!(struct_specifier(&b"struct TestStruct { vec4 foo; }"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(struct_specifier(&b"   struct      TestStruct \n \n\n {\n    vec4   foo  ;\n }"[..]), Ok((&b""[..], expected)));
+    assert_eq!(struct_specifier(&b"struct      TestStruct \n \n\n {\n    vec4   foo  ;}"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2078,7 +2078,7 @@ mod tests {
 
     assert_eq!(struct_specifier(&b"struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(struct_specifier(&b"struct _TestStruct_934i{vec4 foo;float bar;uint zoo;bvec3 foo_BAR_zoo3497_34;S0238_3 x;}"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(struct_specifier(&b"   struct _TestStruct_934i\n   {  vec4\nfoo ;   \n\t float\n\t\t  bar  ;   \nuint   zoo;    \n bvec3   foo_BAR_zoo3497_34\n\n\t\n\t\n  ; S0238_3 x;}"[..]), Ok((&b""[..], expected)));
+    assert_eq!(struct_specifier(&b"struct _TestStruct_934i\n   {  vec4\nfoo ;   \n\t float\n\t\t  bar  ;   \nuint   zoo;    \n bvec3   foo_BAR_zoo3497_34\n\n\t\n\t\n  ; S0238_3 x;}"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2283,11 +2283,11 @@ mod tests {
 
   #[test]
   fn parse_primary_expr_parens() {
-    assert_eq!(primary_expr(&b"(0)"[..]), Ok((&b""[..], syntax::Expr::IntConst(0))));
-    assert_eq!(primary_expr(&b"  (  0 ) "[..]), Ok((&b""[..], syntax::Expr::IntConst(0))));
-    assert_eq!(primary_expr(&b"  (  .0 ) "[..]), Ok((&b""[..], syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr(&b"  (  (.0) ) "[..]), Ok((&b""[..], syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr(&b"(true) "[..]), Ok((&b""[..], syntax::Expr::BoolConst(true))));
+    assert_eq!(run_parser(&b"(0)"[..], primary_expr), Ok(syntax::Expr::IntConst(0)));
+    assert_eq!(run_parser(&b"(  0 )"[..], primary_expr), Ok(syntax::Expr::IntConst(0)));
+    assert_eq!(run_parser(&b"(  .0 )"[..], primary_expr), Ok(syntax::Expr::DoubleConst(0.)));
+    assert_eq!(run_parser(&b"(  (.0) )"[..], primary_expr), Ok(syntax::Expr::DoubleConst(0.)));
+    assert_eq!(run_parser(&b"(true) "[..], primary_expr), Ok(syntax::Expr::BoolConst(true)));
   }
 
   #[test]
@@ -2430,9 +2430,9 @@ mod tests {
     let one = Box::new(syntax::Expr::IntConst(1));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one.clone(), one);
 
-    assert_eq!(expr(&b" 1 + 1 ;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"1+1;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"(1 + 1);"[..]), Ok((&b";"[..], expected)));
+    assert_eq!(run_parser(&b"1 + 1;"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"1+1;"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"(1 + 1);"[..], expr), Ok(expected));
   }
 
   #[test]
@@ -2442,9 +2442,10 @@ mod tests {
     let three = Box::new(syntax::Expr::UIntConst(3));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)));
 
-    assert_eq!(expr(&b" 1u + 2u + 3u ;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"1u+2u+3u;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"(1u + (2u + 3u));"[..]), Ok((&b";"[..], expected)));
+    assert_eq!(run_parser(&b"1u + 2u + 3u"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"1u + 2u + 3u   "[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"1u+2u+3u"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"(1u + (2u + 3u))"[..], expr), Ok(expected));
   }
 
   #[test]
@@ -2454,9 +2455,9 @@ mod tests {
     let three = Box::new(syntax::Expr::UIntConst(3));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, two)), three);
 
-    assert_eq!(expr(&b" 1u * 2u + 3u ;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"1u*2u+3u;"[..]), Ok((&b";"[..], expected.clone())));
-    assert_eq!(expr(&b"(1u * 2u) + 3u;"[..]), Ok((&b";"[..], expected)));
+    assert_eq!(run_parser(&b"1u * 2u + 3u ;"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"1u*2u+3u;"[..], expr), Ok(expected.clone()));
+    assert_eq!(run_parser(&b"(1u * 2u) + 3u;"[..], expr), Ok(expected));
   }
 
   #[test]
@@ -2469,7 +2470,7 @@ mod tests {
     let six = Box::new(syntax::Expr::IntConst(6));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Div, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
 
-    assert_eq!(expr(&b"1 * (2 + 3) + 4 / (5 + 6);"[..]), Ok((&b";"[..], expected.clone())));
+    assert_eq!(run_parser(&b"1 * (2 + 3) + 4 / (5 + 6);"[..], expr), Ok(expected.clone()));
   }
 
   #[test]
@@ -2493,16 +2494,16 @@ mod tests {
   fn parse_function_identifier_typename() {
     let expected = syntax::FunIdentifier::Identifier("foo".into());
     assert_eq!(function_identifier(&b"foo("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b"  foo\n\t("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b" \tfoo\n ("[..]), Ok((&b"("[..], expected)));
+    assert_eq!(function_identifier(&b"foo\n\t("[..]), Ok((&b"("[..], expected.clone())));
+    assert_eq!(function_identifier(&b"foo\n ("[..]), Ok((&b"("[..], expected)));
   }
 
   #[test]
   fn parse_function_identifier_cast() {
     let expected = syntax::FunIdentifier::Identifier("vec3".into());
     assert_eq!(function_identifier(&b"vec3("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b"  vec3 ("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b" \t\n vec3\t\n\n \t ("[..]), Ok((&b"("[..], expected)));
+    assert_eq!(function_identifier(&b"vec3 ("[..]), Ok((&b"("[..], expected.clone())));
+    assert_eq!(function_identifier(&b"vec3\t\n\n \t ("[..]), Ok((&b"("[..], expected)));
   }
 
   #[test]
@@ -2510,14 +2511,15 @@ mod tests {
     let expected =
       syntax::FunIdentifier::Expr(
         Box::new(
-          syntax::Expr::Bracket(Box::new(syntax::Expr::Variable("vec3".into())),
-                                syntax::ArraySpecifier::Unsized
+          syntax::Expr::Bracket(
+            Box::new(syntax::Expr::Variable("vec3".into())),
+            syntax::ArraySpecifier::Unsized
           )
         )
       );
 
     assert_eq!(function_identifier(&b"vec3[]("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b"\n\tvec3  [\t\n]("[..]), Ok((&b"("[..], expected)));
+    assert_eq!(function_identifier(&b"vec3  [\t\n]("[..]), Ok((&b"("[..], expected)));
   }
 
   #[test]
@@ -2537,7 +2539,7 @@ mod tests {
       );
 
     assert_eq!(function_identifier(&b"vec3[12]("[..]), Ok((&b"("[..], expected.clone())));
-    assert_eq!(function_identifier(&b"\n\tvec3  [\t 12\n]("[..]), Ok((&b"("[..], expected)));
+    assert_eq!(function_identifier(&b"vec3  [\t 12\n]("[..]), Ok((&b"("[..], expected)));
   }
 
   #[test]
@@ -2602,13 +2604,20 @@ mod tests {
 
   #[test]
   fn parse_expr_statement() {
-    let expected = Some(syntax::Expr::Assignment(Box::new(syntax::Expr::Variable("foo".into())),
-                                                 syntax::AssignmentOp::Equal,
-                                                 Box::new(syntax::Expr::FloatConst(314.))));
+    let expected =
+      Some(
+        syntax::Expr::Assignment(
+          Box::new(
+            syntax::Expr::Variable("foo".into())
+          ),
+          syntax::AssignmentOp::Equal,
+          Box::new(syntax::Expr::FloatConst(314.))
+        )
+      );
 
     assert_eq!(expr_statement(&b"foo = 314.f;"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(expr_statement(&b"foo=314.f;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(expr_statement(&b"\n\t foo\n\t=  \n314.f\n   ;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(expr_statement(&b"foo\n\t=  \n314.f;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2642,7 +2651,7 @@ mod tests {
     let expected = syntax::Declaration::FunctionPrototype(fp);
 
     assert_eq!(declaration(&b"vec3 foo(vec2, out float the_arg);"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(declaration(&b"  vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(declaration(&b"vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(declaration(&b"vec3 foo(vec2,out float the_arg);"[..]), Ok((&b""[..], expected)));
   }
 
@@ -2666,7 +2675,7 @@ mod tests {
 
     assert_eq!(declaration(&b"int foo = 34;"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(declaration(&b"int foo=34;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34  ;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(declaration(&b"int    \t  \nfoo =\t34  ;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2695,7 +2704,7 @@ mod tests {
 
     assert_eq!(declaration(&b"int foo = 34, bar = 12;"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(declaration(&b"int foo=34,bar=12;"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(declaration(&b"\n\t int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(declaration(&b"int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2773,7 +2782,7 @@ mod tests {
       );
 
     assert_eq!(declaration(&b"uniform UniformBlockTest { float a; vec3 b; foo c, d; };"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(declaration(&b"\n\tuniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(declaration(&b"uniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2815,7 +2824,7 @@ mod tests {
       );
 
     assert_eq!(declaration(&b"buffer UniformBlockTest { float a; vec3 b[]; foo c, d; };"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(declaration(&b"\n\tbuffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(declaration(&b"buffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2833,7 +2842,7 @@ mod tests {
     };
 
     assert_eq!(selection_statement(&b"if (foo < 10) { return false; }K"[..]), Ok((&b"K"[..], expected.clone())));
-    assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return false;}K"[..]), Ok((&b"K"[..], expected)));
+    assert_eq!(selection_statement(&b"if \n(foo<10\n) \t{return false;}K"[..]), Ok((&b"K"[..], expected)));
   }
 
   #[test]
@@ -2854,7 +2863,7 @@ mod tests {
     };
 
     assert_eq!(selection_statement(&b"if (foo < 10) { return 0.f; } else { return foo; }"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(selection_statement(&b" if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"[..]), Ok((&b""[..], expected)));
+    assert_eq!(selection_statement(&b"if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2867,7 +2876,7 @@ mod tests {
 
     assert_eq!(switch_statement(&b"switch (foo) {}"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(switch_statement(&b"switch(foo){}"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(switch_statement(&b"  \tswitch\n\n (  foo  \t   \n) { \n\n   }"[..]), Ok((&b""[..], expected)));
+    assert_eq!(switch_statement(&b"switch\n\n (  foo  \t   \n) { \n\n   }"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2914,7 +2923,7 @@ mod tests {
   #[test]
   fn parse_case_label_def() {
     assert_eq!(case_label(&b"default:"[..]), Ok((&b""[..], syntax::CaseLabel::Def)));
-    assert_eq!(case_label(&b"  default   : "[..]), Ok((&b""[..], syntax::CaseLabel::Def)));
+    assert_eq!(case_label(&b"default   :"[..]), Ok((&b""[..], syntax::CaseLabel::Def)));
   }
 
   #[test]
@@ -2922,7 +2931,7 @@ mod tests {
     let expected = syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(3)));
 
     assert_eq!(case_label(&b"case 3:"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(case_label(&b"  case\n\t 3   : "[..]), Ok((&b""[..], expected)));
+    assert_eq!(case_label(&b"case\n\t 3   :"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2939,7 +2948,7 @@ mod tests {
 
     assert_eq!(iteration_statement(&b"while (a >= b) {}"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(iteration_statement(&b"while(a>=b){}"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(iteration_statement(&b"\t\n  while (  a >=\n\tb  )\t  {   \n}"[..]), Ok((&b""[..], expected)));
+    assert_eq!(iteration_statement(&b"while (  a >=\n\tb  )\t  {   \n}"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -2954,44 +2963,63 @@ mod tests {
 
     assert_eq!(iteration_statement(&b"do {} while (a >= b);"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(iteration_statement(&b"do{}while(a>=b);"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(iteration_statement(&b"\tdo \n {\n} while (  a >=\n\tb  )\t  \n;"[..]), Ok((&b""[..], expected)));
+    assert_eq!(iteration_statement(&b"do \n {\n} while (  a >=\n\tb  )\t  \n;"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
   fn parse_iteration_statement_for_empty() {
-    let init = syntax::ForInitStatement::Declaration(
-                 Box::new(
-                   syntax::Declaration::InitDeclaratorList(
-                     syntax::InitDeclaratorList {
-                       head: syntax::SingleDeclaration {
-                               ty: syntax::FullySpecifiedType {
-                                 qualifier: None,
-                                 ty: syntax::TypeSpecifier {
-                                   ty: syntax::TypeSpecifierNonArray::Float,
-                                   array_specifier: None
-                                 }
-                               },
-                               name: Some("i".into()),
-                               array_specifier: None,
-                               initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
-                             },
-                       tail: Vec::new()
-                     }
-                   )
-                 )
-               );
-    let rest = syntax::ForRestStatement {
-      condition: Some(syntax::Condition::Expr(Box::new(syntax::Expr::Binary(syntax::BinaryOp::LTE,
-                                                                            Box::new(syntax::Expr::Variable("i".into())),
-                                                                            Box::new(syntax::Expr::FloatConst(10.)))))),
-      post_expr: Some(Box::new(syntax::Expr::Unary(syntax::UnaryOp::Inc, Box::new(syntax::Expr::Variable("i".into())))))
-    };
+    let init =
+      syntax::ForInitStatement::Declaration(
+        Box::new(
+          syntax::Declaration::InitDeclaratorList(
+            syntax::InitDeclaratorList {
+              head: syntax::SingleDeclaration {
+                ty: syntax::FullySpecifiedType {
+                  qualifier: None,
+                  ty: syntax::TypeSpecifier {
+                    ty: syntax::TypeSpecifierNonArray::Float,
+                    array_specifier: None
+                  }
+                },
+                name: Some("i".into()),
+                array_specifier: None,
+                initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
+              },
+              tail: Vec::new()
+            }
+          )
+        )
+      );
+    let rest =
+      syntax::ForRestStatement {
+        condition:
+          Some(
+            syntax::Condition::Expr(
+              Box::new(
+                syntax::Expr::Binary(
+                  syntax::BinaryOp::LTE,
+                  Box::new(syntax::Expr::Variable("i".into())),
+                  Box::new(syntax::Expr::FloatConst(10.))
+                )
+              )
+            )
+          ),
+        post_expr:
+          Some(
+            Box::new(
+              syntax::Expr::Unary(
+                syntax::UnaryOp::Inc,
+                Box::new(syntax::Expr::Variable("i".into()))
+              )
+            )
+          )
+      };
     let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
     let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
 
     assert_eq!(iteration_statement(&b"for (float i = 0.f; i <= 10.f; ++i) {}"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(iteration_statement(&b"for(float i=0.f;i<=10.f;++i){}"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(iteration_statement(&b"   for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<=  10.f; \n++i\n)\n{\n}"[..]), Ok((&b""[..], expected)));
+    assert_eq!(iteration_statement(&b"for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<=  10.f; \n++i\n)\n{\n}"[..]), Ok((&b""[..], expected)));
   }
 
   #[test]
@@ -3123,7 +3151,7 @@ mod tests {
     };
 
     assert_eq!(function_definition(&b"iimage2DArray foo() { return bar; }"[..]), Ok((&b""[..], expected.clone())));
-    assert_eq!(function_definition(&b"  \niimage2DArray \tfoo\n()\n \n{\n return \nbar\n;\n }"[..]), Ok((&b""[..], expected.clone())));
+    assert_eq!(function_definition(&b"iimage2DArray \tfoo\n()\n \n{\n return \nbar\n;}"[..]), Ok((&b""[..], expected.clone())));
     assert_eq!(function_definition(&b"iimage2DArray foo(){return bar;}"[..]), Ok((&b""[..], expected)));
   }
 
@@ -3216,14 +3244,14 @@ mod tests {
 
   #[test]
   fn parse_pp_version_number() {
-    assert_eq!(pp_version_number(&b"450 "[..]), Ok((&b" "[..], 450)));
+    assert_eq!(pp_version_number(&b"450"[..]), Ok((&b""[..], 450)));
   }
 
   #[test]
   fn parse_pp_version_profile() {
-    assert_eq!(pp_version_profile(&b"core "[..]), Ok((&b" "[..], syntax::PreprocessorVersionProfile::Core)));
-    assert_eq!(pp_version_profile(&b"compatibility "[..]), Ok((&b" "[..], syntax::PreprocessorVersionProfile::Compatibility)));
-    assert_eq!(pp_version_profile(&b"es "[..]), Ok((&b" "[..], syntax::PreprocessorVersionProfile::ES)));
+    assert_eq!(pp_version_profile(&b"core"[..]), Ok((&b""[..], syntax::PreprocessorVersionProfile::Core)));
+    assert_eq!(pp_version_profile(&b"compatibility"[..]), Ok((&b""[..], syntax::PreprocessorVersionProfile::Compatibility)));
+    assert_eq!(pp_version_profile(&b"es"[..]), Ok((&b""[..], syntax::PreprocessorVersionProfile::ES)));
   }
 
   #[test]
@@ -3252,7 +3280,7 @@ mod tests {
   #[test]
   fn parse_pp_version_newline() {
     assert_eq!(
-      preprocessor(&b"\n\t \n#version 450\n"[..]),
+      preprocessor(&b"#version 450\n"[..]),
       Ok((&b""[..],
          syntax::Preprocessor::Version(syntax::PreprocessorVersion {
            version: 450,
@@ -3262,7 +3290,7 @@ mod tests {
     );
 
     assert_eq!(
-      preprocessor(&b"\n\t \n#version 450 core\n"[..]),
+      preprocessor(&b"#version 450 core\n"[..]),
       Ok((&b""[..],
          syntax::Preprocessor::Version(syntax::PreprocessorVersion {
            version: 450,
