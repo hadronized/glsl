@@ -1806,6 +1806,12 @@ mod tests {
   }
 
   #[test]
+  fn parse_bool_lit() {
+    assert_eq!(run_parser(&b"false"[..], bool_lit), Ok(false));
+    assert_eq!(run_parser(&b"true"[..], bool_lit), Ok(true));
+  }
+
+  #[test]
   fn parse_identifier() {
     assert_eq!(identifier(&b"a"[..]), Ok((&b""[..], "a".into())));
     assert_eq!(identifier(&b"ab_cd"[..]), Ok((&b""[..], "ab_cd".into())));
