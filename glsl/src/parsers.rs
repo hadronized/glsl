@@ -11,7 +11,7 @@ use nom::{Err as NomErr, IResult, ParseTo};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
 use nom::character::{is_hex_digit, is_oct_digit};
-use nom::character::complete::{char, digit1, multispace0, newline, space0};
+use nom::character::complete::{anychar, char, digit1, multispace0, newline, space0};
 use nom::combinator::{map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
 use nom::multi::{many0, many0_count,  many1, separated_list};
@@ -26,6 +26,14 @@ pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
 // from the input. Especially useful as “fallback” in an alternative parser.
 fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T> where T: 'a + Clone {
   move |i| Ok((i, t.clone()))
+}
+
+// Parse a keyword. A keyword is just a regular string that must be followed by punctuation.
+fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
+  terminated(
+    tag(kwd),
+    not(verify(peek(anychar), |&c| identifier_pred(c)))
+  )
 }
 
 /// Parse a single comment.
@@ -80,13 +88,7 @@ pub fn type_name(i: &str) -> ParserResult<syntax::TypeName> {
 
 /// Parse a non-empty list of type names, delimited by comma (,).
 fn nonempty_type_names(i: &str) -> ParserResult<Vec<syntax::TypeName>> {
-  let (i, (first, mut names)) = tuple((
-    type_name,
-    many0(preceded(char(','), preceded(blank, type_name)))
-  ))(i)?;
-
-  names.insert(0, first);
-  Ok((i, names))
+  separated_list(terminated(char(','), blank), terminated(type_name, blank))(i)
 }
 
 /// Parse a type specifier non struct.
@@ -216,7 +218,7 @@ pub fn type_specifier_non_struct(i: &str) -> ParserResult<syntax::TypeSpecifierN
     _ => {
       let vek = VerboseErrorKind::Context("unknown type specifier non array");
       let ve = VerboseError { errors: vec![(i1, vek)] };
-      Err(NomErr::Failure(ve))
+      Err(NomErr::Error(ve))
     }
   }
 }
@@ -233,14 +235,17 @@ pub fn type_specifier_non_array(i: &str) -> ParserResult<syntax::TypeSpecifierNo
 /// Parse a type specifier.
 pub fn type_specifier(i: &str) -> ParserResult<syntax::TypeSpecifier> {
   map(
-    pair(type_specifier_non_array, opt(preceded(blank, array_specifier))),
+    pair(
+      type_specifier_non_array,
+      opt(preceded(blank, array_specifier))
+    ),
     |(ty, array_specifier)| syntax::TypeSpecifier { ty, array_specifier }
   )(i)
 }
 
 /// Parse the void type.
 pub fn void(i: &str) -> ParserResult<()> {
-  value((), tag("void"))(i)
+  value((), keyword("void"))(i)
 }
 
 /// Parse a digit that precludes a leading 0.
@@ -338,7 +343,7 @@ pub fn integral_lit(i: &str) -> ParserResult<i32> {
       }
     }
 
-    Err(NomErr::Failure(x)) | Err(NomErr::Error(x)) => Err(NomErr::Failure(x)),
+    Err(NomErr::Failure(x)) | Err(NomErr::Error(x)) => Err(NomErr::Error(x)),
 
     Err(NomErr::Incomplete(n)) => Err(NomErr::Incomplete(n))
   }
@@ -359,12 +364,12 @@ pub fn unsigned_lit(i: &str) -> ParserResult<u32> {
 
 /// Parse a floating point suffix.
 fn float_suffix(i: &str) -> ParserResult<&str> {
-  alt((tag("f"), tag("F")))(i)
+  alt((keyword("f"), keyword("F")))(i)
 }
 
 /// Parse a double point suffix.
 fn double_suffix(i: &str) -> ParserResult<&str> {
-  alt((tag("lf"), tag("LF")))(i)
+  alt((keyword("lf"), keyword("LF")))(i)
 }
 
 /// Parse the exponent part of a floating point literal.
@@ -440,8 +445,8 @@ pub fn double_lit(i: &str) -> ParserResult<f64> {
 /// Parse a constant boolean.
 pub fn bool_lit(i: &str) -> ParserResult<bool> {
   alt((
-    value(true, tag("true")),
-    value(false, tag("false"))
+    value(true, keyword("true")),
+    value(false, keyword("false"))
   ))(i)
 }
 
@@ -469,9 +474,9 @@ pub fn arrayed_identifier(i: &str) -> ParserResult<syntax::ArrayedIdentifier> {
 /// Parse a struct field declaration.
 pub fn struct_field_specifier(i: &str) -> ParserResult<syntax::StructFieldSpecifier> {
   let (i, (qualifier, ty, identifiers, _)) = tuple((
-    opt(type_qualifier),
-    preceded(blank, type_specifier),
-    separated_list(delimited(blank, char(','), blank), arrayed_identifier),
+    opt(terminated(type_qualifier, blank)),
+    terminated(type_specifier, blank),
+    separated_list(terminated(char(','), blank), terminated(arrayed_identifier, blank)),
     char(';')
   ))(i)?;
 
@@ -487,11 +492,11 @@ pub fn struct_field_specifier(i: &str) -> ParserResult<syntax::StructFieldSpecif
 /// Parse a struct.
 pub fn struct_specifier(i: &str) -> ParserResult<syntax::StructSpecifier> {
   preceded(
-    tag("struct"),
+    terminated(keyword("struct"), blank),
     map(
       pair(
-        opt(type_name),
-        delimited(char('{'), many1(struct_field_specifier), char('}'))
+        opt(terminated(type_name, blank)),
+        delimited(terminated(char('{'), blank), many1(terminated(struct_field_specifier, blank)), char('}'))
       ),
       |(name, fields)| syntax::StructSpecifier { name, fields: syntax::NonEmpty(fields) }
     )
@@ -502,11 +507,11 @@ pub fn struct_specifier(i: &str) -> ParserResult<syntax::StructSpecifier> {
 pub fn storage_qualifier_subroutine_list(i: &str) -> ParserResult<syntax::StorageQualifier> {
   map(
     preceded(
-      tag("subroutine"),
+      terminated(keyword("subroutine"), blank),
       delimited(
-        preceded(blank, char('(')),
-        preceded(blank, nonempty_type_names),
-        preceded(blank, char(')'))
+        terminated(char('('), blank),
+        terminated(nonempty_type_names, blank),
+        char(')')
       )
     ),
     syntax::StorageQualifier::Subroutine
@@ -517,28 +522,28 @@ pub fn storage_qualifier_subroutine_list(i: &str) -> ParserResult<syntax::Storag
 pub fn storage_qualifier_subroutine(i: &str) -> ParserResult<syntax::StorageQualifier> {
   alt((
     storage_qualifier_subroutine_list,
-    value(syntax::StorageQualifier::Subroutine(Vec::new()), tag("subroutine"))
+    value(syntax::StorageQualifier::Subroutine(Vec::new()), keyword("subroutine"))
   ))(i)
 }
 
 /// Parse a storage qualifier.
 pub fn storage_qualifier(i: &str) -> ParserResult<syntax::StorageQualifier> {
   alt((
-    value(syntax::StorageQualifier::Const, tag("const")),
-    value(syntax::StorageQualifier::InOut, tag("inout")),
-    value(syntax::StorageQualifier::In, tag("in")),
-    value(syntax::StorageQualifier::Out, tag("out")),
-    value(syntax::StorageQualifier::Centroid, tag("centroid")),
-    value(syntax::StorageQualifier::Patch, tag("patch")),
-    value(syntax::StorageQualifier::Sample, tag("sample")),
-    value(syntax::StorageQualifier::Uniform, tag("uniform")),
-    value(syntax::StorageQualifier::Buffer, tag("buffer")),
-    value(syntax::StorageQualifier::Shared, tag("shared")),
-    value(syntax::StorageQualifier::Coherent, tag("coherent")),
-    value(syntax::StorageQualifier::Volatile, tag("volatile")),
-    value(syntax::StorageQualifier::Restrict, tag("restrict")),
-    value(syntax::StorageQualifier::ReadOnly, tag("readonly")),
-    value(syntax::StorageQualifier::WriteOnly, tag("writeonly")),
+    value(syntax::StorageQualifier::Const, keyword("const")),
+    value(syntax::StorageQualifier::InOut, keyword("inout")),
+    value(syntax::StorageQualifier::In, keyword("in")),
+    value(syntax::StorageQualifier::Out, keyword("out")),
+    value(syntax::StorageQualifier::Centroid, keyword("centroid")),
+    value(syntax::StorageQualifier::Patch, keyword("patch")),
+    value(syntax::StorageQualifier::Sample, keyword("sample")),
+    value(syntax::StorageQualifier::Uniform, keyword("uniform")),
+    value(syntax::StorageQualifier::Buffer, keyword("buffer")),
+    value(syntax::StorageQualifier::Shared, keyword("shared")),
+    value(syntax::StorageQualifier::Coherent, keyword("coherent")),
+    value(syntax::StorageQualifier::Volatile, keyword("volatile")),
+    value(syntax::StorageQualifier::Restrict, keyword("restrict")),
+    value(syntax::StorageQualifier::ReadOnly, keyword("readonly")),
+    value(syntax::StorageQualifier::WriteOnly, keyword("writeonly")),
     storage_qualifier_subroutine
   ))(i)
 }
@@ -546,27 +551,31 @@ pub fn storage_qualifier(i: &str) -> ParserResult<syntax::StorageQualifier> {
 /// Parse a layout qualifier.
 pub fn layout_qualifier(i: &str) -> ParserResult<syntax::LayoutQualifier> {
   preceded(
-    tag("layout"),
+    terminated(keyword("layout"), blank),
     delimited(
-      preceded(blank, char('(')),
-      preceded(blank, layout_qualifier_inner),
-      preceded(blank, char(')'))
+      terminated(char('('), blank),
+      layout_qualifier_inner,
+      char(')')
     )
   )(i)
 }
 
 fn layout_qualifier_inner(i: &str) -> ParserResult<syntax::LayoutQualifier> {
   map(
-    separated_list(delimited(blank, char(','), blank), layout_qualifier_spec),
+    separated_list(terminated(char(','), blank), terminated(layout_qualifier_spec, blank)),
     |ids| syntax::LayoutQualifier { ids: syntax::NonEmpty(ids) }
   )(i)
 }
 
 fn layout_qualifier_spec(i: &str) -> ParserResult<syntax::LayoutQualifierSpec> {
   alt((
-    value(syntax::LayoutQualifierSpec::Shared, tag("shared")),
+    value(syntax::LayoutQualifierSpec::Shared, keyword("shared")),
     map(
-      separated_pair(identifier, char('='), cond_expr),
+      separated_pair(
+        terminated(identifier, blank),
+        terminated(char('='), blank),
+        cond_expr
+      ),
       |(i, e)| syntax::LayoutQualifierSpec::Identifier(i, Some(Box::new(e)))
     ),
     map(identifier, |i| syntax::LayoutQualifierSpec::Identifier(i, None))
@@ -576,29 +585,29 @@ fn layout_qualifier_spec(i: &str) -> ParserResult<syntax::LayoutQualifierSpec> {
 /// Parse a precision qualifier.
 pub fn precision_qualifier(i: &str) -> ParserResult<syntax::PrecisionQualifier> {
   alt((
-    value(syntax::PrecisionQualifier::High, tag("highp")),
-    value(syntax::PrecisionQualifier::Medium, tag("mediump")),
-    value(syntax::PrecisionQualifier::Low, tag("lowp")),
+    value(syntax::PrecisionQualifier::High, keyword("highp")),
+    value(syntax::PrecisionQualifier::Medium, keyword("mediump")),
+    value(syntax::PrecisionQualifier::Low, keyword("lowp")),
   ))(i)
 }
 
 /// Parse an interpolation qualifier.
 pub fn interpolation_qualifier(i: &str) -> ParserResult<syntax::InterpolationQualifier> {
   alt((
-    value(syntax::InterpolationQualifier::Smooth, tag("smooth")),
-    value(syntax::InterpolationQualifier::Flat, tag("flat")),
-    value(syntax::InterpolationQualifier::NoPerspective, tag("noperspective")),
+    value(syntax::InterpolationQualifier::Smooth, keyword("smooth")),
+    value(syntax::InterpolationQualifier::Flat, keyword("flat")),
+    value(syntax::InterpolationQualifier::NoPerspective, keyword("noperspective")),
   ))(i)
 }
 
 /// Parse an invariant qualifier.
 pub fn invariant_qualifier(i: &str) -> ParserResult<()> {
-  value((), tag("invariant"))(i)
+  value((), keyword("invariant"))(i)
 }
 
 /// Parse a precise qualifier.
 pub fn precise_qualifier(i: &str) -> ParserResult<()> {
-  value((), tag("precise"))(i)
+  value((), keyword("precise"))(i)
 }
 
 /// Parse a type qualifier.
@@ -637,7 +646,7 @@ pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
   alt((
     value(syntax::ArraySpecifier::Unsized, delimited(char('['), blank, char(']'))),
     map(
-      delimited(char('['), cond_expr, char(']')),
+      delimited(terminated(char('['), blank), cond_expr, preceded(blank, char(']'))),
       |e| syntax::ArraySpecifier::ExplicitlySized(Box::new(e))
     )
   ))(i)
@@ -670,10 +679,10 @@ pub fn postfix_expr(i: &str) -> ParserResult<syntax::Expr> {
 // find any more postfix construct.
 fn postfix_part(i: &str, e: syntax::Expr) -> ParserResult<syntax::Expr> {
   let r = alt((
-    map(array_specifier, |a| syntax::Expr::Bracket(Box::new(e.clone()), a)),
-    map(dot_field_selection, |i| syntax::Expr::Dot(Box::new(e.clone()), i)),
-    value(syntax::Expr::PostInc(Box::new(e.clone())), tag("++")),
-    value(syntax::Expr::PostDec(Box::new(e.clone())), tag("--"))
+    map(preceded(blank, array_specifier), |a| syntax::Expr::Bracket(Box::new(e.clone()), a)),
+    map(preceded(blank, dot_field_selection), |i| syntax::Expr::Dot(Box::new(e.clone()), i)),
+    value(syntax::Expr::PostInc(Box::new(e.clone())), preceded(blank, tag("++"))),
+    value(syntax::Expr::PostDec(Box::new(e.clone())), preceded(blank, tag("--")))
   ))(i);
 
   match r {
@@ -705,14 +714,14 @@ pub fn parens_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a dot field selection identifier.
 pub fn dot_field_selection(i: &str) -> ParserResult<syntax::Identifier> {
-  preceded(char('.'), identifier)(i)
+  preceded(terminated(char('.'), blank), identifier)(i)
 }
 
 /// Parse a declaration.
 pub fn declaration(i: &str) -> ParserResult<syntax::Declaration> {
   alt((
-    map(terminated(function_prototype, char(';')), syntax::Declaration::FunctionPrototype),
-    map(terminated(init_declarator_list, char(';')), syntax::Declaration::InitDeclaratorList),
+    map(terminated(function_prototype, terminated(blank, char(';'))), syntax::Declaration::FunctionPrototype),
+    map(terminated(init_declarator_list, terminated(blank, char(';'))), syntax::Declaration::InitDeclaratorList),
     precision_declaration,
     block_declaration,
     global_declaration
@@ -722,12 +731,15 @@ pub fn declaration(i: &str) -> ParserResult<syntax::Declaration> {
 /// Parse a precision declaration.
 pub fn precision_declaration(i: &str) -> ParserResult<syntax::Declaration> {
   delimited(
-    tag("precision"),
+    terminated(keyword("precision"), blank),
     map(
-      pair(precision_qualifier, type_specifier),
+      pair(
+        terminated(precision_qualifier, blank),
+        terminated(type_specifier, blank)
+        ),
       |(qual, ty)| syntax::Declaration::Precision(qual, ty)
     ),
-    preceded(blank, char(';'))
+    char(';')
   )(i)
 }
 
@@ -735,12 +747,12 @@ pub fn precision_declaration(i: &str) -> ParserResult<syntax::Declaration> {
 pub fn block_declaration(i: &str) -> ParserResult<syntax::Declaration> {
   map(
     tuple((
-      type_qualifier,
-      preceded(blank, identifier),
+      terminated(type_qualifier, blank),
+      terminated(identifier, blank),
       delimited(
-        preceded(blank, char('{')),
-        many1(preceded(blank, struct_field_specifier)),
-        preceded(blank, char('}'))
+        terminated(char('{'), blank),
+        many1(terminated(struct_field_specifier, blank)),
+        terminated(char('}'), blank)
       ),
       alt((
         value(None, preceded(blank, char(';'))),
@@ -785,9 +797,9 @@ pub fn init_declarator_list(i: &str) -> ParserResult<syntax::InitDeclaratorList>
       many0(
         map(
           tuple((
-              preceded(terminated(char(','), blank), terminated(identifier, blank)),
-              opt(terminated(array_specifier, blank)),
-              opt(delimited(char('='), initializer, blank))
+              preceded(delimited(blank, char(','), blank), identifier),
+              opt(preceded(blank, array_specifier)),
+              opt(preceded(preceded(blank, char('=')), initializer))
           )),
           |(name, arr_spec, init)| syntax::SingleDeclarationNoType {
             ident: syntax::ArrayedIdentifier::new(name, arr_spec),
@@ -808,9 +820,9 @@ pub fn single_declaration(i: &str) -> ParserResult<syntax::SingleDeclaration> {
   alt((
     map(
       tuple((
-        terminated(identifier, blank),
-        opt(terminated(array_specifier, blank)),
-        opt(delimited(terminated(char('='), blank), initializer, blank))
+        preceded(blank, identifier),
+        opt(preceded(blank, array_specifier)),
+        opt(preceded(delimited(blank, char('='), blank), initializer))
       )),
       move |(name, array_specifier, initializer)| syntax::SingleDeclaration {
         ty: ty_.clone(),
@@ -902,7 +914,7 @@ fn function_parameter_declaration_unnamed(i: &str) -> ParserResult<syntax::Funct
   map(
     pair(
       opt(terminated(type_qualifier, blank)),
-     type_specifier
+      type_specifier
     ),
     |(ty_qual, ty_spec)| syntax::FunctionParameterDeclaration::Unnamed(ty_qual, ty_spec)
   )(i)
@@ -941,7 +953,10 @@ fn function_call_header_with_parameters(i: &str) -> ParserResult<syntax::Expr> {
   map(
     pair(
       terminated(function_call_header, blank),
-      separated_list(terminated(char(','), blank), terminated(assignment_expr, blank))
+      terminated(
+        separated_list(terminated(char(','), blank), terminated(assignment_expr, blank)),
+        char(')')
+      )
     ),
     |(fi, args)| syntax::Expr::FunCall(fi, args)
   )(i)
@@ -1013,13 +1028,13 @@ pub fn assignment_op(i: &str) -> ParserResult<syntax::AssignmentOp> {
 
 /// Parse a conditional expression.
 pub fn cond_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(logical_or_expr, blank)(i)?;
+  let (i, a) = logical_or_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       tuple((
-        terminated(char('?'), blank),
+        delimited(blank, char('?'), blank),
         terminated(expr, blank),
         terminated(char(':'), blank),
         assignment_expr
@@ -1032,12 +1047,12 @@ pub fn cond_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a logical OR expression.
 pub fn logical_or_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(logical_xor_expr, blank)(i)?;
+  let (i, a) = logical_xor_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(tag("||"), blank), logical_or_expr),
+      preceded(delimited(blank, tag("||"), blank), logical_or_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1046,12 +1061,12 @@ pub fn logical_or_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a logical XOR expression.
 pub fn logical_xor_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(logical_and_expr, blank)(i)?;
+  let (i, a) = logical_and_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(tag("^^"), blank), logical_xor_expr),
+      preceded(delimited(blank, tag("^^"), blank), logical_xor_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1060,12 +1075,12 @@ pub fn logical_xor_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a logical AND expression.
 pub fn logical_and_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(inclusive_or_expr, blank)(i)?;
+  let (i, a) = inclusive_or_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(tag("&&"), blank), logical_and_expr),
+      preceded(delimited(blank, tag("&&"), blank), logical_and_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1074,12 +1089,12 @@ pub fn logical_and_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a bitwise OR expression.
 pub fn inclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(exclusive_or_expr, blank)(i)?;
+  let (i, a) = exclusive_or_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(char('|'), blank), inclusive_or_expr),
+      preceded(delimited(blank, char('|'), blank), inclusive_or_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1088,12 +1103,12 @@ pub fn inclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a bitwise XOR expression.
 pub fn exclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(and_expr, blank)(i)?;
+  let (i, a) = and_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(char('^'), blank), exclusive_or_expr),
+      preceded(delimited(blank, char('^'), blank), exclusive_or_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1102,12 +1117,12 @@ pub fn exclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a bitwise AND expression.
 pub fn and_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(equality_expr, blank)(i)?;
+  let (i, a) = equality_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
-      preceded(terminated(char('&'), blank), and_expr),
+      preceded(delimited(blank, char('&'), blank), and_expr),
       move |b| syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a_.clone()), Box::new(b))
     ),
     cnst(a)
@@ -1116,15 +1131,16 @@ pub fn and_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse an equality expression.
 pub fn equality_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(rel_expr, blank)(i)?;
+  let (i, a) = rel_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       pair(
-        terminated(
+        delimited(
+          blank,
           alt((
-            value(syntax::BinaryOp::Equal, tag("==")),
+            value(syntax::BinaryOp::Equal,    tag("==")),
             value(syntax::BinaryOp::NonEqual, tag("!="))
           )),
           blank
@@ -1139,18 +1155,19 @@ pub fn equality_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a relational expression.
 pub fn rel_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(shift_expr, blank)(i)?;
+  let (i, a) = shift_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       pair(
-        terminated(
+        delimited(
+          blank,
           alt((
             value(syntax::BinaryOp::LTE, tag("<=")),
             value(syntax::BinaryOp::GTE, tag(">=")),
-            value(syntax::BinaryOp::LT, char('<')),
-            value(syntax::BinaryOp::GT, char('>')),
+            value(syntax::BinaryOp::LT,  char('<')),
+            value(syntax::BinaryOp::GT,  char('>')),
           )),
           blank
         ),
@@ -1164,13 +1181,14 @@ pub fn rel_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a shift expression.
 pub fn shift_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(additive_expr, blank)(i)?;
+  let (i, a) = additive_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       pair(
-        terminated(
+        delimited(
+          blank,
           alt((
             value(syntax::BinaryOp::LShift, tag("<<")),
             value(syntax::BinaryOp::RShift, tag(">>"))
@@ -1187,13 +1205,14 @@ pub fn shift_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse an additive expression.
 pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(multiplicative_expr, blank)(i)?;
+  let (i, a) = multiplicative_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       pair(
-        terminated(
+        delimited(
+          blank,
           alt((
             value(syntax::BinaryOp::Add, char('+')),
             value(syntax::BinaryOp::Sub, char('-'))
@@ -1210,17 +1229,18 @@ pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a multiplicative expression.
 pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, a) = terminated(unary_expr, blank)(i)?;
+  let (i, a) = unary_expr(i)?;
   let a_ = a.clone();
 
   alt((
     map(
       pair(
-        terminated(
+        delimited(
+          blank,
           alt((
             value(syntax::BinaryOp::Mult, char('*')),
-            value(syntax::BinaryOp::Div, char('/')),
-            value(syntax::BinaryOp::Mod, char('%'))
+            value(syntax::BinaryOp::Div,  char('/')),
+            value(syntax::BinaryOp::Mod,  char('%'))
           )),
           blank
         ),
@@ -1254,7 +1274,7 @@ pub fn expr_statement(i: &str) -> ParserResult<syntax::ExprStatement> {
 pub fn selection_statement(i: &str) -> ParserResult<syntax::SelectionStatement> {
   map(
     tuple((
-        terminated(tag("if"), blank),
+        terminated(keyword("if"), blank),
         terminated(char('('), blank),
         terminated(expr, blank),
         terminated(char(')'), blank),
@@ -1274,7 +1294,7 @@ fn selection_rest_statement(i: &str) -> ParserResult<syntax::SelectionRestStatem
   alt((
     map(
       preceded(
-        terminated(tag("else"), blank),
+        delimited(blank, keyword("else"), blank),
         statement
       ),
       move |rest| syntax::SelectionRestStatement::Else(Box::new(st_.clone()), Box::new(rest))
@@ -1287,7 +1307,7 @@ fn selection_rest_statement(i: &str) -> ParserResult<syntax::SelectionRestStatem
 pub fn switch_statement(i: &str) -> ParserResult<syntax::SwitchStatement> {
   map(
     tuple((
-      terminated(tag("switch"), blank),
+      terminated(keyword("switch"), blank),
       terminated(char('('), blank),
       terminated(expr, blank),
       terminated(char(')'), blank),
@@ -1304,7 +1324,7 @@ pub fn case_label(i: &str) -> ParserResult<syntax::CaseLabel> {
   alt((
     map(
       delimited(
-        terminated(tag("case"), blank),
+        terminated(keyword("case"), blank),
         terminated(expr, blank),
         char(':')
       ),
@@ -1312,7 +1332,7 @@ pub fn case_label(i: &str) -> ParserResult<syntax::CaseLabel> {
     ),
     value(
       syntax::CaseLabel::Def,
-      preceded(terminated(tag("default"), blank), char(':'))
+      preceded(terminated(keyword("default"), blank), char(':'))
     )
   ))(i)
 }
@@ -1330,7 +1350,7 @@ pub fn iteration_statement(i: &str) -> ParserResult<syntax::IterationStatement> 
 pub fn iteration_statement_while(i: &str) -> ParserResult<syntax::IterationStatement> {
   map(
     tuple((
-      terminated(tag("while"), blank),
+      terminated(keyword("while"), blank),
       terminated(char('('), blank),
       terminated(condition, blank),
       terminated(char(')'), blank),
@@ -1344,9 +1364,9 @@ pub fn iteration_statement_while(i: &str) -> ParserResult<syntax::IterationState
 pub fn iteration_statement_do_while(i: &str) -> ParserResult<syntax::IterationStatement> {
   map(
     tuple((
-      terminated(tag("do"), blank),
+      terminated(keyword("do"), blank),
       terminated(statement, blank),
-      terminated(tag("while"), blank),
+      terminated(keyword("while"), blank),
       terminated(char('('), blank),
       terminated(expr, blank),
       terminated(char(')'), blank),
@@ -1360,7 +1380,7 @@ pub fn iteration_statement_do_while(i: &str) -> ParserResult<syntax::IterationSt
 pub fn iteration_statement_for(i: &str) -> ParserResult<syntax::IterationStatement> {
   map(
     tuple((
-      terminated(tag("for"), blank),
+      terminated(keyword("for"), blank),
       terminated(char('('), blank),
       terminated(iteration_statement_for_init_statement, blank),
       terminated(iteration_statement_for_rest_statement, blank),
@@ -1403,7 +1423,7 @@ pub fn jump_statement(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Continue,
-    terminated(tag("continue"), terminated(blank, char(';')))
+    terminated(keyword("continue"), terminated(blank, char(';')))
   )(i)
 }
 
@@ -1411,7 +1431,7 @@ pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Break,
-    terminated(tag("break"), terminated(blank, char(';')))
+    terminated(keyword("break"), terminated(blank, char(';')))
   )(i)
 }
 
@@ -1419,7 +1439,7 @@ pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_discard(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Discard,
-    terminated(tag("discard"), terminated(blank, char(';')))
+    terminated(keyword("discard"), terminated(blank, char(';')))
   )(i)
 }
 
@@ -1427,7 +1447,7 @@ pub fn jump_statement_discard(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_return(i: &str) -> ParserResult<syntax::JumpStatement> {
   map(
     delimited(
-      terminated(tag("return"), blank),
+      terminated(keyword("return"), blank),
       terminated(expr, blank),
       char(';')
     ),
@@ -1520,9 +1540,9 @@ pub fn pp_version_number(i: &str) -> ParserResult<u16> {
 /// Parse a #version profile.
 pub fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionProfile> {
   alt((
-    value(syntax::PreprocessorVersionProfile::Core, tag("core")),
-    value(syntax::PreprocessorVersionProfile::Compatibility, tag("compatibility")),
-    value(syntax::PreprocessorVersionProfile::ES, tag("es")),
+    value(syntax::PreprocessorVersionProfile::Core, keyword("core")),
+    value(syntax::PreprocessorVersionProfile::Compatibility, keyword("compatibility")),
+    value(syntax::PreprocessorVersionProfile::ES, keyword("es")),
   ))(i)
 }
 
@@ -1531,7 +1551,7 @@ pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
   map(
     tuple((
       terminated(char('#'), space0),
-      terminated(tag("define"), space0),
+      terminated(keyword("define"), space0),
       terminated(identifier, space0),
       terminated(primary_expr, space0),
       newline
@@ -1545,7 +1565,7 @@ pub fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
   map(
     tuple((
       terminated(char('#'), space0),
-      terminated(tag("version"), space0),
+      terminated(keyword("version"), space0),
       terminated(pp_version_number, space0),
       opt(terminated(pp_version_profile, space0)),
       newline
@@ -1557,7 +1577,7 @@ pub fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
 /// Parse an #extension name.
 pub fn pp_extension_name(i: &str) -> ParserResult<syntax::PreprocessorExtensionName> {
   alt((
-    value(syntax::PreprocessorExtensionName::All, tag("all")),
+    value(syntax::PreprocessorExtensionName::All, keyword("all")),
     map(string, syntax::PreprocessorExtensionName::Specific)
   ))(i)
 }
@@ -1565,10 +1585,10 @@ pub fn pp_extension_name(i: &str) -> ParserResult<syntax::PreprocessorExtensionN
 /// Parse an #extension behavior.
 pub fn pp_extension_behavior(i: &str) -> ParserResult<syntax::PreprocessorExtensionBehavior> {
   alt((
-    value(syntax::PreprocessorExtensionBehavior::Require, tag("require")),
-    value(syntax::PreprocessorExtensionBehavior::Enable, tag("enable")),
-    value(syntax::PreprocessorExtensionBehavior::Warn, tag("warn")),
-    value(syntax::PreprocessorExtensionBehavior::Disable, tag("disable")),
+    value(syntax::PreprocessorExtensionBehavior::Require, keyword("require")),
+    value(syntax::PreprocessorExtensionBehavior::Enable, keyword("enable")),
+    value(syntax::PreprocessorExtensionBehavior::Warn, keyword("warn")),
+    value(syntax::PreprocessorExtensionBehavior::Disable, keyword("disable")),
   ))(i)
 }
 
@@ -1577,7 +1597,7 @@ pub fn pp_extension(i: &str) -> ParserResult<syntax::PreprocessorExtension> {
   map(
     tuple((
       terminated(char('#'), space0),
-      terminated(tag("extension"), space0),
+      terminated(keyword("extension"), space0),
       terminated(pp_extension_name, space0),
       opt(preceded(terminated(char(':'), space0), terminated(pp_extension_behavior, space0))),
       newline
@@ -1589,23 +1609,6 @@ pub fn pp_extension(i: &str) -> ParserResult<syntax::PreprocessorExtension> {
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  use crate::parser;
-
-  // Run a parser and print errors if any and then panic.
-  fn run_parser<P, T>(
-    source: &str,
-    parser: P
-  ) -> Result<T, parser::ParseError>
-  where P: FnOnce(&str) -> ParserResult<T> {
-    match parser::run_parser(source, parser) {
-      Ok(x) => Ok(x),
-      Err(e) => {
-        eprintln!("{}", e.info);
-        Err(e)
-      }
-    }
-  }
 
   #[test]
   fn parse_uniline_comment() {
@@ -1667,10 +1670,6 @@ mod tests {
     assert_eq!(integral_lit("0x9ABCDEF"), Ok(("", 0x9ABCDEF)));
     assert_eq!(integral_lit("0x9abcdef"), Ok(("", 0x9abcdef)));
     assert_eq!(integral_lit("0x9abcdef"), Ok(("", 0x9abcdef)));
-    assert!(integral_lit("1").is_err());
-    assert!(integral_lit("0x1").is_err());
-    assert!(integral_lit("01").is_err());
-    assert!(integral_lit("0xfffffffff").is_err());
     assert_eq!(integral_lit("0xffffffff"), Ok(("", 0xffffffffu32 as i32)));
   }
 
@@ -1796,8 +1795,8 @@ mod tests {
 
   #[test]
   fn parse_bool_lit() {
-    assert_eq!(run_parser("false", bool_lit), Ok(false));
-    assert_eq!(run_parser("true", bool_lit), Ok(true));
+    assert_eq!(bool_lit("false"), Ok(("", false)));
+    assert_eq!(bool_lit("true"), Ok(("", true)));
   }
 
   #[test]
@@ -1966,7 +1965,7 @@ mod tests {
     };
 
     assert_eq!(struct_field_specifier("vec4 foo;"), Ok(("", expected.clone())));
-    assert_eq!(struct_field_specifier("vec4     foo ; "), Ok(("", expected.clone())));
+    assert_eq!(struct_field_specifier("vec4     foo ; "), Ok((" ", expected.clone())));
   }
 
   #[test]
@@ -2230,7 +2229,7 @@ mod tests {
     let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty };
 
     assert_eq!(fully_specified_type("subroutine (vec2, S032_29k) iimage2DMSArray;"), Ok((";", expected.clone())));
-    assert_eq!(fully_specified_type("  subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"), Ok((";", expected.clone())));
+    assert_eq!(fully_specified_type("subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"), Ok((" ;", expected.clone())));
     assert_eq!(fully_specified_type("subroutine(vec2,S032_29k)iimage2DMSArray;"), Ok((";", expected)));
   }
 
@@ -2266,17 +2265,17 @@ mod tests {
 
   #[test]
   fn parse_primary_expr_boolconst() {
-    assert_eq!(primary_expr("false "), Ok((" ", syntax::Expr::BoolConst(false.to_owned()))));
-    assert_eq!(primary_expr("true "), Ok((" ", syntax::Expr::BoolConst(true.to_owned()))));
+    assert_eq!(primary_expr("false"), Ok(("", syntax::Expr::BoolConst(false.to_owned()))));
+    assert_eq!(primary_expr("true"), Ok(("", syntax::Expr::BoolConst(true.to_owned()))));
   }
 
   #[test]
   fn parse_primary_expr_parens() {
-    assert_eq!(run_parser("(0)", primary_expr), Ok(syntax::Expr::IntConst(0)));
-    assert_eq!(run_parser("(  0 )", primary_expr), Ok(syntax::Expr::IntConst(0)));
-    assert_eq!(run_parser("(  .0 )", primary_expr), Ok(syntax::Expr::DoubleConst(0.)));
-    assert_eq!(run_parser("(  (.0) )", primary_expr), Ok(syntax::Expr::DoubleConst(0.)));
-    assert_eq!(run_parser("(true) ", primary_expr), Ok(syntax::Expr::BoolConst(true)));
+    assert_eq!(primary_expr("(0)"), Ok(("", syntax::Expr::IntConst(0))));
+    assert_eq!(primary_expr("(  0 )"), Ok(("", syntax::Expr::IntConst(0))));
+    assert_eq!(primary_expr("(  .0 )"), Ok(("", syntax::Expr::DoubleConst(0.))));
+    assert_eq!(primary_expr("(  (.0) )"), Ok(("", syntax::Expr::DoubleConst(0.))));
+    assert_eq!(primary_expr("(true) "), Ok((" ", syntax::Expr::BoolConst(true))));
   }
 
   #[test]
@@ -2286,8 +2285,8 @@ mod tests {
     let expected = syntax::Expr::FunCall(fun, args);
 
     assert_eq!(postfix_expr("vec3();"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" vec3   (  ) ;"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" vec3   (\nvoid\n) ;"), Ok((";", expected)));
+    assert_eq!(postfix_expr("vec3   (  ) ;"), Ok((" ;", expected.clone())));
+    assert_eq!(postfix_expr("vec3   (\nvoid\n) ;"), Ok((" ;", expected)));
   }
 
   #[test]
@@ -2297,8 +2296,8 @@ mod tests {
     let expected = syntax::Expr::FunCall(fun, args);
 
     assert_eq!(postfix_expr("foo(0);"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" foo   ( 0 ) ;"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" foo   (\n0\t\n) ;"), Ok((";", expected)));
+    assert_eq!(postfix_expr("foo   ( 0 ) ;"), Ok((" ;", expected.clone())));
+    assert_eq!(postfix_expr("foo   (\n0\t\n) ;"), Ok((" ;", expected)));
   }
 
   #[test]
@@ -2312,7 +2311,7 @@ mod tests {
     let expected = syntax::Expr::FunCall(fun, args);
 
     assert_eq!(postfix_expr("foo(0, false, bar);"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" foo   ( 0\t, false    ,\t\tbar) ;"), Ok((";", expected)));
+    assert_eq!(postfix_expr("foo   ( 0\t, false    ,\t\tbar) ;"), Ok((" ;", expected)));
   }
 
   #[test]
@@ -2322,7 +2321,7 @@ mod tests {
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
 
     assert_eq!(postfix_expr("foo[7354];"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr(" foo[7354];"), Ok((";", expected)));
+    assert_eq!(postfix_expr("foo[\n  7354    ] ;"), Ok((" ;", expected)));
   }
 
   #[test]
@@ -2381,7 +2380,7 @@ mod tests {
     let foo = syntax::Expr::Variable("foo".into());
     let expected = syntax::Expr::Unary(syntax::UnaryOp::Not, Box::new(foo));
 
-    assert_eq!(run_parser("!foo;", unary_expr), Ok(expected));
+    assert_eq!(unary_expr("!foo;"), Ok((";", expected)));
   }
 
   #[test]
@@ -2419,9 +2418,9 @@ mod tests {
     let one = Box::new(syntax::Expr::IntConst(1));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one.clone(), one);
 
-    assert_eq!(run_parser("1 + 1;", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("1+1;", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("(1 + 1);", expr), Ok(expected));
+    assert_eq!(expr("1 + 1;"), Ok((";", expected.clone())));
+    assert_eq!(expr("1+1;"), Ok((";", expected.clone())));
+    assert_eq!(expr("(1 + 1);"), Ok((";", expected)));
   }
 
   #[test]
@@ -2431,10 +2430,10 @@ mod tests {
     let three = Box::new(syntax::Expr::UIntConst(3));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)));
 
-    assert_eq!(run_parser("1u + 2u + 3u", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("1u + 2u + 3u   ", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("1u+2u+3u", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("(1u + (2u + 3u))", expr), Ok(expected));
+    assert_eq!(expr("1u + 2u + 3u"), Ok(("", expected.clone())));
+    assert_eq!(expr("1u + 2u + 3u   "), Ok(("   ", expected.clone())));
+    assert_eq!(expr("1u+2u+3u"), Ok(("", expected.clone())));
+    assert_eq!(expr("(1u + (2u + 3u))"), Ok(("", expected)));
   }
 
   #[test]
@@ -2444,9 +2443,9 @@ mod tests {
     let three = Box::new(syntax::Expr::UIntConst(3));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, two)), three);
 
-    assert_eq!(run_parser("1u * 2u + 3u ;", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("1u*2u+3u;", expr), Ok(expected.clone()));
-    assert_eq!(run_parser("(1u * 2u) + 3u;", expr), Ok(expected));
+    assert_eq!(expr("1u * 2u + 3u ;"), Ok((" ;", expected.clone())));
+    assert_eq!(expr("1u*2u+3u;"), Ok((";", expected.clone())));
+    assert_eq!(expr("(1u * 2u) + 3u;"), Ok((";", expected)));
   }
 
   #[test]
@@ -2459,7 +2458,7 @@ mod tests {
     let six = Box::new(syntax::Expr::IntConst(6));
     let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Div, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
 
-    assert_eq!(run_parser("1 * (2 + 3) + 4 / (5 + 6);", expr), Ok(expected.clone()));
+    assert_eq!(expr("1 * (2 + 3) + 4 / (5 + 6);"), Ok((";", expected.clone())));
   }
 
   #[test]
@@ -3325,7 +3324,7 @@ mod tests {
   #[test]
   fn parse_pp_extension_name() {
     assert_eq!(pp_extension_name("all"), Ok(("", syntax::PreprocessorExtensionName::All)));
-    assert_eq!(pp_extension_name("GL_foobar_extension "), Ok(("", syntax::PreprocessorExtensionName::Specific("GL_foobar_extension".to_owned()))));
+    assert_eq!(pp_extension_name("GL_foobar_extension "), Ok((" ", syntax::PreprocessorExtensionName::Specific("GL_foobar_extension".to_owned()))));
   }
 
   #[test]
