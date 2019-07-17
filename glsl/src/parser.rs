@@ -10,9 +10,8 @@
 //! [`ParserResult`]: parser::ParserResult
 
 use nom::Err as NomErr;
-use nom::error::{VerboseError, convert_error};
+use nom::error::convert_error;
 use std::fmt;
-use std::str::from_utf8;
 
 use crate::parsers::ParserResult;
 use crate::syntax;
@@ -30,12 +29,12 @@ impl fmt::Display for ParseError {
   }
 }
 
-/// Run a parser over a byte slice.
+/// Run a parser.
 pub(crate) fn run_parser<P, T>(
-  source: &[u8],
+  source: &str,
   parser: P
 ) -> Result<T, ParseError>
-where P: FnOnce(&[u8]) -> ParserResult<&[u8], T> {
+where P: FnOnce(&str) -> ParserResult<T> {
   match parser(source) {
     Ok((_, x)) => {
       Ok(x)
@@ -47,22 +46,11 @@ where P: FnOnce(&[u8]) -> ParserResult<&[u8], T> {
       }
 
       NomErr::Error(err) | NomErr::Failure(err) => {
-        let ve = str_verbose_error(err).ok_or(ParseError { info: "non-UTF-8".to_owned() })?;
-        let s = from_utf8(source).map_err(|_| ParseError { info: "non-UTF-8".to_owned() })?;
-        let info = convert_error(s, ve);
+        let info = convert_error(source, err);
         Err(ParseError { info })
       }
     }
   }
-}
-
-// Transform a VerboseError<&[u8]> into a VerboseError<&str>, if possible.
-fn str_verbose_error(ve: VerboseError<&[u8]>) -> Option<VerboseError<&str>> {
-  let errors = ve.errors.into_iter()
-    .map(|(i, kind)| from_utf8(i).map(|s| (s, kind)))
-    .collect::<Result<_, _>>().ok()?;
-
-  Some(VerboseError { errors })
 }
 
 /// Class of types that can be parsed.
@@ -78,20 +66,14 @@ fn str_verbose_error(ve: VerboseError<&[u8]>) -> Option<VerboseError<&str>> {
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {
   /// Parse from a byte slice.
-  fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<[u8]>;
-
-  /// Parse from a string.
-  fn parse_str<S>(source: S) -> Result<Self, ParseError> where S: AsRef<str> {
-    let s = source.as_ref().as_bytes();
-    Self::parse(s)
-  }
+  fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<str>;
 }
 
 /// Macro to implement Parse for a given type.
 macro_rules! impl_parse {
   ($type_name:ty, $parser_name:ident) => {
     impl Parse for $type_name {
-      fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<[u8]> {
+      fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<str> {
         run_parser(source.as_ref(), $crate::parsers::$parser_name)
       }
     }
