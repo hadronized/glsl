@@ -906,9 +906,12 @@ mod tests {
     show_expr(&mut output, &input);
     let _ = output.write_str(";");
 
-    let back = expr(output.as_bytes());
+    let back = expr(&output);
 
-    assert_eq!(back, Ok((&b";"[..], input)),
-               "intermediate source '{}'", output);
+    assert_eq!(
+      back,
+      Ok((";", input)),
+      "intermediate source '{}'", output
+    );
   }
 }
