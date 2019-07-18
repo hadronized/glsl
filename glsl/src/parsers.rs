@@ -799,7 +799,7 @@ pub fn init_declarator_list(i: &str) -> ParserResult<syntax::InitDeclaratorList>
           tuple((
               preceded(delimited(blank, char(','), blank), identifier),
               opt(preceded(blank, array_specifier)),
-              opt(preceded(preceded(blank, char('=')), initializer))
+              opt(preceded(delimited(blank, char('='), blank), initializer))
           )),
           |(name, arr_spec, init)| syntax::SingleDeclarationNoType {
             ident: syntax::ArrayedIdentifier::new(name, arr_spec),
