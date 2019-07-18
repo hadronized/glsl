@@ -296,21 +296,21 @@ fn decimal_lit(i: &str) -> ParserResult<Result<u32, ParseIntError>> {
 ///
 /// From the GLSL 4.30 spec:
 ///
-///    "No white space is allowed between the digits of an integer
-///     constant, including after the leading 0 or after the leading
-///     0x or 0X of a constant, or before the suffix u or U. When
-///     tokenizing, the maximal token matching the above will be
-///     recognized before a new token is started. When the suffix u or
-///     U is present, the literal has type uint, otherwise the type is
-///     int. A leading unary minus sign (-) is interpreted as an
-///     arithmetic unary negation, not as part of the constant. Hence,
-///     literals themselves are always expressed with non-negative
-///     syntax, though they could result in a negative value.
+/// > No white space is allowed between the digits of an integer
+/// > constant, including after the leading 0 or after the leading
+/// > 0x or 0X of a constant, or before the suffix u or U. When
+/// > tokenizing, the maximal token matching the above will be
+/// > recognized before a new token is started. When the suffix u or
+/// > U is present, the literal has type uint, otherwise the type is
+/// > int. A leading unary minus sign (-) is interpreted as an
+/// > arithmetic unary negation, not as part of the constant. Hence,
+/// > literals themselves are always expressed with non-negative
+/// > syntax, though they could result in a negative value.
 ///
-///     It is a compile-time error to provide a literal integer whose
-///     bit pattern cannot fit in 32 bits. The bit pattern of the
-///     literal is always used unmodified. So a signed literal whose
-///     bit pattern includes a set sign bit creates a negative value."
+/// > It is a compile-time error to provide a literal integer whose
+/// > bit pattern cannot fit in 32 bits. The bit pattern of the
+/// > literal is always used unmodified. So a signed literal whose
+/// > bit pattern includes a set sign bit creates a negative value.
 pub fn integral_lit_try(i: &str) -> ParserResult<Result<i32, ParseIntError>> {
   let (i, sign) = opt(char('-'))(i)?;
 
@@ -883,7 +883,7 @@ fn function_header_with_parameters(i: &str) -> ParserResult<syntax::FunctionProt
   map(
     pair(
       function_header,
-      separated_list(delimited(blank, char(','), blank), function_parameter_declaration)
+      separated_list(preceded(blank, char(',')), preceded(blank, function_parameter_declaration))
     ),
     |(header, parameters)| syntax::FunctionPrototype {
       ty: header.0,
@@ -1518,7 +1518,7 @@ pub fn external_declaration(i: &str) -> ParserResult<syntax::ExternalDeclaration
 /// Parse a translation unit (entry point).
 pub fn translation_unit(i: &str) -> ParserResult<syntax::TranslationUnit> {
   map(
-    many1(terminated(external_declaration, blank)),
+    many1(delimited(blank, external_declaration, blank)),
     |eds| syntax::TranslationUnit(syntax::NonEmpty(eds))
   )(i)
 }
