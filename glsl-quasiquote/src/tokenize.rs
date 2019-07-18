@@ -2,10 +2,10 @@
 
 use glsl::syntax;
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{ToTokens, quote};
 use std::iter::once;
 
-use quoted::Quoted;
+use crate::quoted::Quoted;
 
 /// Tokenize a value into a stream of tokens.
 pub trait Tokenize {
