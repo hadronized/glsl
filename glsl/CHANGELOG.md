@@ -1,3 +1,14 @@
+# 1.0
+
+> Thu 18th of July 2019
+
+  - Migrate all parsers to [nom-5](https://crates.io/crates/nom/5.0.0).
+  - Improve and add unit and integration tests.
+  - Improve overall documentation.
+  - Enhance some allocation scheme (removed them by using more adapted parsers).
+  - Completely remove the byte (`&[u8]`) parsing. That was a bad idea, for both its impractical
+    aspect and error removing. Parsing is done on string slices now (`&str`).
+
 ## 0.13.5
 
 > Sun 9th of December 2018

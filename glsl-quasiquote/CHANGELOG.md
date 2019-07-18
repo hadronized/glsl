@@ -1,3 +1,9 @@
+# 1.0
+
+> Thu 18th of July 2019
+
+  - Adapt to the new `&str` parsing (especially because of the `Parse` trait.
+
 ## 0.3.1
 
 > Sun 9th of December 2018
