@@ -368,7 +368,7 @@ impl StructFieldSpecifier {
   /// Create a struct field.
   pub fn new<A, T>(
     identifier: A,
-    ty: T 
+    ty: T
   ) -> Self
   where A: Into<ArrayedIdentifier>,
         T: Into<TypeSpecifier> {
@@ -401,10 +401,15 @@ pub struct ArrayedIdentifier {
 }
 
 impl ArrayedIdentifier {
-  pub fn new<I>(ident: I, array_spec: Option<ArraySpecifier>) -> Self where I: Into<Identifier> {
+  pub fn new<I, AS>(
+    ident: I,
+    array_spec: AS
+  ) -> Self
+  where I: Into<Identifier>,
+        AS: Into<Option<ArraySpecifier>> {
     ArrayedIdentifier {
       ident: ident.into(),
-      array_spec
+      array_spec: array_spec.into()
     }
   }
 }

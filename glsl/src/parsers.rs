@@ -466,7 +466,7 @@ pub fn unary_op(i: &str) -> ParserResult<syntax::UnaryOp> {
 /// Parse an identifier with an optional array specifier.
 pub fn arrayed_identifier(i: &str) -> ParserResult<syntax::ArrayedIdentifier> {
   map(
-    pair(identifier, opt(array_specifier)),
+    pair(identifier, opt(preceded(blank, array_specifier))),
     |(i, a)| syntax::ArrayedIdentifier::new(i, a)
   )(i)
 }
@@ -3405,5 +3405,13 @@ mod tests {
       );
 
     assert_eq!(statement(src), Ok(("", expected)));
+  }
+
+  #[test]
+  fn parse_arrayed_identifier() {
+    let expected = syntax::ArrayedIdentifier::new("foo", syntax::ArraySpecifier::Unsized);
+
+    assert_eq!(arrayed_identifier("foo[]"), Ok(("", expected.clone())));
+    assert_eq!(arrayed_identifier("foo \t\n  [\n\t ]"), Ok(("", expected)));
   }
 }
