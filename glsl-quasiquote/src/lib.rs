@@ -5,12 +5,17 @@
 //! This crate exports a procedural macro: `glsl!`. It enables quasiquoting by allowing you to
 //! embed GLSL source code directly into rust via the syntax:
 //!
-//! ```ignore
-//! glsl!{
+//! ```
+//! #![feature(proc_macro_hygiene)]
+//!
+//! use glsl::syntax::TranslationUnit;
+//! use glsl_quasiquote::glsl;
+//!
+//! let tu: TranslationUnit = glsl!{
 //!   // your GLSL code here
 //!   void main() {
 //!   }
-//! }
+//! };
 //! ```
 //!
 //! The `glsl!` macro accepts the GLSL code directly. You can then write plain GLSL. Especially,
@@ -24,14 +29,14 @@
 //!
 //! Add the following to your dependencies in your `Cargo.toml`:
 //!
-//! ```ignore
+//! ```toml
 //! glsl = "0.11"
 //! glsl-quasiquote = "0.2"
 //! ```
 //!
 //! Then, you currently need to have a nightly compiler and the following feature enabled:
 //!
-//! ```ignore
+//! ```
 //! #![feature(proc_macro_hygiene)]
 //! ```
 //!
@@ -39,14 +44,14 @@
 //!
 //! > *Non-2018 edition*
 //!
-//! ```ignore
+//! ```
 //! extern crate glsl;
 //! #[macro_use] extern crate glsl_quasiquote;
 //! ```
 //!
 //! > *2018 edition*
 //!
-//! ```ignore
+//! ```
 //! extern crate glsl;
 //! use glsl_quasiquote::glsl;
 //! ```
@@ -59,18 +64,14 @@
 //! [glsl](https://crates.io/crates/glsl), this is not accepted by this crate. This limitation is
 //! due to how Rust tokenizes input in procedural macro and is very unlikely to change.
 
-extern crate glsl;
 extern crate proc_macro;
-extern crate proc_macro2;
-extern crate proc_macro_faithful_display;
-#[macro_use] extern crate quote;
 
-use glsl::parser::{Parse, ParseResult};
+use glsl::parser::Parse;
 use glsl::syntax;
 use proc_macro2::TokenStream;
 use proc_macro_faithful_display::faithful_display;
 
-use tokenize::Tokenize;
+use crate::tokenize::Tokenize;
 
 mod quoted;
 mod tokenize;
@@ -79,9 +80,9 @@ mod tokenize;
 #[proc_macro]
 pub fn glsl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let s = format!("{}", faithful_display(&input));
-  let parsed: ParseResult<syntax::TranslationUnit> = Parse::parse_str(s.as_str());
+  let parsed: Result<syntax::TranslationUnit, _> = Parse::parse(&s);
 
-  if let ParseResult::Ok(tu) = parsed {
+  if let Ok(tu) = parsed {
     // create the stream and return it
     let mut stream = TokenStream::new();
     tu.tokenize(&mut stream);

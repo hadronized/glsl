@@ -2,7 +2,7 @@
 //! normally, such as `Option<T>` as `Some(_)` or `None`, `Box<T>` as `Box::new(_)`, etc.
 
 use proc_macro2::TokenStream;
-use quote::ToTokens;
+use quote::{ToTokens, quote};
 
 use glsl::syntax::{Identifier, TypeName};
 

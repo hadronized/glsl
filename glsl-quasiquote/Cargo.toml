@@ -11,6 +11,8 @@ repository = "https://github.com/phaazon/glsl"
 documentation = "https://docs.rs/glsl-quasiquote"
 readme = "README.md"
 
+edition = "2018"
+
 [badges]
 travis-ci = { repository = "phaazon/glsl", branch = "master" }
 is-it-maintained-issue-resolution = { repository = "phaazon/glsl" }
