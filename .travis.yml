@@ -18,8 +18,10 @@ script:
   - cd glsl
   - cargo build --verbose
   - cargo test --verbose
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
   # build glsl-quasiquote only on nightly
   - if [ "$TRAVIS_RUST_VERSION" != "nightly" ]; then exit 0; fi
   - cd $TRAVIS_BUILD_DIR/glsl-quasiquote
   - cargo build --verbose
   - cargo test --verbose
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi
