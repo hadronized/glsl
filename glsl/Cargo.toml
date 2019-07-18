@@ -1,6 +1,6 @@
 [package]
 name = "glsl"
-version = "0.13.5"
+version = "1.0.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "A GLSL450 parser."
@@ -15,9 +15,6 @@ edition = "2018"
 
 [badges]
 travis-ci = { repository = "phaazon/glsl", branch = "master" }
-is-it-maintained-issue-resolution = { repository = "phaazon/glsl" }
-is-it-maintained-open-issues = { repository = "phaazon/glsl" }
-maintenance = { status = "passively-maintained" }
 
 [features]
 spirv = ["shaderc"]
