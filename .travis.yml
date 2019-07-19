@@ -15,7 +15,7 @@ script:
   - rustc --version
   - cargo --version
   # needed to test READMEs
-  - cargo install cargo-sync-readme
+  - cargo install cargo-sync-readme --force
   # always build and glsl
   - cd glsl
   - cargo build --verbose
