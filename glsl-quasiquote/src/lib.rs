@@ -21,7 +21,7 @@
 //! The `glsl!` macro accepts the GLSL code directly. You can then write plain GLSL. Especially,
 //! since version **0.2**, the macro accepts plain GLSL pragmas (both `#version` and `#extension`).
 //!
-//! The `glsl!` procedural macro resolves at compile-time to `glsl::syntax::TranslationUnit`,
+//! The `glsl!` procedural macro resolves at compile-time to [`TranslationUnit`],
 //! allowing you to manipulate the GLSL AST directly. Feel free to have a look at the
 //! [`glsl`](https://crates.io/crates/glsl) crate for further information.
 //!
@@ -52,7 +52,6 @@
 //! > *2018 edition*
 //!
 //! ```
-//! extern crate glsl;
 //! use glsl_quasiquote::glsl;
 //! ```
 //!
@@ -63,6 +62,8 @@
 //! to incorrect parsing if you try to represent the number `0.3` with `.3`. While accepted by
 //! [glsl](https://crates.io/crates/glsl), this is not accepted by this crate. This limitation is
 //! due to how Rust tokenizes input in procedural macro and is very unlikely to change.
+//!
+//! [`TranslationUnit`]: https://docs.rs/glsl/1.0.0/glsl/syntax/struct.TranslationUnit.html
 
 extern crate proc_macro;
 
@@ -77,6 +78,8 @@ mod quoted;
 mod tokenize;
 
 /// Create a [`TranslationUnit`].
+///
+/// [`TranslationUnit`]: https://docs.rs/glsl/1.0.0/glsl/syntax/struct.TranslationUnit.html
 #[proc_macro]
 pub fn glsl(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let s = format!("{}", faithful_display(&input));
