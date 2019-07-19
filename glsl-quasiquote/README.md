@@ -30,8 +30,8 @@ allowing you to manipulate the GLSL AST directly. Feel free to have a look at th
 Add the following to your dependencies in your `Cargo.toml`:
 
 ```toml
-glsl = "0.11"
-glsl-quasiquote = "0.2"
+glsl = "1"
+glsl-quasiquote = "1"
 ```
 
 Then, you currently need to have a nightly compiler and the following feature enabled:
