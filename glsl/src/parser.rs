@@ -4,10 +4,11 @@
 //! input source into an AST. The AST is defined in the [`syntax`] module.
 //!
 //! You want to use the [`Parse`]’s methods to get starting with parsing and pattern match on
-//! [`ParserResult`].
+//! the resulting [`Result`]. In case of an error, you can inspect the content of the [`ParseError`]
+//! object in the `Err` variant.
 //!
-//! [`Parse`]: parser::Parse
-//! [`ParserResult`]: parser::ParserResult
+//! [`Parse`]: crate::parser::Parse
+//! [`ParseError`]: crate::parser::ParseError
 
 use nom::Err as NomErr;
 use nom::error::convert_error;
@@ -16,8 +17,7 @@ use std::fmt;
 use crate::parsers::ParserResult;
 use crate::syntax;
 
-/// A parse error. It contains an [`ErrorKind`] along with a [`String`] giving information on the reason
-/// why the parser failed.
+/// A parse error. It contains a [`String`] giving information on the reason why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
   pub info: String
@@ -29,7 +29,7 @@ impl fmt::Display for ParseError {
   }
 }
 
-/// Run a parser.
+/// Run a parser `P` on a given `[&str`] input.
 pub(crate) fn run_parser<P, T>(
   source: &str,
   parser: P
@@ -55,17 +55,11 @@ where P: FnOnce(&str) -> ParserResult<T> {
 
 /// Class of types that can be parsed.
 ///
-/// This trait exposes two methods:
-///
-///   - [`Parse::parse`], that runs on bytes.
-///   - [`Parse::parse_str`], a convenient function that runs on strings.
-///
-/// If you want to implement [`Parse`], only [`Parse::parse`] is mandatory – [`Parse::parse_str`]
-/// has a default implementation using [`Parse::parse`].
+/// This trait exposes the [`Parse::parse`] function that can be used to parse GLSL types.
 ///
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {
-  /// Parse from a byte slice.
+  /// Parse from a string slice.
   fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<str>;
 }
 
