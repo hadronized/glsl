@@ -1512,6 +1512,7 @@ pub fn external_declaration(i: &str) -> ParserResult<syntax::ExternalDeclaration
     map(preprocessor, syntax::ExternalDeclaration::Preprocessor),
     map(function_definition, syntax::ExternalDeclaration::FunctionDefinition),
     map(declaration, syntax::ExternalDeclaration::Declaration),
+    preceded(delimited(blank, char(';'), blank), external_declaration)
   ))(i)
 }
 
