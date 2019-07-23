@@ -2,8 +2,8 @@
 
 # GLSL compiler
 
-This crate is a GLSL450 compiler. It’s able to parse valid GLSL450 formatted source into an
-abstract syntax tree (AST). That AST can then be transformed into SPIR-V, your own format or
+This crate is a GLSL450/GLSL460 compiler. It’s able to parse valid GLSL formatted source into
+an abstract syntax tree (AST). That AST can then be transformed into SPIR-V, your own format or
 even folded back to a raw GLSL [`String`] (think of a minifier, for instance).
 
 You’ll find several modules:
@@ -16,7 +16,7 @@ You’ll find several modules:
 
 Feel free to inspect those modules for further information.
 
-# Parsing architecture
+## Parsing architecture
 
 Basically, the [`Parse`] trait gives you all you need to start parsing. This crate is designed
 around the concept of type-driven parsing: parsers are hidden and you just have to state what
@@ -30,6 +30,14 @@ structure, etc.
 The crate is also getting more and more combinators and functions to transform the AST or create
 nodes with regular Rust. The [`Visitor`] trait will be a great friend of yours when you will
 want to cope with deep mutation, filtering and validation.
+
+## About the GLSL versions…
+
+This crate can parse both GLSL450 and GLSL460 formatted input sources. At the language level,
+the difference between GLSL450 and GLSL460 is pretty much nothing, so both cases are covered.
+
+> If you’re wondering, the only difference between both versions is that in GLSL460, it’s
+> authorized to have semicolons (`;`) on empty lines at top-level in a shader.
 
 [`Parse`]: crate::parser::Parse
 [`ExternalDeclaration`]: crate::syntax::ExternalDeclaration

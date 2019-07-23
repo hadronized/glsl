@@ -1,3 +1,9 @@
+### 1.0.2
+
+> Tue 23rd of July 2019
+
+  - Change the description of the project and update documentation.
+
 ### 1.0.1
 
 > Tue 23rd of July 2019

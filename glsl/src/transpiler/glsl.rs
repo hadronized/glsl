@@ -1,4 +1,5 @@
-//! A GLSL450 transpiler that takes a syntax tree and writes it as a plain raw GLSL [`String`].
+//! A GLSL450/GLSL460 transpiler that takes a syntax tree and writes it as a plain raw GLSL
+//! [`String`].
 //!
 //! # Foreword
 //!
