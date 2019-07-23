@@ -1,3 +1,12 @@
+### 1.0.1
+
+> Tue 23rd of July 2019
+
+  - Change the `external_declaration` parser so that it can also accept _GLSL460_. That should be a
+    breaking change because now, _GLSL450_ formatted input accepts feature from _GLSL460_, which
+    shouldn’t be allowed. Nevertheless, the added feature (being able to use semicolons (`;`) on
+    empty lines at top-level) is not really an interesting property and no breakage should happen.
+
 # 1.0
 
 > Thu 18th of July 2019
