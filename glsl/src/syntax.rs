@@ -765,6 +765,9 @@ pub enum AssignmentOp {
 #[derive(Clone, Debug, PartialEq)]
 pub struct TranslationUnit(pub NonEmpty<ExternalDeclaration>);
 
+/// A shader stage.
+pub type ShaderStage = TranslationUnit;
+
 impl TranslationUnit {
   /// Construct a translation unit from an iterator.
   ///
