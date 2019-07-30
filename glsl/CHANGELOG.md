@@ -1,3 +1,10 @@
+## 1.1
+
+> Tue 30 of July 2019
+
+  - Add the `ShaderStage` type alias to `TranslationUnit`.
+  - Enhance the front documentation to showcase how to use how to use the crate.
+
 ### 1.0.2
 
 > Tue 23rd of July 2019
