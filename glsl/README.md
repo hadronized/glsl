@@ -1,4 +1,4 @@
-[![Talk on IRC!](https://img.shields.io/badge/chat-%23glsl-rs%40irc.freenode.net-blueviolet)](https://webchat.freenode.net)
+[![Talk on IRC!](https://img.shields.io/badge/chat-%23glsl--rs%40irc.freenode.net-blueviolet)](https://webchat.freenode.net)
 [![Build Status](https://travis-ci.org/phaazon/glsl.svg?branch=master)](https://travis-ci.org/phaazon/glsl)
 [![crates.io](https://img.shields.io/crates/v/glsl.svg)](https://crates.io/crates/glsl)
 [![docs.rs](https://docs.rs/glsl/badge.svg)](https://docs.rs/glsl)
