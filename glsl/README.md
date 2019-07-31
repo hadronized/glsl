@@ -1,3 +1,9 @@
+[![Talk on IRC!](https://img.shields.io/badge/chat-%23glsl-rs%40irc.freenode.net-blueviolet)](https://webchat.freenode.net)
+[![Build Status](https://travis-ci.org/phaazon/glsl.svg?branch=master)](https://travis-ci.org/phaazon/glsl)
+[![crates.io](https://img.shields.io/crates/v/glsl.svg)](https://crates.io/crates/glsl)
+[![docs.rs](https://docs.rs/glsl/badge.svg)](https://docs.rs/glsl)
+![License](https://img.shields.io/badge/license-BSD3-blue.svg?style=flat)
+
 <!-- cargo-sync-readme start -->
 
 This crate is a GLSL450/GLSL460 compiler. It’s able to parse valid GLSL formatted source into
@@ -22,7 +28,7 @@ Feel free to inspect those modules for further information.
 
 Parsing is the most common operation you will do. It is not required per-se (you can still
 create your AST by hand or use [glsl-quasiquote] to create it at compile-time by using the GLSL
-syntax directly in Rust. However, in this section, we are going to see how we can parse from a
+syntax directly in Rust). However, in this section, we are going to see how we can parse from a
 string to several GLSL types.
 
 ## Parsing architecture
@@ -61,7 +67,7 @@ of an RGB color by a cosine of a time, the whole thing being
 responsibility to check if the parsing process has succeeded.
 
 In the previous example, the GLSL string is a constant and hardcoded. It could come from a file,
-network or builded on the fly, but in the case of constant GLSL code, it would be preferable not
+network or built on the fly, but in the case of constant GLSL code, it would be preferable not
 to parse the string at runtime, right? Well, [glsl-quasiquote] is there exactly for that. You
 can ask **rustc** to parse that string and, if the parsing has succeeded, inject the AST
 directly into your code. No [`Result`], just the pure AST. Have a look at [glsl-quasiquote] for
