@@ -1,0 +1,6 @@
+name: CI
+on: [push]
+jobs:
+  hello-world:
+    steps:
+      - echo "Hello, world!"
