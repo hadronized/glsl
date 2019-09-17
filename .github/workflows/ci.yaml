@@ -6,19 +6,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Build
-        run: cargo build --verbose
-      - name: Test
-        run: cargo test --verbose
+      - name: Build glsl
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Test glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo test --verbose
 
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Build
-        run: cargo build --verbose
-      - name: Test
-        run: cargo test --verbose
+      - name: Build glsl
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Test glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo test --verbose
 
   #build-macosx:
   #  runs-on: macosx-latest
