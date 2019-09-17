@@ -6,17 +6,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cargo update
+        run: cargo update
       - name: Build glsl
         run: |
           cd $GITHUB_WORKSPACE/glsl
           cargo build --verbose
-      - name: Switch to nightly Rust
-        run: rustup default nightly
-      - name: Build glsl (nightly)
+      - name: Test glsl
         run: |
           cd $GITHUB_WORKSPACE/glsl
+          cargo test --verbose
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl-quasiquote (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo build --verbose
-      - name: Test glsl (nightly)
+      - name: Test glsl-quasiquote (nightly)
         run: |
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
@@ -27,38 +33,47 @@ jobs:
       - uses: actions/checkout@v1
       - name: Build glsl
         run: |
-          cd $GITHUB_WORKSPACE/glsl
+          cd %GITHUB_WORKSPACE%\glsl
           cargo build --verbose
+      - name: Test glsl
+        run: |
+          cd %GITHUB_WORKSPACE%\glsl
+          cargo test --verbose
       - name: Switch to nightly Rust
         run: rustup default nightly
-      - name: Build glsl (nightly)
+      - name: Build glsl-quasiquote (nightly)
         run: |
-          cd $GITHUB_WORKSPACE/glsl
+          cd %GITHUB_WORKSPACE%\glsl-quasiquote
           cargo build --verbose
-      - name: Test glsl (nightly)
+      - name: Test glsl-quasiquote (nightly)
         run: |
-          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cd %GITHUB_WORKSPACE%\glsl-quasiquote
           cargo test --verbose
 
   build-macosx:
     runs-on: macosx-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cargo update
+        run: cargo update
       - name: Build glsl
         run: |
           cd $GITHUB_WORKSPACE/glsl
           cargo build --verbose
-      - name: Switch to nightly Rust
-        run: rustup default nightly
-      - name: Build glsl (nightly)
+      - name: Test glsl
         run: |
           cd $GITHUB_WORKSPACE/glsl
+          cargo test --verbose
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl-quasiquote (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo build --verbose
-      - name: Test glsl (nightly)
+      - name: Test glsl-quasiquote (nightly)
         run: |
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
-
 
   check-readme:
     runs-on: ubuntu-latest
