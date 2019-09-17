@@ -1,6 +1,6 @@
 [package]
 name = "glsl"
-version = "1.1.0"
+version = "1.1.1"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "A GLSL450/GLSL460 parser."
