@@ -1,17 +1,23 @@
-## 1.1
+# 1.1.1
 
-> Tue 30 of July 2019
+> Tue 17th Sep 2019
+
+  - Update internal code for Rust edition 2018.
+
+# 1.1
+
+> Tue 30th of July 2019
 
   - Add the `ShaderStage` type alias to `TranslationUnit`.
   - Enhance the front documentation to showcase how to use how to use the crate.
 
-### 1.0.2
+# 1.0.2
 
 > Tue 23rd of July 2019
 
   - Change the description of the project and update documentation.
 
-### 1.0.1
+# 1.0.1
 
 > Tue 23rd of July 2019
 
@@ -31,7 +37,7 @@
   - Completely remove the byte (`&[u8]`) parsing. That was a bad idea, for both its impractical
     aspect and error removing. Parsing is done on string slices now (`&str`).
 
-## 0.13.5
+# 0.13.5
 
 > Sun 9th of December 2018
 
@@ -42,27 +48,27 @@
   - Add some unit and integration tests.
   - Add `Identifier::as_str` and `TypeName::as_str`
 
-## 0.13.4
+# 0.13.4
 
 > Wed 25nd of November 2018
 
   - Add `NonEmpty::push` and `NonEmpty::pop`.
   - Implement `Deref` and `DerefMut` for `TranslationUnit`.
 
-## 0.13.3
+# 0.13.3
 
 > Wed 24nd of November 2018
 
   - Add `NonEmpty::from_iter` and `TranslationUnit::from_iter`.
   - Implement `IntoIterator` for `NonEmpty` and `TranslationUnit`.
 
-## 0.13.2
+# 0.13.2
 
 > Wed 22nd of November 2018
 
   - Fix a typo in documentation.
 
-## 0.13.1
+# 0.13.1
 
 > Wed 22nd of November 2018
 
@@ -98,7 +104,7 @@
     simple way to build ASTs out of Rust code instead of parsing.
   - Enhance the documentation of the `Preprocessor` type.
 
-## 0.10.1
+# 0.10.1
 
 > Fri 2nd of November 2018
 
@@ -117,13 +123,13 @@
     proc-macro to allow people use it for any GLSL item (and not only `TranslationUnit`).
   - Enhance the overall documentation.
 
-## 0.9.2
+# 0.9.2
 
 > Wed 3rd of October 2018
 
   - Fix GLSL transpiled representation of `IVec*`. It was plain wrong.
 
-## 0.9.1
+# 0.9.1
 
 > Sat 7th of July 2018
 
@@ -136,7 +142,7 @@
   - Big cleanup of the module hierarchy.
   - Enhanced the documentation.
 
-## 0.8.1
+# 0.8.1
 
 > Sun, 17th of June 2018
 
@@ -156,13 +162,13 @@ you souldn’t have to worry too much when migrating.
   - Fix panic trying to parse literals starting with whitespace.
   - Add fuzzing to find out panics.
 
-## 0.7.2
+# 0.7.2
 
 > Wed 13th of December 2017
 
   - Fix the `show_expr` when the `Expr` is a `Expr::UIntConst`.
 
-## 0.7.1
+# 0.7.1
 
 > Mon 20th of November 2017
 
@@ -174,31 +180,31 @@ you souldn’t have to worry too much when migrating.
 
   - Add support for postfix expressions as function identifiers.
 
-## 0.6.5
+# 0.6.5
 
 > Mon 4th of September 2017
 
   - Fix the formatting of floating values when the fractional part is `0`.
 
-## 0.6.4
+# 0.6.4
 
 > Mon 4th of September 2017
 
   - Fix the output for `show_struct_specifier`.
 
-## 0.6.3
+# 0.6.3
 
 > Mon 4th of September 2017
 
   - Fix the output for `show_struct_specifier`.
 
-## 0.6.2
+# 0.6.2
 
 > Mon 4th of September 2017
 
   - Remove a warning.
 
-## 0.6.1
+# 0.6.1
 
 > Mon 4th of September 2017
 
@@ -218,7 +224,7 @@ you souldn’t have to worry too much when migrating.
   - The `parse` and `parse_str` functions now take as second argument the parser to run. This enables
     using those functions and all the neat logic the wrap in dependent projects.
 
-## 0.4.2
+# 0.4.2
 
 > Fri 4th of August 2017
 
@@ -227,7 +233,7 @@ you souldn’t have to worry too much when migrating.
     replaced by `NonEmpty`, which is an alias to `Vec`, but carry the semantic that it has at least
     one element in it.
 
-## 0.4.1
+# 0.4.1
 
 > Thu 3rd of August 2017
 
@@ -242,7 +248,7 @@ you souldn’t have to worry too much when migrating.
     `syntax` module was altered to make it easier to work with dot field selection. Also related,
     the function identifier syntax is now isomorphic to an identifier.
 
-## 0.3.1
+# 0.3.1
 
 > Tue 1st of August 2017
 
@@ -260,7 +266,7 @@ you souldn’t have to worry too much when migrating.
   - `void` is now recognized as `TypeSpecifier::Void` instead of the erroneous
     `TypeSpecifier::TypeName("void")`.
 
-## 0.2.2
+# 0.2.2
 
 > Mon 31st of July 2017
 
@@ -272,7 +278,7 @@ you souldn’t have to worry too much when migrating.
     + for each identifier defined in the field specifier, its optional array specifier, as in
       `float foo[3];` or `vec3 bar[];` for unsized ones.
 
-## 0.2.1
+# 0.2.1
 
 > Sun 30th of July 2017
 
