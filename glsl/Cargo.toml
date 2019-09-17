@@ -22,6 +22,3 @@ spirv = ["shaderc"]
 [dependencies]
 nom = { version = "5" }
 shaderc = { version = "0.3", optional = true }
-
-[dev-dependencies]
-glsl-quasiquote = "1"
