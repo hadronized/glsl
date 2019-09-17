@@ -40,14 +40,25 @@ jobs:
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
 
-  #build-macosx:
-  #  runs-on: macosx-latest
-  #  steps:
-  #    - uses: actions/checkout@v1
-  #    - name: Build
-  #      run: cargo build --verbose
-  #    - name: Test
-  #      run: cargo test --verbose
+  build-macosx:
+    runs-on: macosx-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Build glsl
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Test glsl (nightly)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo test --verbose
+
 
   check-readme:
     runs-on: ubuntu-latest
