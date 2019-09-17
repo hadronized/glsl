@@ -7,8 +7,8 @@
 use shaderc;
 use std::fmt::Write;
 
-use syntax;
-use transpiler::glsl as glsl_transpiler;
+use crate::syntax;
+use crate::transpiler::glsl as glsl_transpiler;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum ShaderKind {
