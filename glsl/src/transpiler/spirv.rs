@@ -5,7 +5,6 @@
 //! implementation.
 
 use shaderc;
-use std::fmt::Write;
 
 use crate::syntax;
 use crate::transpiler::glsl as glsl_transpiler;
@@ -37,11 +36,43 @@ impl From<ShaderKind> for shaderc::ShaderKind {
 /// [shaderc](https://crates.io/crates/shaderc).
 ///
 /// If any error happens while transpiling, they’re returned as an opaque string.
+pub fn transpile_translation_unit_to_binary<F>(
+  f: &mut F,
+  tu: &syntax::TranslationUnit,
+  kind: ShaderKind
+) -> Result<(), String> where F: std::io::Write {
+  // write as GLSL in an intermediate buffer
+  let mut glsl_buffer = String::new();
+  glsl_transpiler::show_translation_unit(&mut glsl_buffer, tu);
+
+  // pass the GLSL-formatted string to shaderc
+  let mut compiler = shaderc::Compiler::new().unwrap();
+  let options = shaderc::CompileOptions::new().unwrap();
+  let kind = kind.into();
+  let output =
+    compiler.compile_into_spirv(&glsl_buffer,
+                                kind,
+                                "glsl input",
+                                "main",
+                                Some(&options)
+    ).map_err(|e| format!("{}", e))?;
+
+  let _ = f.write_all(output.as_binary_u8());
+
+  Ok(())
+}
+
+/// Transpile a GLSL AST into a SPIR-V internal buffer and write it to the given buffer.
+///
+/// The current implementation is highly inefficient as it relies on internal allocations and
+/// [shaderc](https://crates.io/crates/shaderc).
+///
+/// If any error happens while transpiling, they’re returned as an opaque string.
 pub fn transpile_translation_unit<F>(
   f: &mut F,
   tu: &syntax::TranslationUnit,
   kind: ShaderKind
-) -> Result<(), String> where F: Write {
+) -> Result<(), String> where F: std::fmt::Write {
   // write as GLSL in an intermediate buffer
   let mut glsl_buffer = String::new();
   glsl_transpiler::show_translation_unit(&mut glsl_buffer, tu);
