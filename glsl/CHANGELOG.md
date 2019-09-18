@@ -1,3 +1,11 @@
+# 1.2
+
+> Wed 18th Sep 2019
+
+## Minor changes
+
+  - Add binary SPIR-V transpilation. That enables to transpile GLSL directly into a SPIR-V buffer.
+
 # 1.1.1
 
 > Tue 17th Sep 2019
