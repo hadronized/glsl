@@ -1,3 +1,17 @@
+# 1.2
+
+> Wed 18th Sep 2019
+
+## Deprecations
+
+  - `NonEmpty::from_iter` and `TranslationUnit::from_iter` are deprecated in favor of
+    `*::from_non_empty_iter`.
+
+## Minor changes
+
+  - Add binary SPIR-V transpilation. That enables to transpile GLSL directly into a SPIR-V buffer.
+  - Add `NonEmpty::from_non_empty_iter` and `TranslationUnit::from_non_empty_iter`.
+
 # 1.1.1
 
 > Tue 17th Sep 2019

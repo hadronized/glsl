@@ -32,7 +32,24 @@ impl<T> NonEmpty<T> {
   /// # Errors
   ///
   /// `None` if the iterator yields no value.
+  #[allow(clippy::should_implement_trait)]
+  #[deprecated(since = "1.2.0", note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0")]
   pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = T> {
+    let vec: Vec<_> = iter.into_iter().collect();
+
+    if vec.is_empty() {
+      None
+    } else {
+      Some(NonEmpty(vec))
+    }
+  }
+
+  /// Construct a non-empty from an iterator.
+  ///
+  /// # Errors
+  ///
+  /// `None` if the iterator yields no value.
+  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = T> {
     let vec: Vec<_> = iter.into_iter().collect();
 
     if vec.is_empty() {
@@ -774,8 +791,20 @@ impl TranslationUnit {
   /// # Errors
   ///
   /// `None` if the iterator yields no value.
+  #[allow(clippy::should_implement_trait)]
+  #[deprecated(since = "1.2.0", note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0")]
   pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = ExternalDeclaration> {
-    NonEmpty::from_iter(iter).map(TranslationUnit)
+    NonEmpty::from_non_empty_iter(iter).map(TranslationUnit)
+  }
+
+  /// Construct a translation unit from an iterator representing a _non-empty_ sequence of
+  /// [`ExternalDeclaration`].
+  ///
+  /// # Errors
+  ///
+  /// `None` if the iterator yields no value.
+  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = ExternalDeclaration> {
+    NonEmpty::from_non_empty_iter(iter).map(TranslationUnit)
   }
 }
 

@@ -971,7 +971,7 @@ pub fn function_identifier(i: &str) -> ParserResult<syntax::FunIdentifier> {
   alt((
     map(
       terminated(identifier, terminated(blank, peek(char('(')))),
-      |ident| syntax::FunIdentifier::Identifier(ident)
+      syntax::FunIdentifier::Identifier
     ),
     |i| {
       let (i, e) = primary_expr(i)?;
@@ -2827,7 +2827,7 @@ mod tests {
     let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
     let expected = syntax::SelectionStatement {
       cond: Box::new(cond),
-      rest: rest
+      rest,
     };
 
     assert_eq!(selection_statement("if (foo < 10) { return false; }K"), Ok(("K", expected.clone())));
@@ -2848,7 +2848,7 @@ mod tests {
     let rest = syntax::SelectionRestStatement::Else(Box::new(if_body), Box::new(else_body));
     let expected = syntax::SelectionStatement {
       cond: Box::new(cond),
-      rest: rest
+      rest,
     };
 
     assert_eq!(selection_statement("if (foo < 10) { return 0.f; } else { return foo; }"), Ok(("", expected.clone())));
@@ -2859,7 +2859,7 @@ mod tests {
   fn parse_switch_statement_empty() {
     let head = Box::new(syntax::Expr::Variable("foo".into()));
     let expected = syntax::SwitchStatement {
-      head: head,
+      head,
       body: Vec::new()
     };
 
@@ -2902,7 +2902,7 @@ mod tests {
                     )
                   ));
     let expected = syntax::SwitchStatement {
-      head: head,
+      head,
       body: vec![case0, case1, ret]
     };
 
