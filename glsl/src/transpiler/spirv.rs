@@ -15,7 +15,8 @@ pub enum ShaderKind {
   TessEvaluation,
   Vertex,
   Geometry,
-  Fragment
+  Fragment,
+  Compute,
 }
 
 impl From<ShaderKind> for shaderc::ShaderKind {
@@ -26,6 +27,7 @@ impl From<ShaderKind> for shaderc::ShaderKind {
       ShaderKind::Vertex => shaderc::ShaderKind::Vertex,
       ShaderKind::Geometry => shaderc::ShaderKind::Geometry,
       ShaderKind::Fragment => shaderc::ShaderKind::Fragment,
+      ShaderKind::Compute => shaderc::ShaderKind::Compute,
     }
   }
 }
