@@ -692,7 +692,7 @@ fn tokenize_block(b: &syntax::Block) -> TokenStream {
     glsl::syntax::Block {
       qualifier: #qual,
       name: #name,
-      fields: glsl::syntax::NonEmpty(vec![#(#fields),*]),
+      fields: vec![#(#fields),*],
       identifier: #identifier
     }
   }
