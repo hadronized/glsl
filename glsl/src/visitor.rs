@@ -79,7 +79,7 @@ pub enum Visit {
   /// strategy will be ignored.
   Children,
   /// The visitor won’t visit children nor siblings and will go up.
-  Parent
+  Parent,
 }
 
 /// Visitor object, visiting AST nodes.
@@ -120,7 +120,10 @@ pub trait Visitor {
     Visit::Children
   }
 
-  fn visit_function_parameter_declarator(&mut self, _: &mut syntax::FunctionParameterDeclarator) -> Visit {
+  fn visit_function_parameter_declarator(
+    &mut self,
+    _: &mut syntax::FunctionParameterDeclarator,
+  ) -> Visit {
     Visit::Children
   }
 
@@ -148,11 +151,17 @@ pub trait Visitor {
     Visit::Children
   }
 
-  fn visit_preprocessor_extension_behavior(&mut self, _: &mut syntax::PreprocessorExtensionBehavior) -> Visit {
+  fn visit_preprocessor_extension_behavior(
+    &mut self,
+    _: &mut syntax::PreprocessorExtensionBehavior,
+  ) -> Visit {
     Visit::Children
   }
 
-  fn visit_preprocessor_extension_name(&mut self, _: &mut syntax::PreprocessorExtensionName) -> Visit {
+  fn visit_preprocessor_extension_name(
+    &mut self,
+    _: &mut syntax::PreprocessorExtensionName,
+  ) -> Visit {
     Visit::Children
   }
 
@@ -160,7 +169,10 @@ pub trait Visitor {
     Visit::Children
   }
 
-  fn visit_preprocessor_version_profile(&mut self, _: &mut syntax::PreprocessorVersionProfile) -> Visit {
+  fn visit_preprocessor_version_profile(
+    &mut self,
+    _: &mut syntax::PreprocessorVersionProfile,
+  ) -> Visit {
     Visit::Children
   }
 
@@ -236,7 +248,10 @@ pub trait Visitor {
     Visit::Children
   }
 
-  fn visit_function_parameter_declaration(&mut self, _: &mut syntax::FunctionParameterDeclaration) -> Visit {
+  fn visit_function_parameter_declaration(
+    &mut self,
+    _: &mut syntax::FunctionParameterDeclaration,
+  ) -> Visit {
     Visit::Children
   }
 
@@ -317,25 +332,42 @@ pub trait Visitor {
 ///     AST to implement various checks and validations.
 pub trait Host {
   /// Visit an AST node.
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor;
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor;
 }
 
-impl<T> Host for Option<T> where T: Host {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+impl<T> Host for Option<T>
+where
+  T: Host,
+{
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     if let Some(ref mut x) = *self {
       x.visit(visitor);
     }
   }
 }
 
-impl<T> Host for Box<T> where T: Host {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+impl<T> Host for Box<T>
+where
+  T: Host,
+{
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     (**self).visit(visitor);
   }
 }
 
 impl Host for syntax::TranslationUnit {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_translation_unit(self);
 
     if visit == Visit::Children {
@@ -347,35 +379,44 @@ impl Host for syntax::TranslationUnit {
 }
 
 impl Host for syntax::ExternalDeclaration {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_external_declaration(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::ExternalDeclaration::Preprocessor(ref mut p) => p.visit(visitor),
         syntax::ExternalDeclaration::FunctionDefinition(ref mut fd) => fd.visit(visitor),
-        syntax::ExternalDeclaration::Declaration(ref mut d) => d.visit(visitor)
+        syntax::ExternalDeclaration::Declaration(ref mut d) => d.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::Preprocessor {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_preprocessor(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::Preprocessor::Define(ref mut pd) => pd.visit(visitor),
         syntax::Preprocessor::Version(ref mut pv) => pv.visit(visitor),
-        syntax::Preprocessor::Extension(ref mut ext) => ext.visit(visitor)
+        syntax::Preprocessor::Extension(ref mut ext) => ext.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::PreprocessorDefine {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_preprocessor_define(self);
 
     if visit == Visit::Children {
@@ -386,7 +427,10 @@ impl Host for syntax::PreprocessorDefine {
 }
 
 impl Host for syntax::PreprocessorVersion {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_preprocessor_version(self);
 
     if visit == Visit::Children {
@@ -396,13 +440,19 @@ impl Host for syntax::PreprocessorVersion {
 }
 
 impl Host for syntax::PreprocessorVersionProfile {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_preprocessor_version_profile(self);
   }
 }
 
 impl Host for syntax::PreprocessorExtension {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_preprocessor_extension(self);
 
     if visit == Visit::Children {
@@ -413,19 +463,28 @@ impl Host for syntax::PreprocessorExtension {
 }
 
 impl Host for syntax::PreprocessorExtensionBehavior {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_preprocessor_extension_behavior(self);
   }
 }
 
 impl Host for syntax::PreprocessorExtensionName {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_preprocessor_extension_name(self);
   }
 }
 
 impl Host for syntax::FunctionPrototype {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_function_prototype(self);
 
     if visit == Visit::Children {
@@ -440,7 +499,10 @@ impl Host for syntax::FunctionPrototype {
 }
 
 impl Host for syntax::FunctionParameterDeclaration {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_function_parameter_declaration(self);
 
     if visit == Visit::Children {
@@ -460,7 +522,10 @@ impl Host for syntax::FunctionParameterDeclaration {
 }
 
 impl Host for syntax::FunctionParameterDeclarator {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_function_parameter_declarator(self);
 
     if visit == Visit::Children {
@@ -471,7 +536,10 @@ impl Host for syntax::FunctionParameterDeclarator {
 }
 
 impl Host for syntax::FunctionDefinition {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_function_definition(self);
 
     if visit == Visit::Children {
@@ -482,7 +550,10 @@ impl Host for syntax::FunctionDefinition {
 }
 
 impl Host for syntax::Declaration {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_declaration(self);
 
     if visit == Visit::Children {
@@ -511,7 +582,10 @@ impl Host for syntax::Declaration {
 }
 
 impl Host for syntax::Block {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_block(self);
 
     if visit == Visit::Children {
@@ -528,7 +602,10 @@ impl Host for syntax::Block {
 }
 
 impl Host for syntax::InitDeclaratorList {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_init_declarator_list(self);
 
     if visit == Visit::Children {
@@ -542,7 +619,10 @@ impl Host for syntax::InitDeclaratorList {
 }
 
 impl Host for syntax::SingleDeclaration {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_single_declaration(self);
 
     if visit == Visit::Children {
@@ -555,7 +635,10 @@ impl Host for syntax::SingleDeclaration {
 }
 
 impl Host for syntax::SingleDeclarationNoType {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_single_declaration_no_type(self);
 
     if visit == Visit::Children {
@@ -566,7 +649,10 @@ impl Host for syntax::SingleDeclarationNoType {
 }
 
 impl Host for syntax::FullySpecifiedType {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_full_specified_type(self);
 
     if visit == Visit::Children {
@@ -577,7 +663,10 @@ impl Host for syntax::FullySpecifiedType {
 }
 
 impl Host for syntax::TypeSpecifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_type_specifier(self);
 
     if visit == Visit::Children {
@@ -588,21 +677,27 @@ impl Host for syntax::TypeSpecifier {
 }
 
 impl Host for syntax::TypeSpecifierNonArray {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_type_specifier_non_array(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::TypeSpecifierNonArray::Struct(ref mut ss) => ss.visit(visitor),
         syntax::TypeSpecifierNonArray::TypeName(ref mut tn) => tn.visit(visitor),
-        _ => ()
+        _ => (),
       }
     }
   }
 }
 
 impl Host for syntax::TypeQualifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_type_qualifier(self);
 
     if visit == Visit::Children {
@@ -614,7 +709,10 @@ impl Host for syntax::TypeQualifier {
 }
 
 impl Host for syntax::TypeQualifierSpec {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_type_qualifier_spec(self);
 
     if visit == Visit::Children {
@@ -623,14 +721,17 @@ impl Host for syntax::TypeQualifierSpec {
         syntax::TypeQualifierSpec::Layout(ref mut lq) => lq.visit(visitor),
         syntax::TypeQualifierSpec::Precision(ref mut pq) => pq.visit(visitor),
         syntax::TypeQualifierSpec::Interpolation(ref mut iq) => iq.visit(visitor),
-        _ => ()
+        _ => (),
       }
     }
   }
 }
 
 impl Host for syntax::StorageQualifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_storage_qualifier(self);
 
     if visit == Visit::Children {
@@ -644,7 +745,10 @@ impl Host for syntax::StorageQualifier {
 }
 
 impl Host for syntax::LayoutQualifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_layout_qualifier(self);
 
     if visit == Visit::Children {
@@ -656,7 +760,10 @@ impl Host for syntax::LayoutQualifier {
 }
 
 impl Host for syntax::LayoutQualifierSpec {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_layout_qualifier_spec(self);
 
     if visit == Visit::Children {
@@ -672,31 +779,46 @@ impl Host for syntax::LayoutQualifierSpec {
 }
 
 impl Host for syntax::PrecisionQualifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_precision_qualifier(self);
   }
 }
 
 impl Host for syntax::InterpolationQualifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_interpolation_qualifier(self);
   }
 }
 
 impl Host for syntax::TypeName {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_type_name(self);
   }
 }
 
 impl Host for syntax::Identifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_identifier(self);
   }
 }
 
 impl Host for syntax::ArrayedIdentifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_arrayed_identifier(self);
 
     if visit == Visit::Children {
@@ -707,7 +829,10 @@ impl Host for syntax::ArrayedIdentifier {
 }
 
 impl Host for syntax::Expr {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_expr(self);
 
     if visit == Visit::Children {
@@ -764,32 +889,44 @@ impl Host for syntax::Expr {
           b.visit(visitor);
         }
 
-        _ => ()
+        _ => (),
       }
     }
   }
 }
 
 impl Host for syntax::UnaryOp {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_unary_op(self);
   }
 }
 
 impl Host for syntax::BinaryOp {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_binary_op(self);
   }
 }
 
 impl Host for syntax::AssignmentOp {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let _ = visitor.visit_assignment_op(self);
   }
 }
 
 impl Host for syntax::ArraySpecifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_array_specifier(self);
 
     if visit == Visit::Children {
@@ -801,20 +938,26 @@ impl Host for syntax::ArraySpecifier {
 }
 
 impl Host for syntax::FunIdentifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_fun_identifier(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::FunIdentifier::Identifier(ref mut i) => i.visit(visitor),
-        syntax::FunIdentifier::Expr(ref mut e) => e.visit(visitor)
+        syntax::FunIdentifier::Expr(ref mut e) => e.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::StructSpecifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_struct_specifier(self);
 
     if visit == Visit::Children {
@@ -828,7 +971,10 @@ impl Host for syntax::StructSpecifier {
 }
 
 impl Host for syntax::StructFieldSpecifier {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_struct_field_specifier(self);
 
     if visit == Visit::Children {
@@ -843,20 +989,26 @@ impl Host for syntax::StructFieldSpecifier {
 }
 
 impl Host for syntax::Statement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_statement(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::Statement::Compound(ref mut cs) => cs.visit(visitor),
-        syntax::Statement::Simple(ref mut ss) => ss.visit(visitor)
+        syntax::Statement::Simple(ref mut ss) => ss.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::SimpleStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_simple_statement(self);
 
     if visit == Visit::Children {
@@ -867,14 +1019,17 @@ impl Host for syntax::SimpleStatement {
         syntax::SimpleStatement::Switch(ref mut s) => s.visit(visitor),
         syntax::SimpleStatement::CaseLabel(ref mut cl) => cl.visit(visitor),
         syntax::SimpleStatement::Iteration(ref mut i) => i.visit(visitor),
-        syntax::SimpleStatement::Jump(ref mut j) => j.visit(visitor)
+        syntax::SimpleStatement::Jump(ref mut j) => j.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::CompoundStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_compound_statement(self);
 
     if visit == Visit::Children {
@@ -886,7 +1041,10 @@ impl Host for syntax::CompoundStatement {
 }
 
 impl Host for syntax::SelectionStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_selection_statement(self);
 
     if visit == Visit::Children {
@@ -897,7 +1055,10 @@ impl Host for syntax::SelectionStatement {
 }
 
 impl Host for syntax::SelectionRestStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_selection_rest_statement(self);
 
     if visit == Visit::Children {
@@ -914,7 +1075,10 @@ impl Host for syntax::SelectionRestStatement {
 }
 
 impl Host for syntax::SwitchStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_switch_statement(self);
 
     if visit == Visit::Children {
@@ -928,7 +1092,10 @@ impl Host for syntax::SwitchStatement {
 }
 
 impl Host for syntax::CaseLabel {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_case_label(self);
 
     if visit == Visit::Children {
@@ -940,7 +1107,10 @@ impl Host for syntax::CaseLabel {
 }
 
 impl Host for syntax::IterationStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_iteration_statement(self);
 
     if visit == Visit::Children {
@@ -966,20 +1136,26 @@ impl Host for syntax::IterationStatement {
 }
 
 impl Host for syntax::ForInitStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_for_init_statement(self);
 
     if visit == Visit::Children {
       match *self {
         syntax::ForInitStatement::Expression(ref mut e) => e.visit(visitor),
-        syntax::ForInitStatement::Declaration(ref mut d) => d.visit(visitor)
+        syntax::ForInitStatement::Declaration(ref mut d) => d.visit(visitor),
       }
     }
   }
 }
 
 impl Host for syntax::ForRestStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_for_rest_statement(self);
 
     if visit == Visit::Children {
@@ -990,7 +1166,10 @@ impl Host for syntax::ForRestStatement {
 }
 
 impl Host for syntax::JumpStatement {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_jump_statement(self);
 
     if visit == Visit::Children {
@@ -1002,7 +1181,10 @@ impl Host for syntax::JumpStatement {
 }
 
 impl Host for syntax::Condition {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_condition(self);
 
     if visit == Visit::Children {
@@ -1020,7 +1202,10 @@ impl Host for syntax::Condition {
 }
 
 impl Host for syntax::Initializer {
-  fn visit<V>(&mut self, visitor: &mut V) where V: Visitor {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
     let visit = visitor.visit_initializer(self);
 
     if visit == Visit::Children {
@@ -1050,28 +1235,19 @@ mod tests {
       syntax::TypeSpecifierNonArray::Float,
       "x",
       None,
-      Some(syntax::Expr::from(3.14).into())
+      Some(syntax::Expr::from(3.14).into()),
     );
 
-    let decl1 = syntax::Statement::declare_var(
-      syntax::TypeSpecifierNonArray::Int,
-      "y",
-      None,
-      None
-    );
+    let decl1 = syntax::Statement::declare_var(syntax::TypeSpecifierNonArray::Int, "y", None, None);
 
-    let decl2 = syntax::Statement::declare_var(
-      syntax::TypeSpecifierNonArray::Vec4,
-      "z",
-      None,
-      None
-    );
+    let decl2 =
+      syntax::Statement::declare_var(syntax::TypeSpecifierNonArray::Vec4, "z", None, None);
 
     let mut compound = syntax::CompoundStatement::from_iter(vec![decl0, decl1, decl2]);
 
     // our visitor that will count the number of variables it saw
     struct Counter {
-      var_nb: usize
+      var_nb: usize,
     }
 
     impl Visitor for Counter {

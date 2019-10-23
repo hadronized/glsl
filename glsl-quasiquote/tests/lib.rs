@@ -1,16 +1,17 @@
 #![feature(proc_macro_hygiene)]
 
 extern crate glsl;
-#[macro_use] extern crate glsl_quasiquote;
+#[macro_use]
+extern crate glsl_quasiquote;
 
 #[test]
 fn void_main_empty() {
-  let _  = glsl!{void main() {}};
+  let _ = glsl! {void main() {}};
 }
 
 #[test]
 fn understands_version_and_extension() {
-  let _ = glsl!{
+  let _ = glsl! {
     #version 330 core
     #extension GL_foo_bar : require
     void main() {
@@ -20,7 +21,7 @@ fn understands_version_and_extension() {
 
 #[test]
 fn understands_define() {
-  let _ = glsl!{
+  let _ = glsl! {
     #define foo 32
     void main() {
     }
@@ -29,7 +30,7 @@ fn understands_define() {
 
 #[test]
 fn fn_returns_int() {
-  let _ = glsl!{
+  let _ = glsl! {
     int test() {
       return 3.;
     }
@@ -38,7 +39,7 @@ fn fn_returns_int() {
 
 #[test]
 fn simple_struct() {
-  let _ = glsl!{
+  let _ = glsl! {
     struct V {
       vec4 p;
       vec2 uv;
@@ -52,7 +53,7 @@ fn simple_struct() {
 
 #[test]
 fn struct_several_ident_per_field() {
-  let _ = glsl!{
+  let _ = glsl! {
     struct S {
       float a, b, c;
     };
@@ -61,7 +62,7 @@ fn struct_several_ident_per_field() {
 
 #[test]
 fn struct_with_identifiers() {
-  let _ = glsl!{
+  let _ = glsl! {
     struct S {
       float a, b, c;
     } foo, bar, zoo;
@@ -70,7 +71,7 @@ fn struct_with_identifiers() {
 
 #[test]
 fn struct_with_arrayed_identifiers() {
-  let _ = glsl!{
+  let _ = glsl! {
     struct S {
       float a, b, c;
     } foo[3], bar[12], zoo[];
@@ -79,7 +80,7 @@ fn struct_with_arrayed_identifiers() {
 
 #[test]
 fn typed_return() {
-  let _ = glsl!{
+  let _ = glsl! {
     ReturnType foo() {
     }
   };
@@ -87,7 +88,7 @@ fn typed_return() {
 
 #[test]
 fn dot_expr() {
-  let _ = glsl!{
+  let _ = glsl! {
     void main() {
       let x = foo.xyz;
       let y = 1.;

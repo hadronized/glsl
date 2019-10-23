@@ -41,8 +41,11 @@ impl From<ShaderKind> for shaderc::ShaderKind {
 pub fn transpile_translation_unit_to_binary<F>(
   f: &mut F,
   tu: &syntax::TranslationUnit,
-  kind: ShaderKind
-) -> Result<(), String> where F: std::io::Write {
+  kind: ShaderKind,
+) -> Result<(), String>
+where
+  F: std::io::Write,
+{
   // write as GLSL in an intermediate buffer
   let mut glsl_buffer = String::new();
   glsl_transpiler::show_translation_unit(&mut glsl_buffer, tu);
@@ -51,13 +54,9 @@ pub fn transpile_translation_unit_to_binary<F>(
   let mut compiler = shaderc::Compiler::new().unwrap();
   let options = shaderc::CompileOptions::new().unwrap();
   let kind = kind.into();
-  let output =
-    compiler.compile_into_spirv(&glsl_buffer,
-                                kind,
-                                "glsl input",
-                                "main",
-                                Some(&options)
-    ).map_err(|e| format!("{}", e))?;
+  let output = compiler
+    .compile_into_spirv(&glsl_buffer, kind, "glsl input", "main", Some(&options))
+    .map_err(|e| format!("{}", e))?;
 
   let _ = f.write_all(output.as_binary_u8());
 
@@ -73,8 +72,11 @@ pub fn transpile_translation_unit_to_binary<F>(
 pub fn transpile_translation_unit<F>(
   f: &mut F,
   tu: &syntax::TranslationUnit,
-  kind: ShaderKind
-) -> Result<(), String> where F: std::fmt::Write {
+  kind: ShaderKind,
+) -> Result<(), String>
+where
+  F: std::fmt::Write,
+{
   // write as GLSL in an intermediate buffer
   let mut glsl_buffer = String::new();
   glsl_transpiler::show_translation_unit(&mut glsl_buffer, tu);
@@ -83,13 +85,9 @@ pub fn transpile_translation_unit<F>(
   let mut compiler = shaderc::Compiler::new().unwrap();
   let options = shaderc::CompileOptions::new().unwrap();
   let kind = kind.into();
-  let output =
-    compiler.compile_into_spirv_assembly(&glsl_buffer,
-                                         kind,
-                                         "glsl input",
-                                         "main",
-                                         Some(&options)
-    ).map_err(|e| format!("{}", e))?;
+  let output = compiler
+    .compile_into_spirv_assembly(&glsl_buffer, kind, "glsl input", "main", Some(&options))
+    .map_err(|e| format!("{}", e))?;
 
   let _ = f.write_str(&output.as_text());
 
