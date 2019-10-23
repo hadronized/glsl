@@ -442,6 +442,30 @@ pub fn bool_lit(i: &str) -> ParserResult<bool> {
   alt((value(true, keyword("true")), value(false, keyword("false"))))(i)
 }
 
+/// Parse a path literal.
+pub fn path_lit(i: &str) -> ParserResult<syntax::Path> {
+  alt((
+    map(path_lit_absolute, syntax::Path::Absolute),
+    map(path_lit_relative, syntax::Path::Relative),
+  ))(i)
+}
+
+/// Parse a path literal with angle brackets.
+pub fn path_lit_absolute(i: &str) -> ParserResult<String> {
+  map(
+    delimited(char('<'), take_until(">"), char('>')),
+    |s: &str| s.to_owned()
+  )(i)
+}
+
+/// Parse a path literal with double quotes.
+pub fn path_lit_relative(i: &str) -> ParserResult<String> {
+  map(
+    delimited(char('"'), take_until("\""), char('\"')),
+    |s: &str| s.to_owned()
+  )(i)
+}
+
 /// Parse a unary operator.
 pub fn unary_op(i: &str) -> ParserResult<syntax::UnaryOp> {
   alt((
@@ -1579,10 +1603,21 @@ pub fn translation_unit(i: &str) -> ParserResult<syntax::TranslationUnit> {
   )(i)
 }
 
-/// Parse a preprocessor command.
+/// Parse a preprocessor directive.
 pub fn preprocessor(i: &str) -> ParserResult<syntax::Preprocessor> {
   alt((
     map(pp_define, syntax::Preprocessor::Define),
+    value(syntax::Preprocessor::Else, pp_else),
+    map(pp_elseif, syntax::Preprocessor::ElseIf),
+    value(syntax::Preprocessor::EndIf, pp_endif),
+    map(pp_error, syntax::Preprocessor::Error),
+    map(pp_if, syntax::Preprocessor::If),
+    map(pp_ifdef, syntax::Preprocessor::IfDef),
+    map(pp_ifndef, syntax::Preprocessor::IfNDef),
+    map(pp_include, syntax::Preprocessor::Include),
+    map(pp_line, syntax::Preprocessor::Line),
+    map(pp_pragma, syntax::Preprocessor::Pragma),
+    map(pp_undef, syntax::Preprocessor::Undef),
     map(pp_version, syntax::Preprocessor::Version),
     map(pp_extension, syntax::Preprocessor::Extension),
   ))(i)
@@ -1605,7 +1640,7 @@ pub fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionPr
   ))(i)
 }
 
-/// Parse a #define
+/// Parse a #define.
 pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
   map(
     tuple((
@@ -1616,6 +1651,148 @@ pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
       newline,
     )),
     |(_, _, name, value, _)| syntax::PreprocessorDefine { name, value },
+  )(i)
+}
+
+/// Parse a #else.
+pub fn pp_else(i: &str) -> ParserResult<syntax::Preprocessor> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("else"), space0),
+      newline
+    )),
+    |(_, _, _)| syntax::Preprocessor::Else
+  )(i)
+}
+
+/// Parse a #elseif.
+pub fn pp_elseif(i: &str) -> ParserResult<syntax::PreprocessorElseIf> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("elseif"), space0),
+      terminated(primary_expr, space0),
+      newline
+    )),
+    |(_, _, expr, _)| syntax::PreprocessorElseIf { expr }
+  )(i)
+}
+
+/// Parse a #endif.
+pub fn pp_endif(i: &str) -> ParserResult<syntax::Preprocessor> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("endif"), space0),
+      newline
+    )),
+    |(_, _, _)| syntax::Preprocessor::EndIf
+  )(i)
+}
+
+/// Parse a #error.
+pub fn pp_error(i: &str) -> ParserResult<syntax::PreprocessorError> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("error"), space0),
+      take_until("\n"),
+      newline
+    )),
+    |(_, _, message, _)| syntax::PreprocessorError { message: message.to_owned() }
+  )(i)
+}
+
+/// Parse a #if.
+pub fn pp_if(i: &str) -> ParserResult<syntax::PreprocessorIf> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("if"), space0),
+      terminated(primary_expr, space0),
+      newline
+    )),
+    |(_, _, expr, _)| syntax::PreprocessorIf { expr }
+  )(i)
+}
+
+/// Parse a #ifdef.
+pub fn pp_ifdef(i: &str) -> ParserResult<syntax::PreprocessorIfDef> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("ifdef"), space0),
+      terminated(identifier, space0),
+      newline
+    )),
+    |(_, _, name, _)| syntax::PreprocessorIfDef { name }
+  )(i)
+}
+
+/// Parse a #ifndef.
+pub fn pp_ifndef(i: &str) -> ParserResult<syntax::PreprocessorIfNDef> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("ifndef"), space0),
+      terminated(identifier, space0),
+      newline
+    )),
+    |(_, _, name, _)| syntax::PreprocessorIfNDef { name }
+  )(i)
+}
+
+/// Parse a #include.
+pub fn pp_include(i: &str) -> ParserResult<syntax::PreprocessorInclude> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("include"), space0),
+      terminated(path_lit, space0),
+      newline
+    )),
+    |(_, _, path, _)| syntax::PreprocessorInclude { path }
+  )(i)
+}
+
+/// Parse a #line.
+pub fn pp_line(i: &str) -> ParserResult<syntax::PreprocessorLine> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("line"), space0),
+      terminated(integral_lit, space0),
+      opt(terminated(integral_lit, space0)),
+      newline
+    )),
+    |(_, _, line, source_string_number, _)| syntax::PreprocessorLine { line, source_string_number }
+  )(i)
+}
+
+/// Parse a #pragma.
+pub fn pp_pragma(i: &str) -> ParserResult<syntax::PreprocessorPragma> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("pragma"), space0),
+      take_until("\n"),
+      newline
+    )),
+    |(_, _, command, _)| syntax::PreprocessorPragma { command: command.to_owned() }
+  )(i)
+}
+
+/// Parse a #undef.
+pub fn pp_undef(i: &str) -> ParserResult<syntax::PreprocessorUndef> {
+  map(
+    tuple((
+      terminated(char('#'), space0),
+      terminated(keyword("undef"), space0),
+      terminated(identifier, space0),
+      newline
+    )),
+    |(_, _, name, _)| syntax::PreprocessorUndef { name }
   )(i)
 }
 
@@ -4081,7 +4258,7 @@ mod tests {
   }
 
   #[test]
-  fn parse_define() {
+  fn parse_pp_define() {
     assert_eq!(
       preprocessor("#define test 1.0\n"),
       Ok((
@@ -4112,6 +4289,154 @@ mod tests {
           name: "test".into(),
           value: syntax::Expr::IntConst(1)
         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_else() {
+    assert_eq!(
+      preprocessor("#else\n"),
+      Ok(("",
+         syntax::Preprocessor::Else
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_elseif() {
+    assert_eq!(
+      preprocessor("#elseif 42\n"),
+      Ok(("",
+         syntax::Preprocessor::ElseIf(syntax::PreprocessorElseIf {
+           expr: syntax::Expr::IntConst(42)
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_endif() {
+    assert_eq!(
+      preprocessor("#endif\n"),
+      Ok(("",
+         syntax::Preprocessor::EndIf
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_error() {
+    assert_eq!(
+      preprocessor("#error some message\n"),
+      Ok(("",
+         syntax::Preprocessor::Error(syntax::PreprocessorError {
+           message: "some message".to_owned()
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_if() {
+    assert_eq!(
+      preprocessor("#if 42\n"),
+      Ok(("",
+         syntax::Preprocessor::If(syntax::PreprocessorIf {
+           expr: syntax::Expr::IntConst(42)
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_ifdef() {
+    assert_eq!(
+      preprocessor("#ifdef FOO\n"),
+      Ok(("",
+         syntax::Preprocessor::IfDef(syntax::PreprocessorIfDef {
+           name: syntax::Identifier("FOO".to_owned())
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_ifndef() {
+    assert_eq!(
+      preprocessor("#ifndef FOO\n"),
+      Ok(("",
+         syntax::Preprocessor::IfNDef(syntax::PreprocessorIfNDef {
+           name: syntax::Identifier("FOO".to_owned())
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_include() {
+    assert_eq!(
+      preprocessor("#include <filename>\n"),
+      Ok(("",
+         syntax::Preprocessor::Include(syntax::PreprocessorInclude {
+           path: syntax::Path::Absolute("filename".to_owned())
+         })
+      ))
+    );
+
+    assert_eq!(
+      preprocessor("#include \"filename\"\n"),
+      Ok(("",
+         syntax::Preprocessor::Include(syntax::PreprocessorInclude {
+           path: syntax::Path::Relative("filename".to_owned())
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_line() {
+    assert_eq!(
+      preprocessor("#line 2\n"),
+      Ok(("",
+         syntax::Preprocessor::Line(syntax::PreprocessorLine {
+           line: 2,
+           source_string_number: None,
+         })
+      ))
+    );
+
+    assert_eq!(
+      preprocessor("#line 2 4\n"),
+      Ok(("",
+         syntax::Preprocessor::Line(syntax::PreprocessorLine {
+           line: 2,
+           source_string_number: Some(4),
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_pragma() {
+    assert_eq!(
+      preprocessor("#pragma some flag\n"),
+      Ok(("",
+         syntax::Preprocessor::Pragma(syntax::PreprocessorPragma{
+           command: "some flag".to_owned()
+         })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_undef() {
+    assert_eq!(
+      preprocessor("#undef FOO\n"),
+      Ok(("",
+         syntax::Preprocessor::Undef(syntax::PreprocessorUndef {
+           name: syntax::Identifier("FOO".to_owned())
+         })
       ))
     );
   }

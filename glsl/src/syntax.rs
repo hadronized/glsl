@@ -100,6 +100,15 @@ impl<T> Extend<T> for NonEmpty<T> {
   }
 }
 
+/// A path literal.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Path {
+  /// Specified with angle brackets.
+  Absolute(String),
+  /// Specified with double quotes.
+  Relative(String),
+}
+
 /// Error that might occur when creating a new [`Identifier`].
 #[derive(Debug)]
 pub enum IdentifierError {
@@ -1125,10 +1134,10 @@ pub enum JumpStatement {
   Discard,
 }
 
-/// Some basic preprocessor commands.
+/// Some basic preprocessor directives.
 ///
 /// As it’s important to carry them around the AST because they cannot be substituted in a normal
-/// preprocessor (they’re used by GPU’s compilers), those preprocessor commands are available for
+/// preprocessor (they’re used by GPU’s compilers), those preprocessor directives are available for
 /// inspection.
 ///
 /// > Important note: so far, only `#version` and `#extension` are supported. Other pragmas will be
@@ -1136,11 +1145,22 @@ pub enum JumpStatement {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Preprocessor {
   Define(PreprocessorDefine),
+  Else,
+  ElseIf(PreprocessorElseIf),
+  EndIf,
+  Error(PreprocessorError),
+  If(PreprocessorIf),
+  IfDef(PreprocessorIfDef),
+  IfNDef(PreprocessorIfNDef),
+  Include(PreprocessorInclude),
+  Line(PreprocessorLine),
+  Pragma(PreprocessorPragma),
+  Undef(PreprocessorUndef),
   Version(PreprocessorVersion),
   Extension(PreprocessorExtension),
 }
 
-/// A #define preprocessor command.
+/// A #define preprocessor directive.
 /// Allows any expression but only Integer and Float literals make sense
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorDefine {
@@ -1148,7 +1168,63 @@ pub struct PreprocessorDefine {
   pub value: Expr,
 }
 
-/// A #version preprocessor command.
+/// A #else preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorElseIf {
+  pub expr: Expr,
+}
+
+/// A #error preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorError {
+  pub message: String,
+}
+
+/// A #if preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorIf {
+  pub expr: Expr,
+}
+
+/// A #ifdef preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorIfDef {
+  pub name: Identifier,
+}
+
+/// A #ifndef preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorIfNDef {
+  pub name: Identifier,
+}
+
+/// An #include name annotation.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorInclude {
+  pub path: Path,
+}
+
+/// A #line preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorLine {
+  pub line: i32,
+  pub source_string_number: Option<i32>,
+}
+
+/// A #pragma preprocessor directive.
+/// Holds compiler-specific command.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorPragma {
+  pub command: String,
+}
+
+/// A #undef preprocessor directive.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PreprocessorUndef {
+  pub name: Identifier,
+}
+
+/// A #version preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorVersion {
   pub version: u16,
@@ -1163,7 +1239,7 @@ pub enum PreprocessorVersionProfile {
   ES,
 }
 
-/// An #extension preprocessor command.
+/// An #extension preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorExtension {
   pub name: PreprocessorExtensionName,

@@ -96,6 +96,16 @@ impl_tokenize!(syntax::FunctionDefinition, tokenize_function_definition);
 impl_tokenize!(syntax::ExternalDeclaration, tokenize_external_declaration);
 impl_tokenize!(syntax::TranslationUnit, tokenize_translation_unit);
 impl_tokenize!(syntax::Preprocessor, tokenize_preprocessor);
+impl_tokenize!(syntax::PreprocessorDefine, tokenize_preprocessor_define);
+impl_tokenize!(syntax::PreprocessorElseIf, tokenize_preprocessor_elseif);
+impl_tokenize!(syntax::PreprocessorError, tokenize_preprocessor_error);
+impl_tokenize!(syntax::PreprocessorIf, tokenize_preprocessor_if);
+impl_tokenize!(syntax::PreprocessorIfDef, tokenize_preprocessor_ifdef);
+impl_tokenize!(syntax::PreprocessorIfNDef, tokenize_preprocessor_ifndef);
+impl_tokenize!(syntax::PreprocessorInclude, tokenize_preprocessor_include);
+impl_tokenize!(syntax::PreprocessorLine, tokenize_preprocessor_line);
+impl_tokenize!(syntax::PreprocessorPragma, tokenize_preprocessor_pragma);
+impl_tokenize!(syntax::PreprocessorUndef, tokenize_preprocessor_undef);
 impl_tokenize!(syntax::PreprocessorVersion, tokenize_preprocessor_version);
 impl_tokenize!(
   syntax::PreprocessorVersionProfile,
@@ -117,6 +127,13 @@ impl_tokenize!(
 fn tokenize_identifier(i: &syntax::Identifier) -> TokenStream {
   let i = i.quote();
   quote! { #i }
+}
+
+fn tokenize_path(p: &syntax::Path) -> TokenStream {
+  match p {
+    syntax::Path::Absolute(s) => quote! { glsl::syntax::Path::Absolute(#s.to_owned()) },
+    syntax::Path::Relative(s) => quote! { glsl::syntax::Path::Relative(#s.to_owned()) },
+  }
 }
 
 fn tokenize_type_name(tn: &syntax::TypeName) -> TokenStream {
@@ -1110,6 +1127,59 @@ fn tokenize_preprocessor(pp: &syntax::Preprocessor) -> TokenStream {
       quote! { glsl::syntax::Preprocessor::Define(#pd) }
     }
 
+    syntax::Preprocessor::Else => {
+      quote! { glsl::syntax::Preprocessor::Else }
+    }
+
+    syntax::Preprocessor::ElseIf(ref pei) => {
+      let pei = tokenize_preprocessor_elseif(pei);
+      quote! { glsl::syntax::Preprocessor::ElseIf(#pei) }
+    }
+
+    syntax::Preprocessor::EndIf => {
+      quote! { glsl::syntax::Preprocessor::EndIf }
+    }
+
+    syntax::Preprocessor::Error(ref pe) => {
+      let pe = tokenize_preprocessor_error(pe);
+      quote! { glsl::syntax::Preprocessor::Error(#pe) }
+    }
+
+    syntax::Preprocessor::If(ref pi) => {
+      let pi = tokenize_preprocessor_if(pi);
+      quote! { glsl::syntax::Preprocessor::If(#pi) }
+    }
+
+    syntax::Preprocessor::IfDef(ref pid) => {
+      let pid = tokenize_preprocessor_ifdef(pid);
+      quote! { glsl::syntax::Preprocessor::IfDef(#pid) }
+    }
+
+    syntax::Preprocessor::IfNDef(ref pind) => {
+      let pind = tokenize_preprocessor_ifndef(pind);
+      quote! { glsl::syntax::Preprocessor::IfNDef(#pind) }
+    }
+
+    syntax::Preprocessor::Include(ref pi) => {
+      let pi = tokenize_preprocessor_include(pi);
+      quote! { glsl::syntax::Preprocessor::Include(#pi) }
+    }
+
+    syntax::Preprocessor::Line(ref pl) => {
+      let pl = tokenize_preprocessor_line(pl);
+      quote! { glsl::syntax::Preprocessor::Line(#pl) }
+    }
+
+    syntax::Preprocessor::Pragma(ref pp) => {
+      let pp = tokenize_preprocessor_pragma(pp);
+      quote! { glsl::syntax::Preprocessor::Pragma(#pp) }
+    }
+
+    syntax::Preprocessor::Undef(ref pu) => {
+      let pu = tokenize_preprocessor_undef(pu);
+      quote! { glsl::syntax::Preprocessor::Undef(#pu) }
+    }
+
     syntax::Preprocessor::Version(ref pv) => {
       let pv = tokenize_preprocessor_version(pv);
       quote! { glsl::syntax::Preprocessor::Version(#pv) }
@@ -1130,6 +1200,98 @@ fn tokenize_preprocessor_define(pd: &syntax::PreprocessorDefine) -> TokenStream 
     glsl::syntax::PreprocessorDefine {
       name: #name,
       value: #value
+    }
+  }
+}
+
+fn tokenize_preprocessor_elseif(pei: &syntax::PreprocessorElseIf) -> TokenStream {
+  let expr = tokenize_expr(&pei.expr);
+
+  quote! {
+    glsl::syntax::PreprocessorElseIf {
+      expr: #expr
+    }
+  }
+}
+
+fn tokenize_preprocessor_error(pe: &syntax::PreprocessorError) -> TokenStream {
+  let message = &pe.message;
+
+  quote! {
+    glsl::syntax::PreprocessorError {
+      message: #message.to_owned()
+    }
+  }
+}
+
+fn tokenize_preprocessor_if(pi: &syntax::PreprocessorIf) -> TokenStream {
+  let expr = tokenize_expr(&pi.expr);
+
+  quote! {
+    glsl::syntax::PreprocessorIf {
+      expr: #expr
+    }
+  }
+}
+
+fn tokenize_preprocessor_ifdef(pid: &syntax::PreprocessorIfDef) -> TokenStream {
+  let name = tokenize_identifier(&pid.name);
+
+  quote! {
+    glsl::syntax::PreprocessorIfDef {
+      name: #name
+    }
+  }
+}
+
+fn tokenize_preprocessor_ifndef(pind: &syntax::PreprocessorIfNDef) -> TokenStream {
+  let name = tokenize_identifier(&pind.name);
+
+  quote! {
+    glsl::syntax::PreprocessorIfNDef {
+      name: #name
+    }
+  }
+}
+
+fn tokenize_preprocessor_include(pi: &syntax::PreprocessorInclude) -> TokenStream {
+  let path = tokenize_path(&pi.path);
+
+  quote! {
+    glsl::syntax::PreprocessorInclude {
+      path: #path
+    }
+  }
+}
+
+fn tokenize_preprocessor_line(pl: &syntax::PreprocessorLine) -> TokenStream {
+  let line = pl.line;
+  let source_string_number = pl.source_string_number.quote();
+
+  quote! {
+    glsl::syntax::PreprocessorLine {
+      line: #line,
+      source_string_number: #source_string_number
+    }
+  }
+}
+
+fn tokenize_preprocessor_pragma(pp: &syntax::PreprocessorPragma) -> TokenStream {
+  let command = &pp.command;
+
+  quote! {
+    glsl::syntax::PreprocessorPragma {
+      command: #command.to_owned()
+    }
+  }
+}
+
+fn tokenize_preprocessor_undef(pu: &syntax::PreprocessorUndef) -> TokenStream {
+  let name = tokenize_identifier(&pu.name);
+
+  quote! {
+    glsl::syntax::PreprocessorUndef {
+      name: #name
     }
   }
 }

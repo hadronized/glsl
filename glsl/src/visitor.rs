@@ -147,6 +147,14 @@ pub trait Visitor {
     Visit::Children
   }
 
+  fn visit_preprocessor_elseif(&mut self, _: &mut syntax::PreprocessorElseIf) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_error(&mut self, _: &mut syntax::PreprocessorError) -> Visit {
+    Visit::Children
+  }
+
   fn visit_preprocessor_extension(&mut self, _: &mut syntax::PreprocessorExtension) -> Visit {
     Visit::Children
   }
@@ -162,6 +170,34 @@ pub trait Visitor {
     &mut self,
     _: &mut syntax::PreprocessorExtensionName,
   ) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_if(&mut self, _: &mut syntax::PreprocessorIf) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_ifdef(&mut self, _: &mut syntax::PreprocessorIfDef) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_ifndef(&mut self, _: &mut syntax::PreprocessorIfNDef) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_include(&mut self, _: &mut syntax::PreprocessorInclude) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_line(&mut self, _: &mut syntax::PreprocessorLine) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_pragma(&mut self, _: &mut syntax::PreprocessorPragma) -> Visit {
+    Visit::Children
+  }
+
+  fn visit_preprocessor_undef(&mut self, _: &mut syntax::PreprocessorUndef) -> Visit {
     Visit::Children
   }
 
@@ -405,6 +441,17 @@ impl Host for syntax::Preprocessor {
     if visit == Visit::Children {
       match *self {
         syntax::Preprocessor::Define(ref mut pd) => pd.visit(visitor),
+        syntax::Preprocessor::Else => (),
+        syntax::Preprocessor::ElseIf(ref mut pei) => pei.visit(visitor),
+        syntax::Preprocessor::EndIf => (),
+        syntax::Preprocessor::Error(ref mut pe) => pe.visit(visitor),
+        syntax::Preprocessor::If(ref mut pi) => pi.visit(visitor),
+        syntax::Preprocessor::IfDef(ref mut pid) => pid.visit(visitor),
+        syntax::Preprocessor::IfNDef(ref mut pind) => pind.visit(visitor),
+        syntax::Preprocessor::Include(ref mut pi) => pi.visit(visitor),
+        syntax::Preprocessor::Line(ref mut pl) => pl.visit(visitor),
+        syntax::Preprocessor::Pragma(ref mut pp) => pp.visit(visitor),
+        syntax::Preprocessor::Undef(ref mut pu) => pu.visit(visitor),
         syntax::Preprocessor::Version(ref mut pv) => pv.visit(visitor),
         syntax::Preprocessor::Extension(ref mut ext) => ext.visit(visitor),
       }
@@ -422,6 +469,107 @@ impl Host for syntax::PreprocessorDefine {
     if visit == Visit::Children {
       self.name.visit(visitor);
       self.value.visit(visitor);
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorElseIf {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_preprocessor_elseif(self);
+
+    if visit == Visit::Children {
+      self.expr.visit(visitor);
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorError {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let _ = visitor.visit_preprocessor_error(self);
+  }
+}
+
+impl Host for syntax::PreprocessorIf {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_preprocessor_if(self);
+
+    if visit == Visit::Children {
+      self.expr.visit(visitor);
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorIfDef {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_preprocessor_ifdef(self);
+
+    if visit == Visit::Children {
+      self.name.visit(visitor);
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorIfNDef {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_preprocessor_ifndef(self);
+
+    if visit == Visit::Children {
+      self.name.visit(visitor);
+    }
+  }
+}
+
+impl Host for syntax::PreprocessorInclude {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let _ = visitor.visit_preprocessor_include(self);
+  }
+}
+
+impl Host for syntax::PreprocessorLine {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let _ = visitor.visit_preprocessor_line(self);
+  }
+}
+
+impl Host for syntax::PreprocessorPragma {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let _ = visitor.visit_preprocessor_pragma(self);
+  }
+}
+
+impl Host for syntax::PreprocessorUndef {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_preprocessor_undef(self);
+
+    if visit == Visit::Children {
+      self.name.visit(visitor);
     }
   }
 }
