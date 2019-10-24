@@ -1,6 +1,6 @@
 [package]
 name = "glsl-quasiquote"
-version = "1.0.0"
+version = "2.0.0"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "The glsl! procedural macro, providing quasiquoting of the glsl crate."
@@ -20,7 +20,7 @@ travis-ci = { repository = "phaazon/glsl", branch = "master" }
 proc-macro = true
 
 [dependencies]
-glsl = "1"
-proc-macro2 = "0.4"
+glsl = "2"
+proc-macro2 = "1"
 proc-macro-faithful-display = "0.1"
-quote = "0.6"
+quote = "1"
