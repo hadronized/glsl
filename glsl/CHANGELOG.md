@@ -1,6 +1,6 @@
 # 2.0
 
-> Tue 24th Oct 2019
+> Thu 24th Oct 2019
 
 ## Major changes
 
