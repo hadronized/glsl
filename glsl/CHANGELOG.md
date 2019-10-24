@@ -1,3 +1,17 @@
+# 2.0
+
+> Tue 24th Oct 2019
+
+## Major changes
+
+- Add `ShaderKind::Compute`.
+
+## Patch changes
+
+- Fix tokenizer of `Block`.
+- Fix a bug while parsing floating-point numbers.
+- Reformat with `rustfmt`.
+
 # 1.2
 
 > Wed 18th Sep 2019
