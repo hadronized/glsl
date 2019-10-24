@@ -27,6 +27,41 @@ jobs:
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
 
+  build-macos:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
+      - name: Cargo update
+        run: |
+          source ~/.cargo/env
+          cargo update
+      - name: Build glsl
+        run: |
+          source ~/.cargo/env
+          cd $GITHUB_WORKSPACE/glsl
+          cargo build --verbose
+      - name: Test glsl
+        run: |
+          source ~/.cargo/env
+          cd $GITHUB_WORKSPACE/glsl
+          cargo test --verbose
+      - name: Switch to nightly Rust
+        run: |
+          source ~/.cargo/env
+          rustup default nightly
+      - name: Build glsl-quasiquote (nightly)
+        run: |
+          source ~/.cargo/env
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo build --verbose
+      - name: Test glsl-quasiquote (nightly)
+        run: |
+          source ~/.cargo/env
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo test --verbose
+
   build-windows:
     runs-on: windows-latest
     steps:
@@ -48,31 +83,6 @@ jobs:
       - name: Test glsl-quasiquote (nightly)
         run: |
           cd %GITHUB_WORKSPACE%\glsl-quasiquote
-          cargo test --verbose
-
-  build-macosx:
-    runs-on: macosx-latest
-    steps:
-      - uses: actions/checkout@v1
-      - name: Cargo update
-        run: cargo update
-      - name: Build glsl
-        run: |
-          cd $GITHUB_WORKSPACE/glsl
-          cargo build --verbose
-      - name: Test glsl
-        run: |
-          cd $GITHUB_WORKSPACE/glsl
-          cargo test --verbose
-      - name: Switch to nightly Rust
-        run: rustup default nightly
-      - name: Build glsl-quasiquote (nightly)
-        run: |
-          cd $GITHUB_WORKSPACE/glsl-quasiquote
-          cargo build --verbose
-      - name: Test glsl-quasiquote (nightly)
-        run: |
-          cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
 
   check-readme:
