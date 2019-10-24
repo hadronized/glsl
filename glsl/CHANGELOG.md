@@ -5,6 +5,8 @@
 ## Major changes
 
 - Add `ShaderKind::Compute`.
+- Remove `NonEmpty::from_iter` and `TranslationUnit::from_iter` as they were deprecated. Use
+  `*::from_non_empty_iter` instead.
 
 ## Patch changes
 
