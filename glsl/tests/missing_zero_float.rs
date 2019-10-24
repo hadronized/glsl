@@ -17,10 +17,12 @@ fn missing_zero_float_is_valid() {
 
 #[test]
 fn float_exp_is_valid() {
-  let r = TranslationUnit::parse("
+  let r = TranslationUnit::parse(
+    "
     void main() {
       float x = 1e-5;
-    }");
+    }",
+  );
 
   assert!(r.is_ok());
 }
