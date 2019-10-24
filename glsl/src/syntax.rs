@@ -19,7 +19,7 @@
 //! [`FunctionDefinition`]: syntax::FunctionDefinition
 
 use std::fmt;
-use std::iter::{FromIterator, once};
+use std::iter::{once, FromIterator};
 use std::ops::{Deref, DerefMut};
 
 /// A non-empty [`Vec`]. It has at least one element.
@@ -33,8 +33,14 @@ impl<T> NonEmpty<T> {
   ///
   /// `None` if the iterator yields no value.
   #[allow(clippy::should_implement_trait)]
-  #[deprecated(since = "1.2.0", note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0")]
-  pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = T> {
+  #[deprecated(
+    since = "1.2.0",
+    note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0"
+  )]
+  pub fn from_iter<I>(iter: I) -> Option<Self>
+  where
+    I: IntoIterator<Item = T>,
+  {
     let vec: Vec<_> = iter.into_iter().collect();
 
     if vec.is_empty() {
@@ -49,7 +55,10 @@ impl<T> NonEmpty<T> {
   /// # Errors
   ///
   /// `None` if the iterator yields no value.
-  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = T> {
+  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self>
+  where
+    I: IntoIterator<Item = T>,
+  {
     let vec: Vec<_> = iter.into_iter().collect();
 
     if vec.is_empty() {
@@ -106,7 +115,10 @@ impl<'a, T> IntoIterator for &'a mut NonEmpty<T> {
 }
 
 impl<T> Extend<T> for NonEmpty<T> {
-  fn extend<I>(&mut self, iter: I) where I: IntoIterator<Item = T> {
+  fn extend<I>(&mut self, iter: I)
+  where
+    I: IntoIterator<Item = T>,
+  {
     self.0.extend(iter);
   }
 }
@@ -115,17 +127,17 @@ impl<T> Extend<T> for NonEmpty<T> {
 #[derive(Debug)]
 pub enum IdentifierError {
   StartsWithDigit,
-  ContainsNonASCIIAlphaNum
+  ContainsNonASCIIAlphaNum,
 }
 
 impl fmt::Display for IdentifierError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
-      IdentifierError::StartsWithDigit =>
-        f.write_str("starts starts with a digit"),
+      IdentifierError::StartsWithDigit => f.write_str("starts starts with a digit"),
 
-      IdentifierError::ContainsNonASCIIAlphaNum =>
+      IdentifierError::ContainsNonASCIIAlphaNum => {
         f.write_str("contains at least one non-alphanumeric ASCII character")
+      }
     }
   }
 }
@@ -141,7 +153,10 @@ impl Identifier {
   ///
   /// This function will fail if the identifier starts with a digit or contains non-alphanumeric
   /// ASCII characters.
-  pub fn new<N>(name: N) -> Result<Self, IdentifierError> where N: Into<String> {
+  pub fn new<N>(name: N) -> Result<Self, IdentifierError>
+  where
+    N: Into<String>,
+  {
     let name = name.into();
 
     if name.chars().next().map(|c| c.is_ascii_alphabetic()) == Some(false) {
@@ -190,7 +205,10 @@ impl TypeName {
   ///
   /// This function will fail if the type name starts with a digit or contains non-alphanumeric
   /// ASCII characters.
-  pub fn new<N>(name: N) -> Result<Self, IdentifierError> where N: Into<String> {
+  pub fn new<N>(name: N) -> Result<Self, IdentifierError>
+  where
+    N: Into<String>,
+  {
     // build as identifier and unwrap into type name
     let Identifier(tn) = Identifier::new(name)?;
     Ok(TypeName(tn))
@@ -341,21 +359,21 @@ pub enum TypeSpecifierNonArray {
   USamplerCubeArray,
   UImageCubeArray,
   Struct(StructSpecifier),
-  TypeName(TypeName)
+  TypeName(TypeName),
 }
 
 /// Type specifier.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeSpecifier {
   pub ty: TypeSpecifierNonArray,
-  pub array_specifier: Option<ArraySpecifier>
+  pub array_specifier: Option<ArraySpecifier>,
 }
 
 impl TypeSpecifier {
   pub fn new(ty: TypeSpecifierNonArray) -> Self {
     TypeSpecifier {
       ty,
-      array_specifier: None
+      array_specifier: None,
     }
   }
 }
@@ -378,34 +396,32 @@ pub struct StructSpecifier {
 pub struct StructFieldSpecifier {
   pub qualifier: Option<TypeQualifier>,
   pub ty: TypeSpecifier,
-  pub identifiers: NonEmpty<ArrayedIdentifier> // several identifiers of the same type
+  pub identifiers: NonEmpty<ArrayedIdentifier>, // several identifiers of the same type
 }
 
 impl StructFieldSpecifier {
   /// Create a struct field.
-  pub fn new<A, T>(
-    identifier: A,
-    ty: T
-  ) -> Self
-  where A: Into<ArrayedIdentifier>,
-        T: Into<TypeSpecifier> {
+  pub fn new<A, T>(identifier: A, ty: T) -> Self
+  where
+    A: Into<ArrayedIdentifier>,
+    T: Into<TypeSpecifier>,
+  {
     StructFieldSpecifier {
       qualifier: None,
       ty: ty.into(),
-      identifiers: NonEmpty(vec![identifier.into()])
+      identifiers: NonEmpty(vec![identifier.into()]),
     }
   }
 
   /// Create a list of struct fields that all have the same type.
-  pub fn new_many<I>(
-    identifiers: I,
-    ty: TypeSpecifier
-  ) -> Self
-  where I: IntoIterator<Item = ArrayedIdentifier> {
+  pub fn new_many<I>(identifiers: I, ty: TypeSpecifier) -> Self
+  where
+    I: IntoIterator<Item = ArrayedIdentifier>,
+  {
     StructFieldSpecifier {
       qualifier: None,
       ty,
-      identifiers: NonEmpty(identifiers.into_iter().collect())
+      identifiers: NonEmpty(identifiers.into_iter().collect()),
     }
   }
 }
@@ -414,19 +430,18 @@ impl StructFieldSpecifier {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ArrayedIdentifier {
   pub ident: Identifier,
-  pub array_spec: Option<ArraySpecifier>
+  pub array_spec: Option<ArraySpecifier>,
 }
 
 impl ArrayedIdentifier {
-  pub fn new<I, AS>(
-    ident: I,
-    array_spec: AS
-  ) -> Self
-  where I: Into<Identifier>,
-        AS: Into<Option<ArraySpecifier>> {
+  pub fn new<I, AS>(ident: I, array_spec: AS) -> Self
+  where
+    I: Into<Identifier>,
+    AS: Into<Option<ArraySpecifier>>,
+  {
     ArrayedIdentifier {
       ident: ident.into(),
-      array_spec: array_spec.into()
+      array_spec: array_spec.into(),
     }
   }
 }
@@ -435,7 +450,7 @@ impl<'a> From<&'a str> for ArrayedIdentifier {
   fn from(ident: &str) -> Self {
     ArrayedIdentifier {
       ident: Identifier(ident.to_owned()),
-      array_spec: None
+      array_spec: None,
     }
   }
 }
@@ -444,7 +459,7 @@ impl From<Identifier> for ArrayedIdentifier {
   fn from(ident: Identifier) -> Self {
     ArrayedIdentifier {
       ident,
-      array_spec: None
+      array_spec: None,
     }
   }
 }
@@ -452,7 +467,7 @@ impl From<Identifier> for ArrayedIdentifier {
 /// Type qualifier.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeQualifier {
-  pub qualifiers: NonEmpty<TypeQualifierSpec>
+  pub qualifiers: NonEmpty<TypeQualifierSpec>,
 }
 
 /// Type qualifier spec.
@@ -463,7 +478,7 @@ pub enum TypeQualifierSpec {
   Precision(PrecisionQualifier),
   Interpolation(InterpolationQualifier),
   Invariant,
-  Precise
+  Precise,
 }
 
 /// Storage qualifier.
@@ -490,14 +505,14 @@ pub enum StorageQualifier {
 /// Layout qualifier.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LayoutQualifier {
-  pub ids: NonEmpty<LayoutQualifierSpec>
+  pub ids: NonEmpty<LayoutQualifierSpec>,
 }
 
 /// Layout qualifier spec.
 #[derive(Clone, Debug, PartialEq)]
 pub enum LayoutQualifierSpec {
   Identifier(Identifier, Option<Box<Expr>>),
-  Shared
+  Shared,
 }
 
 /// Precision qualifier.
@@ -505,7 +520,7 @@ pub enum LayoutQualifierSpec {
 pub enum PrecisionQualifier {
   High,
   Medium,
-  Low
+  Low,
 }
 
 /// Interpolation qualifier.
@@ -513,14 +528,14 @@ pub enum PrecisionQualifier {
 pub enum InterpolationQualifier {
   Smooth,
   Flat,
-  NoPerspective
+  NoPerspective,
 }
 
 /// Fully specified type.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FullySpecifiedType {
   pub qualifier: Option<TypeQualifier>,
-  pub ty: TypeSpecifier
+  pub ty: TypeSpecifier,
 }
 
 impl FullySpecifiedType {
@@ -529,8 +544,8 @@ impl FullySpecifiedType {
       qualifier: None,
       ty: TypeSpecifier {
         ty,
-        array_specifier: None
-      }
+        array_specifier: None,
+      },
     }
   }
 }
@@ -545,7 +560,7 @@ impl From<TypeSpecifierNonArray> for FullySpecifiedType {
 #[derive(Clone, Debug, PartialEq)]
 pub enum ArraySpecifier {
   Unsized,
-  ExplicitlySized(Box<Expr>)
+  ExplicitlySized(Box<Expr>),
 }
 
 /// A declaration.
@@ -555,7 +570,7 @@ pub enum Declaration {
   InitDeclaratorList(InitDeclaratorList),
   Precision(PrecisionQualifier, TypeSpecifier),
   Block(Block),
-  Global(TypeQualifier, Vec<Identifier>)
+  Global(TypeQualifier, Vec<Identifier>),
 }
 
 /// A general purpose block, containing fields and possibly a list of declared identifiers. Semantic
@@ -565,14 +580,14 @@ pub struct Block {
   pub qualifier: TypeQualifier,
   pub name: Identifier,
   pub fields: Vec<StructFieldSpecifier>,
-  pub identifier: Option<ArrayedIdentifier>
+  pub identifier: Option<ArrayedIdentifier>,
 }
 
 /// Function identifier.
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunIdentifier {
   Identifier(Identifier),
-  Expr(Box<Expr>)
+  Expr(Box<Expr>),
 }
 
 /// Function prototype.
@@ -580,34 +595,36 @@ pub enum FunIdentifier {
 pub struct FunctionPrototype {
   pub ty: FullySpecifiedType,
   pub name: Identifier,
-  pub parameters: Vec<FunctionParameterDeclaration>
+  pub parameters: Vec<FunctionParameterDeclaration>,
 }
 
 /// Function parameter declaration.
 #[derive(Clone, Debug, PartialEq)]
 pub enum FunctionParameterDeclaration {
   Named(Option<TypeQualifier>, FunctionParameterDeclarator),
-  Unnamed(Option<TypeQualifier>, TypeSpecifier)
+  Unnamed(Option<TypeQualifier>, TypeSpecifier),
 }
 
 impl FunctionParameterDeclaration {
   /// Create a named function argument.
-  pub fn new_named<I, T>(
-    ident: I,
-    ty: T
-  ) -> Self
-  where I: Into<ArrayedIdentifier>,
-        T: Into<TypeSpecifier> {
+  pub fn new_named<I, T>(ident: I, ty: T) -> Self
+  where
+    I: Into<ArrayedIdentifier>,
+    T: Into<TypeSpecifier>,
+  {
     let declator = FunctionParameterDeclarator {
       ty: ty.into(),
-      ident: ident.into()
+      ident: ident.into(),
     };
 
     FunctionParameterDeclaration::Named(None, declator)
   }
 
   /// Create an unnamed function argument (mostly useful for interfaces / function prototypes).
-  pub fn new_unnamed<T>(ty: T) -> Self where T: Into<TypeSpecifier> {
+  pub fn new_unnamed<T>(ty: T) -> Self
+  where
+    T: Into<TypeSpecifier>,
+  {
     FunctionParameterDeclaration::Unnamed(None, ty.into())
   }
 }
@@ -616,14 +633,14 @@ impl FunctionParameterDeclaration {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionParameterDeclarator {
   pub ty: TypeSpecifier,
-  pub ident: ArrayedIdentifier
+  pub ident: ArrayedIdentifier,
 }
 
 /// Init declarator list.
 #[derive(Clone, Debug, PartialEq)]
 pub struct InitDeclaratorList {
   pub head: SingleDeclaration,
-  pub tail: Vec<SingleDeclarationNoType>
+  pub tail: Vec<SingleDeclarationNoType>,
 }
 
 /// Single declaration.
@@ -632,21 +649,21 @@ pub struct SingleDeclaration {
   pub ty: FullySpecifiedType,
   pub name: Option<Identifier>,
   pub array_specifier: Option<ArraySpecifier>,
-  pub initializer: Option<Initializer>
+  pub initializer: Option<Initializer>,
 }
 
 /// A single declaration with implicit, already-defined type.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SingleDeclarationNoType {
   pub ident: ArrayedIdentifier,
-  pub initializer: Option<Initializer>
+  pub initializer: Option<Initializer>,
 }
 
 /// Initializer.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Initializer {
   Simple(Box<Expr>),
-  List(NonEmpty<Initializer>)
+  List(NonEmpty<Initializer>),
 }
 
 impl From<Expr> for Initializer {
@@ -694,7 +711,7 @@ pub enum Expr {
   /// Post-decrementation of an expression.
   PostDec(Box<Expr>),
   /// An expression that contains several, separated with comma.
-  Comma(Box<Expr>, Box<Expr>)
+  Comma(Box<Expr>, Box<Expr>),
 }
 
 impl From<i32> for Expr {
@@ -735,7 +752,7 @@ pub enum UnaryOp {
   Add,
   Minus,
   Not,
-  Complement
+  Complement,
 }
 
 /// All binary operators that exist in GLSL.
@@ -759,7 +776,7 @@ pub enum BinaryOp {
   Sub,
   Mult,
   Div,
-  Mod
+  Mod,
 }
 
 /// All possible operators for assigning expressions.
@@ -775,7 +792,7 @@ pub enum AssignmentOp {
   RShift,
   And,
   Xor,
-  Or
+  Or,
 }
 
 /// Starting rule.
@@ -792,8 +809,14 @@ impl TranslationUnit {
   ///
   /// `None` if the iterator yields no value.
   #[allow(clippy::should_implement_trait)]
-  #[deprecated(since = "1.2.0", note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0")]
-  pub fn from_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = ExternalDeclaration> {
+  #[deprecated(
+    since = "1.2.0",
+    note = "Use `from_non_empty_iter` instead. Will be removed in 2.0.0"
+  )]
+  pub fn from_iter<I>(iter: I) -> Option<Self>
+  where
+    I: IntoIterator<Item = ExternalDeclaration>,
+  {
     NonEmpty::from_non_empty_iter(iter).map(TranslationUnit)
   }
 
@@ -803,7 +826,10 @@ impl TranslationUnit {
   /// # Errors
   ///
   /// `None` if the iterator yields no value.
-  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self> where I: IntoIterator<Item = ExternalDeclaration> {
+  pub fn from_non_empty_iter<I>(iter: I) -> Option<Self>
+  where
+    I: IntoIterator<Item = ExternalDeclaration>,
+  {
     NonEmpty::from_non_empty_iter(iter).map(TranslationUnit)
   }
 }
@@ -854,33 +880,28 @@ impl<'a> IntoIterator for &'a mut TranslationUnit {
 pub enum ExternalDeclaration {
   Preprocessor(Preprocessor),
   FunctionDefinition(FunctionDefinition),
-  Declaration(Declaration)
+  Declaration(Declaration),
 }
 
 impl ExternalDeclaration {
   /// Create a new function.
-  pub fn new_fn<T, N, A, S>(
-    ret_ty: T,
-    name: N,
-    args: A,
-    body: S
-  ) -> Self
-  where T: Into<FullySpecifiedType>,
-        N: Into<Identifier>,
-        A: IntoIterator<Item = FunctionParameterDeclaration>,
-        S: IntoIterator<Item = Statement> {
-    ExternalDeclaration::FunctionDefinition(
-      FunctionDefinition {
-        prototype: FunctionPrototype {
-          ty: ret_ty.into(),
-          name: name.into(),
-          parameters: args.into_iter().collect()
-        },
-        statement: CompoundStatement {
-          statement_list: body.into_iter().collect()
-        }
-      }
-    )
+  pub fn new_fn<T, N, A, S>(ret_ty: T, name: N, args: A, body: S) -> Self
+  where
+    T: Into<FullySpecifiedType>,
+    N: Into<Identifier>,
+    A: IntoIterator<Item = FunctionParameterDeclaration>,
+    S: IntoIterator<Item = Statement>,
+  {
+    ExternalDeclaration::FunctionDefinition(FunctionDefinition {
+      prototype: FunctionPrototype {
+        ty: ret_ty.into(),
+        name: name.into(),
+        parameters: args.into_iter().collect(),
+      },
+      statement: CompoundStatement {
+        statement_list: body.into_iter().collect(),
+      },
+    })
   }
 
   /// Create a new structure.
@@ -889,36 +910,34 @@ impl ExternalDeclaration {
   ///
   ///   - [`None`] if no fields are provided. GLSL forbids having empty structs.
   pub fn new_struct<N, F>(name: N, fields: F) -> Option<Self>
-  where N: Into<TypeName>,
-        F: IntoIterator<Item = StructFieldSpecifier> {
+  where
+    N: Into<TypeName>,
+    F: IntoIterator<Item = StructFieldSpecifier>,
+  {
     let fields: Vec<_> = fields.into_iter().collect();
 
     if fields.is_empty() {
       None
     } else {
       Some(ExternalDeclaration::Declaration(
-        Declaration::InitDeclaratorList(
-          InitDeclaratorList {
-            head: SingleDeclaration {
-              ty: FullySpecifiedType {
-                qualifier: None,
-                ty: TypeSpecifier {
-                  ty: TypeSpecifierNonArray::Struct(
-                        StructSpecifier {
-                          name: Some(name.into()),
-                          fields: NonEmpty(fields.into_iter().collect())
-                        }
-                  ),
-                  array_specifier: None
-                }
+        Declaration::InitDeclaratorList(InitDeclaratorList {
+          head: SingleDeclaration {
+            ty: FullySpecifiedType {
+              qualifier: None,
+              ty: TypeSpecifier {
+                ty: TypeSpecifierNonArray::Struct(StructSpecifier {
+                  name: Some(name.into()),
+                  fields: NonEmpty(fields.into_iter().collect()),
+                }),
+                array_specifier: None,
               },
-              name: None,
-              array_specifier: None,
-              initializer: None
             },
-            tail: vec![]
-          }
-        )
+            name: None,
+            array_specifier: None,
+            initializer: None,
+          },
+          tail: vec![],
+        }),
       ))
     }
   }
@@ -934,13 +953,16 @@ pub struct FunctionDefinition {
 /// Compound statement (with no new scope).
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompoundStatement {
-  pub statement_list: Vec<Statement>
+  pub statement_list: Vec<Statement>,
 }
 
 impl FromIterator<Statement> for CompoundStatement {
-  fn from_iter<T>(iter: T) -> Self where T: IntoIterator<Item = Statement> {
+  fn from_iter<T>(iter: T) -> Self
+  where
+    T: IntoIterator<Item = Statement>,
+  {
     CompoundStatement {
-      statement_list: iter.into_iter().collect()
+      statement_list: iter.into_iter().collect(),
     }
   }
 }
@@ -949,24 +971,21 @@ impl FromIterator<Statement> for CompoundStatement {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Statement {
   Compound(Box<CompoundStatement>),
-  Simple(Box<SimpleStatement>)
+  Simple(Box<SimpleStatement>),
 }
 
 impl Statement {
   /// Create a case-label sequence of nested statements.
-  pub fn new_case<C, S>(
-    case: C,
-    statements: S
-  ) -> Self
-  where C: Into<CaseLabel>,
-        S: IntoIterator<Item = Statement> {
+  pub fn new_case<C, S>(case: C, statements: S) -> Self
+  where
+    C: Into<CaseLabel>,
+    S: IntoIterator<Item = Statement>,
+  {
     let case_stmt = Statement::Simple(Box::new(SimpleStatement::CaseLabel(case.into())));
 
-    Statement::Compound(
-      Box::new(CompoundStatement {
-        statement_list: once(case_stmt).chain(statements.into_iter()).collect()
-      })
-    )
+    Statement::Compound(Box::new(CompoundStatement {
+      statement_list: once(case_stmt).chain(statements.into_iter()).collect(),
+    }))
   }
 
   /// Declare a new variable.
@@ -974,31 +993,24 @@ impl Statement {
   /// `ty` is the type of the variable, `name` the name of the binding to create,
   /// `array_specifier` an optional argument to make your binding an array and
   /// `initializer`
-  pub fn declare_var<T, N, A, I>(
-    ty: T,
-    name: N,
-    array_specifier: A,
-    initializer: I
-  ) -> Self
-  where T: Into<FullySpecifiedType>,
-        N: Into<Identifier>,
-        A: Into<Option<ArraySpecifier>>,
-        I: Into<Option<Initializer>> {
-    Statement::Simple(
-      Box::new(SimpleStatement::Declaration(
-        Declaration::InitDeclaratorList(
-          InitDeclaratorList {
-            head: SingleDeclaration {
-              ty: ty.into(),
-              name: Some(name.into()),
-              array_specifier: array_specifier.into(),
-              initializer: initializer.into()
-            },
-            tail: Vec::new()
-          }
-        )
-      ))
-    )
+  pub fn declare_var<T, N, A, I>(ty: T, name: N, array_specifier: A, initializer: I) -> Self
+  where
+    T: Into<FullySpecifiedType>,
+    N: Into<Identifier>,
+    A: Into<Option<ArraySpecifier>>,
+    I: Into<Option<Initializer>>,
+  {
+    Statement::Simple(Box::new(SimpleStatement::Declaration(
+      Declaration::InitDeclaratorList(InitDeclaratorList {
+        head: SingleDeclaration {
+          ty: ty.into(),
+          name: Some(name.into()),
+          array_specifier: array_specifier.into(),
+          initializer: initializer.into(),
+        },
+        tail: Vec::new(),
+      }),
+    )))
   }
 }
 
@@ -1011,72 +1023,68 @@ pub enum SimpleStatement {
   Switch(SwitchStatement),
   CaseLabel(CaseLabel),
   Iteration(IterationStatement),
-  Jump(JumpStatement)
+  Jump(JumpStatement),
 }
 
 impl SimpleStatement {
   /// Create a new expression statement.
-  pub fn new_expr<E>(expr: E) -> Self where E: Into<Expr> {
+  pub fn new_expr<E>(expr: E) -> Self
+  where
+    E: Into<Expr>,
+  {
     SimpleStatement::Expression(Some(expr.into()))
   }
 
   /// Create a new selection statement (if / else).
-  pub fn new_if_else<If, True, False>(
-    ife: If,
-    truee: True,
-    falsee: False
-  ) -> Self
-  where If: Into<Expr>,
-        True: Into<Statement>,
-        False: Into<Statement> {
-    SimpleStatement::Selection(
-      SelectionStatement {
-        cond: Box::new(ife.into()),
-        rest: SelectionRestStatement::Else(Box::new(truee.into()), Box::new(falsee.into()))
-      }
-    )
+  pub fn new_if_else<If, True, False>(ife: If, truee: True, falsee: False) -> Self
+  where
+    If: Into<Expr>,
+    True: Into<Statement>,
+    False: Into<Statement>,
+  {
+    SimpleStatement::Selection(SelectionStatement {
+      cond: Box::new(ife.into()),
+      rest: SelectionRestStatement::Else(Box::new(truee.into()), Box::new(falsee.into())),
+    })
   }
 
   /// Create a new switch statement.
   ///
   /// A switch statement is always composed of a [`SimpleStatement::Switch`] block, that contains it
   /// all, and has as body a compound list of case statements.
-  pub fn new_switch<H, B>(
-    head: H,
-    body: B
-  ) -> Self
-  where H: Into<Expr>,
-        B: IntoIterator<Item = Statement> {
-    SimpleStatement::Switch(
-      SwitchStatement {
-        head: Box::new(head.into()),
-        body: body.into_iter().collect()
-      }
-    )
+  pub fn new_switch<H, B>(head: H, body: B) -> Self
+  where
+    H: Into<Expr>,
+    B: IntoIterator<Item = Statement>,
+  {
+    SimpleStatement::Switch(SwitchStatement {
+      head: Box::new(head.into()),
+      body: body.into_iter().collect(),
+    })
   }
 
   /// Create a new while statement.
-  pub fn new_while<C, S>(
-    cond: C,
-    body: S
-  ) -> Self
-  where C: Into<Condition>,
-        S: Into<Statement> {
-    SimpleStatement::Iteration(
-      IterationStatement::While(cond.into(), Box::new(body.into()))
-    )
+  pub fn new_while<C, S>(cond: C, body: S) -> Self
+  where
+    C: Into<Condition>,
+    S: Into<Statement>,
+  {
+    SimpleStatement::Iteration(IterationStatement::While(
+      cond.into(),
+      Box::new(body.into()),
+    ))
   }
 
   /// Create a new do-while statement.
-  pub fn new_do_while<C, S>(
-    body: S,
-    cond: C
-  ) -> Self
-  where S: Into<Statement>,
-        C: Into<Expr> {
-    SimpleStatement::Iteration(
-      IterationStatement::DoWhile(Box::new(body.into()), Box::new(cond.into()))
-    )
+  pub fn new_do_while<C, S>(body: S, cond: C) -> Self
+  where
+    S: Into<Statement>,
+    C: Into<Expr>,
+  {
+    SimpleStatement::Iteration(IterationStatement::DoWhile(
+      Box::new(body.into()),
+      Box::new(cond.into()),
+    ))
   }
 }
 
@@ -1087,14 +1095,14 @@ pub type ExprStatement = Option<Expr>;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SelectionStatement {
   pub cond: Box<Expr>,
-  pub rest: SelectionRestStatement
+  pub rest: SelectionRestStatement,
 }
 
 /// Condition.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Condition {
   Expr(Box<Expr>),
-  Assignment(FullySpecifiedType, Identifier, Initializer)
+  Assignment(FullySpecifiedType, Identifier, Initializer),
 }
 
 impl From<Expr> for Condition {
@@ -1109,21 +1117,21 @@ pub enum SelectionRestStatement {
   /// Body of the if.
   Statement(Box<Statement>),
   /// The first argument is the body of the if, the rest is the next statement.
-  Else(Box<Statement>, Box<Statement>)
+  Else(Box<Statement>, Box<Statement>),
 }
 
 /// Switch statement.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SwitchStatement {
   pub head: Box<Expr>,
-  pub body: Vec<Statement>
+  pub body: Vec<Statement>,
 }
 
 /// Case label statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum CaseLabel {
   Case(Box<Expr>),
-  Def
+  Def,
 }
 
 /// Iteration statement.
@@ -1131,21 +1139,21 @@ pub enum CaseLabel {
 pub enum IterationStatement {
   While(Condition, Box<Statement>),
   DoWhile(Box<Statement>, Box<Expr>),
-  For(ForInitStatement, ForRestStatement, Box<Statement>)
+  For(ForInitStatement, ForRestStatement, Box<Statement>),
 }
 
 /// For init statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ForInitStatement {
   Expression(Option<Expr>),
-  Declaration(Box<Declaration>)
+  Declaration(Box<Declaration>),
 }
 
 /// For init statement.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ForRestStatement {
   pub condition: Option<Condition>,
-  pub post_expr: Option<Box<Expr>>
+  pub post_expr: Option<Box<Expr>>,
 }
 
 /// Jump statement.
@@ -1154,7 +1162,7 @@ pub enum JumpStatement {
   Continue,
   Break,
   Return(Box<Expr>),
-  Discard
+  Discard,
 }
 
 /// Some basic preprocessor commands.
@@ -1169,7 +1177,7 @@ pub enum JumpStatement {
 pub enum Preprocessor {
   Define(PreprocessorDefine),
   Version(PreprocessorVersion),
-  Extension(PreprocessorExtension)
+  Extension(PreprocessorExtension),
 }
 
 /// A #define preprocessor command.
@@ -1184,7 +1192,7 @@ pub struct PreprocessorDefine {
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorVersion {
   pub version: u16,
-  pub profile: Option<PreprocessorVersionProfile>
+  pub profile: Option<PreprocessorVersionProfile>,
 }
 
 /// A #version profile annotation.
@@ -1192,14 +1200,14 @@ pub struct PreprocessorVersion {
 pub enum PreprocessorVersionProfile {
   Core,
   Compatibility,
-  ES
+  ES,
 }
 
 /// An #extension preprocessor command.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorExtension {
   pub name: PreprocessorExtensionName,
-  pub behavior: Option<PreprocessorExtensionBehavior>
+  pub behavior: Option<PreprocessorExtensionBehavior>,
 }
 
 /// An #extension name annotation.
@@ -1208,7 +1216,7 @@ pub enum PreprocessorExtensionName {
   /// All extensions you could ever imagine in your whole lifetime (how crazy is that!).
   All,
   /// A specific extension.
-  Specific(String)
+  Specific(String),
 }
 
 /// An #extension behavior annotation.
@@ -1217,7 +1225,7 @@ pub enum PreprocessorExtensionBehavior {
   Require,
   Enable,
   Warn,
-  Disable
+  Disable,
 }
 
 #[cfg(test)]
@@ -1251,12 +1259,15 @@ mod tests {
   // }
   #[test]
   fn declare_new_fn() {
-    let _ =
-      ExternalDeclaration::new_fn(TypeSpecifierNonArray::Bool,
-                                  "predicate",
-                                  vec![FunctionParameterDeclaration::new_named("x", TypeSpecifierNonArray::Float)],
-                                  vec![]
-      );
+    let _ = ExternalDeclaration::new_fn(
+      TypeSpecifierNonArray::Bool,
+      "predicate",
+      vec![FunctionParameterDeclaration::new_named(
+        "x",
+        TypeSpecifierNonArray::Float,
+      )],
+      vec![],
+    );
   }
 
   // struct Point2D {
@@ -1265,13 +1276,13 @@ mod tests {
   // };
   #[test]
   fn declare_struct() {
-    let point =
-      ExternalDeclaration::new_struct("Point2D",
-                                      vec![
-                                        StructFieldSpecifier::new("x", TypeSpecifierNonArray::Double),
-                                        StructFieldSpecifier::new("y", TypeSpecifierNonArray::Double)
-                                      ]
-      );
+    let point = ExternalDeclaration::new_struct(
+      "Point2D",
+      vec![
+        StructFieldSpecifier::new("x", TypeSpecifierNonArray::Double),
+        StructFieldSpecifier::new("y", TypeSpecifierNonArray::Double),
+      ],
+    );
 
     assert!(point.is_some());
   }

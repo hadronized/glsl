@@ -10,8 +10,8 @@
 //! [`Parse`]: crate::parser::Parse
 //! [`ParseError`]: crate::parser::ParseError
 
-use nom::Err as NomErr;
 use nom::error::convert_error;
+use nom::Err as NomErr;
 use std::fmt;
 
 use crate::parsers::ParserResult;
@@ -20,7 +20,7 @@ use crate::syntax;
 /// A parse error. It contains a [`String`] giving information on the reason why the parser failed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
-  pub info: String
+  pub info: String,
 }
 
 impl fmt::Display for ParseError {
@@ -30,26 +30,23 @@ impl fmt::Display for ParseError {
 }
 
 /// Run a parser `P` on a given `[&str`] input.
-pub(crate) fn run_parser<P, T>(
-  source: &str,
-  parser: P
-) -> Result<T, ParseError>
-where P: FnOnce(&str) -> ParserResult<T> {
+pub(crate) fn run_parser<P, T>(source: &str, parser: P) -> Result<T, ParseError>
+where
+  P: FnOnce(&str) -> ParserResult<T>,
+{
   match parser(source) {
-    Ok((_, x)) => {
-      Ok(x)
-    }
+    Ok((_, x)) => Ok(x),
 
     Err(e) => match e {
-      NomErr::Incomplete(_) => {
-        Err(ParseError { info: "incomplete parser".to_owned() })
-      }
+      NomErr::Incomplete(_) => Err(ParseError {
+        info: "incomplete parser".to_owned(),
+      }),
 
       NomErr::Error(err) | NomErr::Failure(err) => {
         let info = convert_error(source, err);
         Err(ParseError { info })
       }
-    }
+    },
   }
 }
 
@@ -60,18 +57,23 @@ where P: FnOnce(&str) -> ParserResult<T> {
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {
   /// Parse from a string slice.
-  fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<str>;
+  fn parse<B>(source: B) -> Result<Self, ParseError>
+  where
+    B: AsRef<str>;
 }
 
 /// Macro to implement Parse for a given type.
 macro_rules! impl_parse {
   ($type_name:ty, $parser_name:ident) => {
     impl Parse for $type_name {
-      fn parse<B>(source: B) -> Result<Self, ParseError> where B: AsRef<str> {
+      fn parse<B>(source: B) -> Result<Self, ParseError>
+      where
+        B: AsRef<str>,
+      {
         run_parser(source.as_ref(), $crate::parsers::$parser_name)
       }
     }
-  }
+  };
 }
 
 impl_parse!(syntax::Identifier, identifier);

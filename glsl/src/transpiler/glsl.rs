@@ -35,135 +35,373 @@ use std::fmt::Write;
 
 use crate::syntax;
 
-pub fn show_identifier<F>(f: &mut F, i: &syntax::Identifier) where F: Write {
+pub fn show_identifier<F>(f: &mut F, i: &syntax::Identifier)
+where
+  F: Write,
+{
   let _ = f.write_str(&i.0);
 }
 
-pub fn show_type_name<F>(f: &mut F, t: &syntax::TypeName) where F: Write {
+pub fn show_type_name<F>(f: &mut F, t: &syntax::TypeName)
+where
+  F: Write,
+{
   let _ = f.write_str(&t.0);
 }
 
-pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonArray) where F: Write {
+pub fn show_type_specifier_non_array<F>(f: &mut F, t: &syntax::TypeSpecifierNonArray)
+where
+  F: Write,
+{
   match *t {
-    syntax::TypeSpecifierNonArray::Void => { let _ = f.write_str("void"); }
-    syntax::TypeSpecifierNonArray::Bool => { let _ = f.write_str("bool"); }
-    syntax::TypeSpecifierNonArray::Int => { let _ = f.write_str("int"); }
-    syntax::TypeSpecifierNonArray::UInt => { let _ = f.write_str("uint"); }
-    syntax::TypeSpecifierNonArray::Float => { let _ = f.write_str("float"); }
-    syntax::TypeSpecifierNonArray::Double => { let _ = f.write_str("double"); }
-    syntax::TypeSpecifierNonArray::Vec2 => { let _ = f.write_str("vec2"); }
-    syntax::TypeSpecifierNonArray::Vec3 => { let _ = f.write_str("vec3"); }
-    syntax::TypeSpecifierNonArray::Vec4 => { let _ = f.write_str("vec4"); }
-    syntax::TypeSpecifierNonArray::DVec2 => { let _ = f.write_str("dvec2"); }
-    syntax::TypeSpecifierNonArray::DVec3 => { let _ = f.write_str("dvec3"); }
-    syntax::TypeSpecifierNonArray::DVec4 => { let _ = f.write_str("dvec4"); }
-    syntax::TypeSpecifierNonArray::BVec2 => { let _ = f.write_str("bvec2"); }
-    syntax::TypeSpecifierNonArray::BVec3 => { let _ = f.write_str("bvec3"); }
-    syntax::TypeSpecifierNonArray::BVec4 => { let _ = f.write_str("bvec4"); }
-    syntax::TypeSpecifierNonArray::IVec2 => { let _ = f.write_str("ivec2"); }
-    syntax::TypeSpecifierNonArray::IVec3 => { let _ = f.write_str("ivec3"); }
-    syntax::TypeSpecifierNonArray::IVec4 => { let _ = f.write_str("ivec4"); }
-    syntax::TypeSpecifierNonArray::UVec2 => { let _ = f.write_str("uvec2"); }
-    syntax::TypeSpecifierNonArray::UVec3 => { let _ = f.write_str("uvec3"); }
-    syntax::TypeSpecifierNonArray::UVec4 => { let _ = f.write_str("uvec4"); }
-    syntax::TypeSpecifierNonArray::Mat2 => { let _ = f.write_str("mat2"); }
-    syntax::TypeSpecifierNonArray::Mat3 => { let _ = f.write_str("mat3"); }
-    syntax::TypeSpecifierNonArray::Mat4 => { let _ = f.write_str("mat4"); }
-    syntax::TypeSpecifierNonArray::Mat23 => { let _ = f.write_str("mat23"); }
-    syntax::TypeSpecifierNonArray::Mat24 => { let _ = f.write_str("mat24"); }
-    syntax::TypeSpecifierNonArray::Mat32 => { let _ = f.write_str("mat32"); }
-    syntax::TypeSpecifierNonArray::Mat34 => { let _ = f.write_str("mat34"); }
-    syntax::TypeSpecifierNonArray::Mat42 => { let _ = f.write_str("mat42"); }
-    syntax::TypeSpecifierNonArray::Mat43 => { let _ = f.write_str("mat43"); }
-    syntax::TypeSpecifierNonArray::DMat2 => { let _ = f.write_str("dmat2"); }
-    syntax::TypeSpecifierNonArray::DMat3 => { let _ = f.write_str("dmat3"); }
-    syntax::TypeSpecifierNonArray::DMat4 => { let _ = f.write_str("dmat4"); }
-    syntax::TypeSpecifierNonArray::DMat23 => { let _ = f.write_str("dmat23"); }
-    syntax::TypeSpecifierNonArray::DMat24 => { let _ = f.write_str("dmat24"); }
-    syntax::TypeSpecifierNonArray::DMat32 => { let _ = f.write_str("dmat32"); }
-    syntax::TypeSpecifierNonArray::DMat34 => { let _ = f.write_str("dmat34"); }
-    syntax::TypeSpecifierNonArray::DMat42 => { let _ = f.write_str("dmat42"); }
-    syntax::TypeSpecifierNonArray::DMat43 => { let _ = f.write_str("dmat43"); }
-    syntax::TypeSpecifierNonArray::Sampler1D => { let _ = f.write_str("sampler1D"); }
-    syntax::TypeSpecifierNonArray::Image1D => { let _ = f.write_str("image1D"); }
-    syntax::TypeSpecifierNonArray::Sampler2D => { let _ = f.write_str("sampler2D"); }
-    syntax::TypeSpecifierNonArray::Image2D => { let _ = f.write_str("image2D"); }
-    syntax::TypeSpecifierNonArray::Sampler3D => { let _ = f.write_str("sampler3D"); }
-    syntax::TypeSpecifierNonArray::Image3D => { let _ = f.write_str("image3D"); }
-    syntax::TypeSpecifierNonArray::SamplerCube => { let _ = f.write_str("samplerCube"); }
-    syntax::TypeSpecifierNonArray::ImageCube => { let _ = f.write_str("imageCube"); }
-    syntax::TypeSpecifierNonArray::Sampler2DRect => { let _ = f.write_str("sampler2DRect"); }
-    syntax::TypeSpecifierNonArray::Image2DRect => { let _ = f.write_str("image2DRect"); }
-    syntax::TypeSpecifierNonArray::Sampler1DArray => { let _ = f.write_str("sampler1DArray"); }
-    syntax::TypeSpecifierNonArray::Image1DArray => { let _ = f.write_str("image1DArray"); }
-    syntax::TypeSpecifierNonArray::Sampler2DArray => { let _ = f.write_str("sampler2DArray"); }
-    syntax::TypeSpecifierNonArray::Image2DArray => { let _ = f.write_str("image2DArray"); }
-    syntax::TypeSpecifierNonArray::SamplerBuffer => { let _ = f.write_str("samplerBuffer"); }
-    syntax::TypeSpecifierNonArray::ImageBuffer => { let _ = f.write_str("imageBuffer"); }
-    syntax::TypeSpecifierNonArray::Sampler2DMS => { let _ = f.write_str("sampler2DMS"); }
-    syntax::TypeSpecifierNonArray::Image2DMS => { let _ = f.write_str("image2DMS"); }
-    syntax::TypeSpecifierNonArray::Sampler2DMSArray => { let _ = f.write_str("sampler2DMSArray"); }
-    syntax::TypeSpecifierNonArray::Image2DMSArray => { let _ = f.write_str("image2DMSArray"); }
-    syntax::TypeSpecifierNonArray::SamplerCubeArray => { let _ = f.write_str("samplerCubeArray"); }
-    syntax::TypeSpecifierNonArray::ImageCubeArray => { let _ = f.write_str("imageCubeArray"); }
-    syntax::TypeSpecifierNonArray::Sampler1DShadow => { let _ = f.write_str("sampler1DShadow"); }
-    syntax::TypeSpecifierNonArray::Sampler2DShadow => { let _ = f.write_str("sampler2DShadow"); }
-    syntax::TypeSpecifierNonArray::Sampler2DRectShadow => { let _ = f.write_str("sampler2DRectShadow"); }
-    syntax::TypeSpecifierNonArray::Sampler1DArrayShadow => { let _ = f.write_str("sampler1DArrayShadow"); }
-    syntax::TypeSpecifierNonArray::Sampler2DArrayShadow => { let _ = f.write_str("sampler2DArrayShadow"); }
-    syntax::TypeSpecifierNonArray::SamplerCubeShadow => { let _ = f.write_str("samplerCubeShadow"); }
-    syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow => { let _ = f.write_str("samplerCubeArrayShadow"); }
-    syntax::TypeSpecifierNonArray::ISampler1D => { let _ = f.write_str("isampler1D"); }
-    syntax::TypeSpecifierNonArray::IImage1D => { let _ = f.write_str("iimage1D"); }
-    syntax::TypeSpecifierNonArray::ISampler2D => { let _ = f.write_str("isampler2D"); }
-    syntax::TypeSpecifierNonArray::IImage2D => { let _ = f.write_str("iimage2D"); }
-    syntax::TypeSpecifierNonArray::ISampler3D => { let _ = f.write_str("isampler3D"); }
-    syntax::TypeSpecifierNonArray::IImage3D => { let _ = f.write_str("iimage3D"); }
-    syntax::TypeSpecifierNonArray::ISamplerCube => { let _ = f.write_str("isamplerCube"); }
-    syntax::TypeSpecifierNonArray::IImageCube => { let _ = f.write_str("iimageCube"); }
-    syntax::TypeSpecifierNonArray::ISampler2DRect => { let _ = f.write_str("isampler2DRect"); }
-    syntax::TypeSpecifierNonArray::IImage2DRect => { let _ = f.write_str("iimage2DRect"); }
-    syntax::TypeSpecifierNonArray::ISampler1DArray => { let _ = f.write_str("isampler1DArray"); }
-    syntax::TypeSpecifierNonArray::IImage1DArray => { let _ = f.write_str("iimage1DArray"); }
-    syntax::TypeSpecifierNonArray::ISampler2DArray => { let _ = f.write_str("isampler2DArray"); }
-    syntax::TypeSpecifierNonArray::IImage2DArray => { let _ = f.write_str("iimage2DArray"); }
-    syntax::TypeSpecifierNonArray::ISamplerBuffer => { let _ = f.write_str("isamplerBuffer"); }
-    syntax::TypeSpecifierNonArray::IImageBuffer => { let _ = f.write_str("iimageBuffer"); }
-    syntax::TypeSpecifierNonArray::ISampler2DMS => { let _ = f.write_str("isampler2MS"); }
-    syntax::TypeSpecifierNonArray::IImage2DMS => { let _ = f.write_str("iimage2DMS"); }
-    syntax::TypeSpecifierNonArray::ISampler2DMSArray => { let _ = f.write_str("isampler2DMSArray"); }
-    syntax::TypeSpecifierNonArray::IImage2DMSArray => { let _ = f.write_str("iimage2DMSArray"); }
-    syntax::TypeSpecifierNonArray::ISamplerCubeArray => { let _ = f.write_str("isamplerCubeArray"); }
-    syntax::TypeSpecifierNonArray::IImageCubeArray => { let _ = f.write_str("iimageCubeArray"); }
-    syntax::TypeSpecifierNonArray::AtomicUInt => { let _ = f.write_str("atomic_uint"); }
-    syntax::TypeSpecifierNonArray::USampler1D => { let _ = f.write_str("usampler1D"); }
-    syntax::TypeSpecifierNonArray::UImage1D => { let _ = f.write_str("uimage1D"); }
-    syntax::TypeSpecifierNonArray::USampler2D => { let _ = f.write_str("usampler2D"); }
-    syntax::TypeSpecifierNonArray::UImage2D => { let _ = f.write_str("uimage2D"); }
-    syntax::TypeSpecifierNonArray::USampler3D => { let _ = f.write_str("usampler3D"); }
-    syntax::TypeSpecifierNonArray::UImage3D => { let _ = f.write_str("uimage3D"); }
-    syntax::TypeSpecifierNonArray::USamplerCube => { let _ = f.write_str("usamplerCube"); }
-    syntax::TypeSpecifierNonArray::UImageCube => { let _ = f.write_str("uimageCube"); }
-    syntax::TypeSpecifierNonArray::USampler2DRect => { let _ = f.write_str("usampler2DRect"); }
-    syntax::TypeSpecifierNonArray::UImage2DRect => { let _ = f.write_str("uimage2DRect"); }
-    syntax::TypeSpecifierNonArray::USampler1DArray => { let _ = f.write_str("usampler1DArray"); }
-    syntax::TypeSpecifierNonArray::UImage1DArray => { let _ = f.write_str("uimage1DArray"); }
-    syntax::TypeSpecifierNonArray::USampler2DArray => { let _ = f.write_str("usampler2DArray"); }
-    syntax::TypeSpecifierNonArray::UImage2DArray => { let _ = f.write_str("uimage2DArray"); }
-    syntax::TypeSpecifierNonArray::USamplerBuffer => { let _ = f.write_str("usamplerBuffer"); }
-    syntax::TypeSpecifierNonArray::UImageBuffer => { let _ = f.write_str("uimageBuffer"); }
-    syntax::TypeSpecifierNonArray::USampler2DMS => { let _ = f.write_str("usampler2DMS"); }
-    syntax::TypeSpecifierNonArray::UImage2DMS => { let _ = f.write_str("uimage2DMS"); }
-    syntax::TypeSpecifierNonArray::USampler2DMSArray => { let _ = f.write_str("usamplerDMSArray"); }
-    syntax::TypeSpecifierNonArray::UImage2DMSArray => { let _ = f.write_str("uimage2DMSArray"); }
-    syntax::TypeSpecifierNonArray::USamplerCubeArray => { let _ = f.write_str("usamplerCubeArray"); }
-    syntax::TypeSpecifierNonArray::UImageCubeArray => { let _ = f.write_str("uimageCubeArray"); }
+    syntax::TypeSpecifierNonArray::Void => {
+      let _ = f.write_str("void");
+    }
+    syntax::TypeSpecifierNonArray::Bool => {
+      let _ = f.write_str("bool");
+    }
+    syntax::TypeSpecifierNonArray::Int => {
+      let _ = f.write_str("int");
+    }
+    syntax::TypeSpecifierNonArray::UInt => {
+      let _ = f.write_str("uint");
+    }
+    syntax::TypeSpecifierNonArray::Float => {
+      let _ = f.write_str("float");
+    }
+    syntax::TypeSpecifierNonArray::Double => {
+      let _ = f.write_str("double");
+    }
+    syntax::TypeSpecifierNonArray::Vec2 => {
+      let _ = f.write_str("vec2");
+    }
+    syntax::TypeSpecifierNonArray::Vec3 => {
+      let _ = f.write_str("vec3");
+    }
+    syntax::TypeSpecifierNonArray::Vec4 => {
+      let _ = f.write_str("vec4");
+    }
+    syntax::TypeSpecifierNonArray::DVec2 => {
+      let _ = f.write_str("dvec2");
+    }
+    syntax::TypeSpecifierNonArray::DVec3 => {
+      let _ = f.write_str("dvec3");
+    }
+    syntax::TypeSpecifierNonArray::DVec4 => {
+      let _ = f.write_str("dvec4");
+    }
+    syntax::TypeSpecifierNonArray::BVec2 => {
+      let _ = f.write_str("bvec2");
+    }
+    syntax::TypeSpecifierNonArray::BVec3 => {
+      let _ = f.write_str("bvec3");
+    }
+    syntax::TypeSpecifierNonArray::BVec4 => {
+      let _ = f.write_str("bvec4");
+    }
+    syntax::TypeSpecifierNonArray::IVec2 => {
+      let _ = f.write_str("ivec2");
+    }
+    syntax::TypeSpecifierNonArray::IVec3 => {
+      let _ = f.write_str("ivec3");
+    }
+    syntax::TypeSpecifierNonArray::IVec4 => {
+      let _ = f.write_str("ivec4");
+    }
+    syntax::TypeSpecifierNonArray::UVec2 => {
+      let _ = f.write_str("uvec2");
+    }
+    syntax::TypeSpecifierNonArray::UVec3 => {
+      let _ = f.write_str("uvec3");
+    }
+    syntax::TypeSpecifierNonArray::UVec4 => {
+      let _ = f.write_str("uvec4");
+    }
+    syntax::TypeSpecifierNonArray::Mat2 => {
+      let _ = f.write_str("mat2");
+    }
+    syntax::TypeSpecifierNonArray::Mat3 => {
+      let _ = f.write_str("mat3");
+    }
+    syntax::TypeSpecifierNonArray::Mat4 => {
+      let _ = f.write_str("mat4");
+    }
+    syntax::TypeSpecifierNonArray::Mat23 => {
+      let _ = f.write_str("mat23");
+    }
+    syntax::TypeSpecifierNonArray::Mat24 => {
+      let _ = f.write_str("mat24");
+    }
+    syntax::TypeSpecifierNonArray::Mat32 => {
+      let _ = f.write_str("mat32");
+    }
+    syntax::TypeSpecifierNonArray::Mat34 => {
+      let _ = f.write_str("mat34");
+    }
+    syntax::TypeSpecifierNonArray::Mat42 => {
+      let _ = f.write_str("mat42");
+    }
+    syntax::TypeSpecifierNonArray::Mat43 => {
+      let _ = f.write_str("mat43");
+    }
+    syntax::TypeSpecifierNonArray::DMat2 => {
+      let _ = f.write_str("dmat2");
+    }
+    syntax::TypeSpecifierNonArray::DMat3 => {
+      let _ = f.write_str("dmat3");
+    }
+    syntax::TypeSpecifierNonArray::DMat4 => {
+      let _ = f.write_str("dmat4");
+    }
+    syntax::TypeSpecifierNonArray::DMat23 => {
+      let _ = f.write_str("dmat23");
+    }
+    syntax::TypeSpecifierNonArray::DMat24 => {
+      let _ = f.write_str("dmat24");
+    }
+    syntax::TypeSpecifierNonArray::DMat32 => {
+      let _ = f.write_str("dmat32");
+    }
+    syntax::TypeSpecifierNonArray::DMat34 => {
+      let _ = f.write_str("dmat34");
+    }
+    syntax::TypeSpecifierNonArray::DMat42 => {
+      let _ = f.write_str("dmat42");
+    }
+    syntax::TypeSpecifierNonArray::DMat43 => {
+      let _ = f.write_str("dmat43");
+    }
+    syntax::TypeSpecifierNonArray::Sampler1D => {
+      let _ = f.write_str("sampler1D");
+    }
+    syntax::TypeSpecifierNonArray::Image1D => {
+      let _ = f.write_str("image1D");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2D => {
+      let _ = f.write_str("sampler2D");
+    }
+    syntax::TypeSpecifierNonArray::Image2D => {
+      let _ = f.write_str("image2D");
+    }
+    syntax::TypeSpecifierNonArray::Sampler3D => {
+      let _ = f.write_str("sampler3D");
+    }
+    syntax::TypeSpecifierNonArray::Image3D => {
+      let _ = f.write_str("image3D");
+    }
+    syntax::TypeSpecifierNonArray::SamplerCube => {
+      let _ = f.write_str("samplerCube");
+    }
+    syntax::TypeSpecifierNonArray::ImageCube => {
+      let _ = f.write_str("imageCube");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DRect => {
+      let _ = f.write_str("sampler2DRect");
+    }
+    syntax::TypeSpecifierNonArray::Image2DRect => {
+      let _ = f.write_str("image2DRect");
+    }
+    syntax::TypeSpecifierNonArray::Sampler1DArray => {
+      let _ = f.write_str("sampler1DArray");
+    }
+    syntax::TypeSpecifierNonArray::Image1DArray => {
+      let _ = f.write_str("image1DArray");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DArray => {
+      let _ = f.write_str("sampler2DArray");
+    }
+    syntax::TypeSpecifierNonArray::Image2DArray => {
+      let _ = f.write_str("image2DArray");
+    }
+    syntax::TypeSpecifierNonArray::SamplerBuffer => {
+      let _ = f.write_str("samplerBuffer");
+    }
+    syntax::TypeSpecifierNonArray::ImageBuffer => {
+      let _ = f.write_str("imageBuffer");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DMS => {
+      let _ = f.write_str("sampler2DMS");
+    }
+    syntax::TypeSpecifierNonArray::Image2DMS => {
+      let _ = f.write_str("image2DMS");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DMSArray => {
+      let _ = f.write_str("sampler2DMSArray");
+    }
+    syntax::TypeSpecifierNonArray::Image2DMSArray => {
+      let _ = f.write_str("image2DMSArray");
+    }
+    syntax::TypeSpecifierNonArray::SamplerCubeArray => {
+      let _ = f.write_str("samplerCubeArray");
+    }
+    syntax::TypeSpecifierNonArray::ImageCubeArray => {
+      let _ = f.write_str("imageCubeArray");
+    }
+    syntax::TypeSpecifierNonArray::Sampler1DShadow => {
+      let _ = f.write_str("sampler1DShadow");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DShadow => {
+      let _ = f.write_str("sampler2DShadow");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DRectShadow => {
+      let _ = f.write_str("sampler2DRectShadow");
+    }
+    syntax::TypeSpecifierNonArray::Sampler1DArrayShadow => {
+      let _ = f.write_str("sampler1DArrayShadow");
+    }
+    syntax::TypeSpecifierNonArray::Sampler2DArrayShadow => {
+      let _ = f.write_str("sampler2DArrayShadow");
+    }
+    syntax::TypeSpecifierNonArray::SamplerCubeShadow => {
+      let _ = f.write_str("samplerCubeShadow");
+    }
+    syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow => {
+      let _ = f.write_str("samplerCubeArrayShadow");
+    }
+    syntax::TypeSpecifierNonArray::ISampler1D => {
+      let _ = f.write_str("isampler1D");
+    }
+    syntax::TypeSpecifierNonArray::IImage1D => {
+      let _ = f.write_str("iimage1D");
+    }
+    syntax::TypeSpecifierNonArray::ISampler2D => {
+      let _ = f.write_str("isampler2D");
+    }
+    syntax::TypeSpecifierNonArray::IImage2D => {
+      let _ = f.write_str("iimage2D");
+    }
+    syntax::TypeSpecifierNonArray::ISampler3D => {
+      let _ = f.write_str("isampler3D");
+    }
+    syntax::TypeSpecifierNonArray::IImage3D => {
+      let _ = f.write_str("iimage3D");
+    }
+    syntax::TypeSpecifierNonArray::ISamplerCube => {
+      let _ = f.write_str("isamplerCube");
+    }
+    syntax::TypeSpecifierNonArray::IImageCube => {
+      let _ = f.write_str("iimageCube");
+    }
+    syntax::TypeSpecifierNonArray::ISampler2DRect => {
+      let _ = f.write_str("isampler2DRect");
+    }
+    syntax::TypeSpecifierNonArray::IImage2DRect => {
+      let _ = f.write_str("iimage2DRect");
+    }
+    syntax::TypeSpecifierNonArray::ISampler1DArray => {
+      let _ = f.write_str("isampler1DArray");
+    }
+    syntax::TypeSpecifierNonArray::IImage1DArray => {
+      let _ = f.write_str("iimage1DArray");
+    }
+    syntax::TypeSpecifierNonArray::ISampler2DArray => {
+      let _ = f.write_str("isampler2DArray");
+    }
+    syntax::TypeSpecifierNonArray::IImage2DArray => {
+      let _ = f.write_str("iimage2DArray");
+    }
+    syntax::TypeSpecifierNonArray::ISamplerBuffer => {
+      let _ = f.write_str("isamplerBuffer");
+    }
+    syntax::TypeSpecifierNonArray::IImageBuffer => {
+      let _ = f.write_str("iimageBuffer");
+    }
+    syntax::TypeSpecifierNonArray::ISampler2DMS => {
+      let _ = f.write_str("isampler2MS");
+    }
+    syntax::TypeSpecifierNonArray::IImage2DMS => {
+      let _ = f.write_str("iimage2DMS");
+    }
+    syntax::TypeSpecifierNonArray::ISampler2DMSArray => {
+      let _ = f.write_str("isampler2DMSArray");
+    }
+    syntax::TypeSpecifierNonArray::IImage2DMSArray => {
+      let _ = f.write_str("iimage2DMSArray");
+    }
+    syntax::TypeSpecifierNonArray::ISamplerCubeArray => {
+      let _ = f.write_str("isamplerCubeArray");
+    }
+    syntax::TypeSpecifierNonArray::IImageCubeArray => {
+      let _ = f.write_str("iimageCubeArray");
+    }
+    syntax::TypeSpecifierNonArray::AtomicUInt => {
+      let _ = f.write_str("atomic_uint");
+    }
+    syntax::TypeSpecifierNonArray::USampler1D => {
+      let _ = f.write_str("usampler1D");
+    }
+    syntax::TypeSpecifierNonArray::UImage1D => {
+      let _ = f.write_str("uimage1D");
+    }
+    syntax::TypeSpecifierNonArray::USampler2D => {
+      let _ = f.write_str("usampler2D");
+    }
+    syntax::TypeSpecifierNonArray::UImage2D => {
+      let _ = f.write_str("uimage2D");
+    }
+    syntax::TypeSpecifierNonArray::USampler3D => {
+      let _ = f.write_str("usampler3D");
+    }
+    syntax::TypeSpecifierNonArray::UImage3D => {
+      let _ = f.write_str("uimage3D");
+    }
+    syntax::TypeSpecifierNonArray::USamplerCube => {
+      let _ = f.write_str("usamplerCube");
+    }
+    syntax::TypeSpecifierNonArray::UImageCube => {
+      let _ = f.write_str("uimageCube");
+    }
+    syntax::TypeSpecifierNonArray::USampler2DRect => {
+      let _ = f.write_str("usampler2DRect");
+    }
+    syntax::TypeSpecifierNonArray::UImage2DRect => {
+      let _ = f.write_str("uimage2DRect");
+    }
+    syntax::TypeSpecifierNonArray::USampler1DArray => {
+      let _ = f.write_str("usampler1DArray");
+    }
+    syntax::TypeSpecifierNonArray::UImage1DArray => {
+      let _ = f.write_str("uimage1DArray");
+    }
+    syntax::TypeSpecifierNonArray::USampler2DArray => {
+      let _ = f.write_str("usampler2DArray");
+    }
+    syntax::TypeSpecifierNonArray::UImage2DArray => {
+      let _ = f.write_str("uimage2DArray");
+    }
+    syntax::TypeSpecifierNonArray::USamplerBuffer => {
+      let _ = f.write_str("usamplerBuffer");
+    }
+    syntax::TypeSpecifierNonArray::UImageBuffer => {
+      let _ = f.write_str("uimageBuffer");
+    }
+    syntax::TypeSpecifierNonArray::USampler2DMS => {
+      let _ = f.write_str("usampler2DMS");
+    }
+    syntax::TypeSpecifierNonArray::UImage2DMS => {
+      let _ = f.write_str("uimage2DMS");
+    }
+    syntax::TypeSpecifierNonArray::USampler2DMSArray => {
+      let _ = f.write_str("usamplerDMSArray");
+    }
+    syntax::TypeSpecifierNonArray::UImage2DMSArray => {
+      let _ = f.write_str("uimage2DMSArray");
+    }
+    syntax::TypeSpecifierNonArray::USamplerCubeArray => {
+      let _ = f.write_str("usamplerCubeArray");
+    }
+    syntax::TypeSpecifierNonArray::UImageCubeArray => {
+      let _ = f.write_str("uimageCubeArray");
+    }
     syntax::TypeSpecifierNonArray::Struct(ref s) => show_struct_non_declaration(f, s),
-    syntax::TypeSpecifierNonArray::TypeName(ref tn) => show_type_name(f, tn)
+    syntax::TypeSpecifierNonArray::TypeName(ref tn) => show_type_name(f, tn),
   }
 }
 
-pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier) where F: Write {
+pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier)
+where
+  F: Write,
+{
   show_type_specifier_non_array(f, &t.ty);
 
   if let Some(ref arr_spec) = t.array_specifier {
@@ -171,7 +409,10 @@ pub fn show_type_specifier<F>(f: &mut F, t: &syntax::TypeSpecifier) where F: Wri
   }
 }
 
-pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) where F: Write {
+pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType)
+where
+  F: Write,
+{
   if let Some(ref qual) = t.qualifier {
     show_type_qualifier(f, &qual);
     let _ = f.write_str(" ");
@@ -180,7 +421,10 @@ pub fn show_fully_specified_type<F>(f: &mut F, t: &syntax::FullySpecifiedType) w
   show_type_specifier(f, &t.ty);
 }
 
-pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
+pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier)
+where
+  F: Write,
+{
   let _ = f.write_str("struct ");
 
   if let Some(ref name) = s.name {
@@ -196,12 +440,18 @@ pub fn show_struct_non_declaration<F>(f: &mut F, s: &syntax::StructSpecifier) wh
   let _ = f.write_str("}");
 }
 
-pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier) where F: Write {
+pub fn show_struct<F>(f: &mut F, s: &syntax::StructSpecifier)
+where
+  F: Write,
+{
   show_struct_non_declaration(f, s);
   let _ = f.write_str(";\n");
 }
 
-pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) where F: Write {
+pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier)
+where
+  F: Write,
+{
   if let Some(ref qual) = field.qualifier {
     show_type_qualifier(f, &qual);
     let _ = f.write_str(" ");
@@ -225,9 +475,14 @@ pub fn show_struct_field<F>(f: &mut F, field: &syntax::StructFieldSpecifier) whe
   let _ = f.write_str(";\n");
 }
 
-pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier) where F: Write {
+pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier)
+where
+  F: Write,
+{
   match *a {
-    syntax::ArraySpecifier::Unsized => { let _ = f.write_str("[]"); }
+    syntax::ArraySpecifier::Unsized => {
+      let _ = f.write_str("[]");
+    }
     syntax::ArraySpecifier::ExplicitlySized(ref e) => {
       let _ = f.write_str("[");
       show_expr(f, &e);
@@ -236,7 +491,10 @@ pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier) where F: Write 
   }
 }
 
-pub fn show_arrayed_identifier<F>(f: &mut F, a: &syntax::ArrayedIdentifier) where F: Write {
+pub fn show_arrayed_identifier<F>(f: &mut F, a: &syntax::ArrayedIdentifier)
+where
+  F: Write,
+{
   let _ = write!(f, "{}", a.ident);
 
   if let Some(ref arr_spec) = a.array_spec {
@@ -244,7 +502,10 @@ pub fn show_arrayed_identifier<F>(f: &mut F, a: &syntax::ArrayedIdentifier) wher
   }
 }
 
-pub fn show_type_qualifier<F>(f: &mut F, q: &syntax::TypeQualifier) where F: Write {
+pub fn show_type_qualifier<F>(f: &mut F, q: &syntax::TypeQualifier)
+where
+  F: Write,
+{
   let mut qualifiers = q.qualifiers.0.iter();
   let first = qualifiers.next().unwrap();
 
@@ -256,39 +517,82 @@ pub fn show_type_qualifier<F>(f: &mut F, q: &syntax::TypeQualifier) where F: Wri
   }
 }
 
-pub fn show_type_qualifier_spec<F>(f: &mut F, q: &syntax::TypeQualifierSpec) where F: Write {
+pub fn show_type_qualifier_spec<F>(f: &mut F, q: &syntax::TypeQualifierSpec)
+where
+  F: Write,
+{
   match *q {
     syntax::TypeQualifierSpec::Storage(ref s) => show_storage_qualifier(f, &s),
     syntax::TypeQualifierSpec::Layout(ref l) => show_layout_qualifier(f, &l),
     syntax::TypeQualifierSpec::Precision(ref p) => show_precision_qualifier(f, &p),
     syntax::TypeQualifierSpec::Interpolation(ref i) => show_interpolation_qualifier(f, &i),
-    syntax::TypeQualifierSpec::Invariant => { let _ = f.write_str("invariant"); },
-    syntax::TypeQualifierSpec::Precise => { let _ = f.write_str("precise"); }
+    syntax::TypeQualifierSpec::Invariant => {
+      let _ = f.write_str("invariant");
+    }
+    syntax::TypeQualifierSpec::Precise => {
+      let _ = f.write_str("precise");
+    }
   }
 }
 
-pub fn show_storage_qualifier<F>(f: &mut F, q: &syntax::StorageQualifier) where F: Write {
+pub fn show_storage_qualifier<F>(f: &mut F, q: &syntax::StorageQualifier)
+where
+  F: Write,
+{
   match *q {
-    syntax::StorageQualifier::Const => { let _ = f.write_str("const"); }
-    syntax::StorageQualifier::InOut => { let _ = f.write_str("inout"); }
-    syntax::StorageQualifier::In => { let _ = f.write_str("in"); }
-    syntax::StorageQualifier::Out => { let _ = f.write_str("out"); }
-    syntax::StorageQualifier::Centroid => { let _ = f.write_str("centroid"); }
-    syntax::StorageQualifier::Patch => { let _ = f.write_str("patch"); }
-    syntax::StorageQualifier::Sample => { let _ = f.write_str("sample"); }
-    syntax::StorageQualifier::Uniform => { let _ = f.write_str("uniform"); }
-    syntax::StorageQualifier::Buffer => { let _ = f.write_str("buffer"); }
-    syntax::StorageQualifier::Shared => { let _ = f.write_str("shared"); }
-    syntax::StorageQualifier::Coherent => { let _ = f.write_str("coherent"); }
-    syntax::StorageQualifier::Volatile => { let _ = f.write_str("volatile"); }
-    syntax::StorageQualifier::Restrict => { let _ = f.write_str("restrict"); }
-    syntax::StorageQualifier::ReadOnly => { let _ = f.write_str("readonly"); }
-    syntax::StorageQualifier::WriteOnly => { let _ = f.write_str("writeonly"); }
-    syntax::StorageQualifier::Subroutine(ref n) => show_subroutine(f, &n)
+    syntax::StorageQualifier::Const => {
+      let _ = f.write_str("const");
+    }
+    syntax::StorageQualifier::InOut => {
+      let _ = f.write_str("inout");
+    }
+    syntax::StorageQualifier::In => {
+      let _ = f.write_str("in");
+    }
+    syntax::StorageQualifier::Out => {
+      let _ = f.write_str("out");
+    }
+    syntax::StorageQualifier::Centroid => {
+      let _ = f.write_str("centroid");
+    }
+    syntax::StorageQualifier::Patch => {
+      let _ = f.write_str("patch");
+    }
+    syntax::StorageQualifier::Sample => {
+      let _ = f.write_str("sample");
+    }
+    syntax::StorageQualifier::Uniform => {
+      let _ = f.write_str("uniform");
+    }
+    syntax::StorageQualifier::Buffer => {
+      let _ = f.write_str("buffer");
+    }
+    syntax::StorageQualifier::Shared => {
+      let _ = f.write_str("shared");
+    }
+    syntax::StorageQualifier::Coherent => {
+      let _ = f.write_str("coherent");
+    }
+    syntax::StorageQualifier::Volatile => {
+      let _ = f.write_str("volatile");
+    }
+    syntax::StorageQualifier::Restrict => {
+      let _ = f.write_str("restrict");
+    }
+    syntax::StorageQualifier::ReadOnly => {
+      let _ = f.write_str("readonly");
+    }
+    syntax::StorageQualifier::WriteOnly => {
+      let _ = f.write_str("writeonly");
+    }
+    syntax::StorageQualifier::Subroutine(ref n) => show_subroutine(f, &n),
   }
 }
 
-pub fn show_subroutine<F>(f: &mut F, types: &Vec<syntax::TypeName>) where F: Write {
+pub fn show_subroutine<F>(f: &mut F, types: &Vec<syntax::TypeName>)
+where
+  F: Write,
+{
   let _ = f.write_str("subroutine");
 
   if !types.is_empty() {
@@ -308,7 +612,10 @@ pub fn show_subroutine<F>(f: &mut F, types: &Vec<syntax::TypeName>) where F: Wri
   }
 }
 
-pub fn show_layout_qualifier<F>(f: &mut F, l: &syntax::LayoutQualifier) where F: Write {
+pub fn show_layout_qualifier<F>(f: &mut F, l: &syntax::LayoutQualifier)
+where
+  F: Write,
+{
   let mut qualifiers = l.ids.0.iter();
   let first = qualifiers.next().unwrap();
 
@@ -323,34 +630,60 @@ pub fn show_layout_qualifier<F>(f: &mut F, l: &syntax::LayoutQualifier) where F:
   let _ = f.write_str(")");
 }
 
-pub fn show_layout_qualifier_spec<F>(f: &mut F, l: &syntax::LayoutQualifierSpec) where F: Write {
+pub fn show_layout_qualifier_spec<F>(f: &mut F, l: &syntax::LayoutQualifierSpec)
+where
+  F: Write,
+{
   match *l {
     syntax::LayoutQualifierSpec::Identifier(ref i, Some(ref e)) => {
       let _ = write!(f, "{} = ", i);
       show_expr(f, &e);
     }
     syntax::LayoutQualifierSpec::Identifier(ref i, None) => show_identifier(f, &i),
-    syntax::LayoutQualifierSpec::Shared => { let _ = f.write_str("shared"); }
+    syntax::LayoutQualifierSpec::Shared => {
+      let _ = f.write_str("shared");
+    }
   }
 }
 
-pub fn show_precision_qualifier<F>(f: &mut F, p: &syntax::PrecisionQualifier) where F: Write {
+pub fn show_precision_qualifier<F>(f: &mut F, p: &syntax::PrecisionQualifier)
+where
+  F: Write,
+{
   match *p {
-    syntax::PrecisionQualifier::High => { let _ = f.write_str("highp"); }
-    syntax::PrecisionQualifier::Medium => { let _ = f.write_str("mediump"); }
-    syntax::PrecisionQualifier::Low => { let _ = f.write_str("low"); }
+    syntax::PrecisionQualifier::High => {
+      let _ = f.write_str("highp");
+    }
+    syntax::PrecisionQualifier::Medium => {
+      let _ = f.write_str("mediump");
+    }
+    syntax::PrecisionQualifier::Low => {
+      let _ = f.write_str("low");
+    }
   }
 }
 
-pub fn show_interpolation_qualifier<F>(f: &mut F, i: &syntax::InterpolationQualifier) where F: Write {
+pub fn show_interpolation_qualifier<F>(f: &mut F, i: &syntax::InterpolationQualifier)
+where
+  F: Write,
+{
   match *i {
-    syntax::InterpolationQualifier::Smooth => { let _ = f.write_str("smooth"); }
-    syntax::InterpolationQualifier::Flat => { let _ = f.write_str("flat"); }
-    syntax::InterpolationQualifier::NoPerspective => { let _ = f.write_str("noperspective"); }
+    syntax::InterpolationQualifier::Smooth => {
+      let _ = f.write_str("smooth");
+    }
+    syntax::InterpolationQualifier::Flat => {
+      let _ = f.write_str("flat");
+    }
+    syntax::InterpolationQualifier::NoPerspective => {
+      let _ = f.write_str("noperspective");
+    }
   }
 }
 
-pub fn show_float<F>(f: &mut F, x: f32) where F: Write {
+pub fn show_float<F>(f: &mut F, x: f32)
+where
+  F: Write,
+{
   if x.fract() == 0. {
     let _ = write!(f, "{}.", x);
   } else {
@@ -358,7 +691,10 @@ pub fn show_float<F>(f: &mut F, x: f32) where F: Write {
   }
 }
 
-pub fn show_double<F>(f: &mut F, x: f64) where F: Write {
+pub fn show_double<F>(f: &mut F, x: f64)
+where
+  F: Write,
+{
   if x.fract() == 0. {
     let _ = write!(f, "{}.", x);
   } else {
@@ -366,12 +702,21 @@ pub fn show_double<F>(f: &mut F, x: f64) where F: Write {
   }
 }
 
-pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
+pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr)
+where
+  F: Write,
+{
   match *expr {
     syntax::Expr::Variable(ref i) => show_identifier(f, &i),
-    syntax::Expr::IntConst(ref x) => { let _ = write!(f, "{}", x); }
-    syntax::Expr::UIntConst(ref x) => { let _ = write!(f, "{}u", x); }
-    syntax::Expr::BoolConst(ref x) => { let _ = write!(f, "{}", x); }
+    syntax::Expr::IntConst(ref x) => {
+      let _ = write!(f, "{}", x);
+    }
+    syntax::Expr::UIntConst(ref x) => {
+      let _ = write!(f, "{}u", x);
+    }
+    syntax::Expr::BoolConst(ref x) => {
+      let _ = write!(f, "{}", x);
+    }
     syntax::Expr::FloatConst(ref x) => show_float(f, *x),
     syntax::Expr::DoubleConst(ref x) => show_double(f, *x),
     syntax::Expr::Unary(ref op, ref e) => {
@@ -447,65 +792,152 @@ pub fn show_expr<F>(f: &mut F, expr: &syntax::Expr) where F: Write {
   }
 }
 
-pub fn show_unary_op<F>(f: &mut F, op: &syntax::UnaryOp) where F: Write {
+pub fn show_unary_op<F>(f: &mut F, op: &syntax::UnaryOp)
+where
+  F: Write,
+{
   match *op {
-    syntax::UnaryOp::Inc => { let _ = f.write_str("++"); }
-    syntax::UnaryOp::Dec => { let _ = f.write_str("--"); }
-    syntax::UnaryOp::Add => { let _ = f.write_str("+"); }
-    syntax::UnaryOp::Minus => { let _ = f.write_str("-"); }
-    syntax::UnaryOp::Not => { let _ = f.write_str("!"); }
-    syntax::UnaryOp::Complement => { let _ = f.write_str("~"); }
+    syntax::UnaryOp::Inc => {
+      let _ = f.write_str("++");
+    }
+    syntax::UnaryOp::Dec => {
+      let _ = f.write_str("--");
+    }
+    syntax::UnaryOp::Add => {
+      let _ = f.write_str("+");
+    }
+    syntax::UnaryOp::Minus => {
+      let _ = f.write_str("-");
+    }
+    syntax::UnaryOp::Not => {
+      let _ = f.write_str("!");
+    }
+    syntax::UnaryOp::Complement => {
+      let _ = f.write_str("~");
+    }
   }
 }
 
-pub fn show_binary_op<F>(f: &mut F, op: &syntax::BinaryOp) where F: Write {
+pub fn show_binary_op<F>(f: &mut F, op: &syntax::BinaryOp)
+where
+  F: Write,
+{
   match *op {
-    syntax::BinaryOp::Or => { let _ = f.write_str("||"); }
-    syntax::BinaryOp::Xor => { let _ = f.write_str("^^"); }
-    syntax::BinaryOp::And => { let _ = f.write_str("&&"); }
-    syntax::BinaryOp::BitOr => { let _ = f.write_str("|"); }
-    syntax::BinaryOp::BitXor => { let _ = f.write_str("^"); }
-    syntax::BinaryOp::BitAnd => { let _ = f.write_str("&"); }
-    syntax::BinaryOp::Equal => { let _ = f.write_str("=="); }
-    syntax::BinaryOp::NonEqual => { let _ = f.write_str("!="); }
-    syntax::BinaryOp::LT => { let _ = f.write_str("<"); }
-    syntax::BinaryOp::GT => { let _ = f.write_str(">"); }
-    syntax::BinaryOp::LTE => { let _ = f.write_str("<="); }
-    syntax::BinaryOp::GTE => { let _ = f.write_str(">="); }
-    syntax::BinaryOp::LShift => { let _ = f.write_str("<<"); }
-    syntax::BinaryOp::RShift => { let _ = f.write_str(">>"); }
-    syntax::BinaryOp::Add => { let _ = f.write_str("+"); }
-    syntax::BinaryOp::Sub => { let _ = f.write_str("-"); }
-    syntax::BinaryOp::Mult => { let _ = f.write_str("*"); }
-    syntax::BinaryOp::Div => { let _ = f.write_str("/"); }
-    syntax::BinaryOp::Mod => { let _ = f.write_str("%"); }
+    syntax::BinaryOp::Or => {
+      let _ = f.write_str("||");
+    }
+    syntax::BinaryOp::Xor => {
+      let _ = f.write_str("^^");
+    }
+    syntax::BinaryOp::And => {
+      let _ = f.write_str("&&");
+    }
+    syntax::BinaryOp::BitOr => {
+      let _ = f.write_str("|");
+    }
+    syntax::BinaryOp::BitXor => {
+      let _ = f.write_str("^");
+    }
+    syntax::BinaryOp::BitAnd => {
+      let _ = f.write_str("&");
+    }
+    syntax::BinaryOp::Equal => {
+      let _ = f.write_str("==");
+    }
+    syntax::BinaryOp::NonEqual => {
+      let _ = f.write_str("!=");
+    }
+    syntax::BinaryOp::LT => {
+      let _ = f.write_str("<");
+    }
+    syntax::BinaryOp::GT => {
+      let _ = f.write_str(">");
+    }
+    syntax::BinaryOp::LTE => {
+      let _ = f.write_str("<=");
+    }
+    syntax::BinaryOp::GTE => {
+      let _ = f.write_str(">=");
+    }
+    syntax::BinaryOp::LShift => {
+      let _ = f.write_str("<<");
+    }
+    syntax::BinaryOp::RShift => {
+      let _ = f.write_str(">>");
+    }
+    syntax::BinaryOp::Add => {
+      let _ = f.write_str("+");
+    }
+    syntax::BinaryOp::Sub => {
+      let _ = f.write_str("-");
+    }
+    syntax::BinaryOp::Mult => {
+      let _ = f.write_str("*");
+    }
+    syntax::BinaryOp::Div => {
+      let _ = f.write_str("/");
+    }
+    syntax::BinaryOp::Mod => {
+      let _ = f.write_str("%");
+    }
   }
 }
 
-pub fn show_assignment_op<F>(f: &mut F, op: &syntax::AssignmentOp) where F: Write {
+pub fn show_assignment_op<F>(f: &mut F, op: &syntax::AssignmentOp)
+where
+  F: Write,
+{
   match *op {
-    syntax::AssignmentOp::Equal => { let _ = f.write_str("="); }
-    syntax::AssignmentOp::Mult => { let _ = f.write_str("*="); }
-    syntax::AssignmentOp::Div => { let _ = f.write_str("/="); }
-    syntax::AssignmentOp::Mod => { let _ = f.write_str("%="); }
-    syntax::AssignmentOp::Add => { let _ = f.write_str("+="); }
-    syntax::AssignmentOp::Sub => { let _ = f.write_str("-="); }
-    syntax::AssignmentOp::LShift => { let _ = f.write_str("<<="); }
-    syntax::AssignmentOp::RShift => { let _ = f.write_str(">>="); }
-    syntax::AssignmentOp::And => { let _ = f.write_str("&="); }
-    syntax::AssignmentOp::Xor => { let _ = f.write_str("^="); }
-    syntax::AssignmentOp::Or => { let _ = f.write_str("|="); }
+    syntax::AssignmentOp::Equal => {
+      let _ = f.write_str("=");
+    }
+    syntax::AssignmentOp::Mult => {
+      let _ = f.write_str("*=");
+    }
+    syntax::AssignmentOp::Div => {
+      let _ = f.write_str("/=");
+    }
+    syntax::AssignmentOp::Mod => {
+      let _ = f.write_str("%=");
+    }
+    syntax::AssignmentOp::Add => {
+      let _ = f.write_str("+=");
+    }
+    syntax::AssignmentOp::Sub => {
+      let _ = f.write_str("-=");
+    }
+    syntax::AssignmentOp::LShift => {
+      let _ = f.write_str("<<=");
+    }
+    syntax::AssignmentOp::RShift => {
+      let _ = f.write_str(">>=");
+    }
+    syntax::AssignmentOp::And => {
+      let _ = f.write_str("&=");
+    }
+    syntax::AssignmentOp::Xor => {
+      let _ = f.write_str("^=");
+    }
+    syntax::AssignmentOp::Or => {
+      let _ = f.write_str("|=");
+    }
   }
 }
 
-pub fn show_function_identifier<F>(f: &mut F, i: &syntax::FunIdentifier) where F: Write {
+pub fn show_function_identifier<F>(f: &mut F, i: &syntax::FunIdentifier)
+where
+  F: Write,
+{
   match *i {
     syntax::FunIdentifier::Identifier(ref n) => show_identifier(f, &n),
-    syntax::FunIdentifier::Expr(ref e) => show_expr(f, &*e)
+    syntax::FunIdentifier::Expr(ref e) => show_expr(f, &*e),
   }
 }
 
-pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration) where F: Write {
+pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration)
+where
+  F: Write,
+{
   match *d {
     syntax::Declaration::FunctionPrototype(ref proto) => {
       show_function_prototype(f, &proto);
@@ -542,7 +974,10 @@ pub fn show_declaration<F>(f: &mut F, d: &syntax::Declaration) where F: Write {
   }
 }
 
-pub fn show_function_prototype<F>(f: &mut F, fp: &syntax::FunctionPrototype) where F: Write {
+pub fn show_function_prototype<F>(f: &mut F, fp: &syntax::FunctionPrototype)
+where
+  F: Write,
+{
   show_fully_specified_type(f, &fp.ty);
   let _ = f.write_str(" ");
   show_identifier(f, &fp.name);
@@ -562,7 +997,10 @@ pub fn show_function_prototype<F>(f: &mut F, fp: &syntax::FunctionPrototype) whe
 
   let _ = f.write_str(")");
 }
-pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionParameterDeclaration) where F: Write {
+pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionParameterDeclaration)
+where
+  F: Write,
+{
   match *p {
     syntax::FunctionParameterDeclaration::Named(ref qual, ref fpd) => {
       if let Some(ref q) = *qual {
@@ -583,13 +1021,19 @@ pub fn show_function_parameter_declaration<F>(f: &mut F, p: &syntax::FunctionPar
   }
 }
 
-pub fn show_function_parameter_declarator<F>(f: &mut F, p: &syntax::FunctionParameterDeclarator) where F: Write {
+pub fn show_function_parameter_declarator<F>(f: &mut F, p: &syntax::FunctionParameterDeclarator)
+where
+  F: Write,
+{
   show_type_specifier(f, &p.ty);
   let _ = f.write_str(" ");
   show_arrayed_identifier(f, &p.ident);
 }
 
-pub fn show_init_declarator_list<F>(f: &mut F, i: &syntax::InitDeclaratorList) where F: Write {
+pub fn show_init_declarator_list<F>(f: &mut F, i: &syntax::InitDeclaratorList)
+where
+  F: Write,
+{
   show_single_declaration(f, &i.head);
 
   for decl in &i.tail {
@@ -598,7 +1042,10 @@ pub fn show_init_declarator_list<F>(f: &mut F, i: &syntax::InitDeclaratorList) w
   }
 }
 
-pub fn show_single_declaration<F>(f: &mut F, d: &syntax::SingleDeclaration) where F: Write {
+pub fn show_single_declaration<F>(f: &mut F, d: &syntax::SingleDeclaration)
+where
+  F: Write,
+{
   show_fully_specified_type(f, &d.ty);
 
   if let Some(ref name) = d.name {
@@ -616,7 +1063,10 @@ pub fn show_single_declaration<F>(f: &mut F, d: &syntax::SingleDeclaration) wher
   }
 }
 
-pub fn show_single_declaration_no_type<F>(f: &mut F, d: &syntax::SingleDeclarationNoType) where F: Write {
+pub fn show_single_declaration_no_type<F>(f: &mut F, d: &syntax::SingleDeclarationNoType)
+where
+  F: Write,
+{
   show_arrayed_identifier(f, &d.ident);
 
   if let Some(ref initializer) = d.initializer {
@@ -625,7 +1075,10 @@ pub fn show_single_declaration_no_type<F>(f: &mut F, d: &syntax::SingleDeclarati
   }
 }
 
-pub fn show_initializer<F>(f: &mut F, i: &syntax::Initializer) where F: Write {
+pub fn show_initializer<F>(f: &mut F, i: &syntax::Initializer)
+where
+  F: Write,
+{
   match *i {
     syntax::Initializer::Simple(ref e) => show_expr(f, e),
     syntax::Initializer::List(ref list) => {
@@ -645,7 +1098,10 @@ pub fn show_initializer<F>(f: &mut F, i: &syntax::Initializer) where F: Write {
   }
 }
 
-pub fn show_block<F>(f: &mut F, b: &syntax::Block) where F: Write {
+pub fn show_block<F>(f: &mut F, b: &syntax::Block)
+where
+  F: Write,
+{
   show_type_qualifier(f, &b.qualifier);
   let _ = f.write_str(" ");
   show_identifier(f, &b.name);
@@ -662,13 +1118,19 @@ pub fn show_block<F>(f: &mut F, b: &syntax::Block) where F: Write {
   }
 }
 
-pub fn show_function_definition<F>(f: &mut F, fd: &syntax::FunctionDefinition) where F: Write {
+pub fn show_function_definition<F>(f: &mut F, fd: &syntax::FunctionDefinition)
+where
+  F: Write,
+{
   show_function_prototype(f, &fd.prototype);
   let _ = f.write_str(" ");
   show_compound_statement(f, &fd.statement);
 }
 
-pub fn show_compound_statement<F>(f: &mut F, cst: &syntax::CompoundStatement) where F: Write {
+pub fn show_compound_statement<F>(f: &mut F, cst: &syntax::CompoundStatement)
+where
+  F: Write,
+{
   let _ = f.write_str("{\n");
 
   for st in &cst.statement_list {
@@ -678,14 +1140,20 @@ pub fn show_compound_statement<F>(f: &mut F, cst: &syntax::CompoundStatement) wh
   let _ = f.write_str("}\n");
 }
 
-pub fn show_statement<F>(f: &mut F, st: &syntax::Statement) where F: Write {
+pub fn show_statement<F>(f: &mut F, st: &syntax::Statement)
+where
+  F: Write,
+{
   match *st {
     syntax::Statement::Compound(ref cst) => show_compound_statement(f, cst),
-    syntax::Statement::Simple(ref sst) => show_simple_statement(f, sst)
+    syntax::Statement::Simple(ref sst) => show_simple_statement(f, sst),
   }
 }
 
-pub fn show_simple_statement<F>(f: &mut F, sst: &syntax::SimpleStatement) where F: Write {
+pub fn show_simple_statement<F>(f: &mut F, sst: &syntax::SimpleStatement)
+where
+  F: Write,
+{
   match *sst {
     syntax::SimpleStatement::Declaration(ref d) => show_declaration(f, d),
     syntax::SimpleStatement::Expression(ref e) => show_expression_statement(f, e),
@@ -693,11 +1161,14 @@ pub fn show_simple_statement<F>(f: &mut F, sst: &syntax::SimpleStatement) where 
     syntax::SimpleStatement::Switch(ref s) => show_switch_statement(f, s),
     syntax::SimpleStatement::CaseLabel(ref cl) => show_case_label(f, cl),
     syntax::SimpleStatement::Iteration(ref i) => show_iteration_statement(f, i),
-    syntax::SimpleStatement::Jump(ref j) => show_jump_statement(f, j)
+    syntax::SimpleStatement::Jump(ref j) => show_jump_statement(f, j),
   }
 }
 
-pub fn show_expression_statement<F>(f: &mut F, est: &syntax::ExprStatement) where F: Write {
+pub fn show_expression_statement<F>(f: &mut F, est: &syntax::ExprStatement)
+where
+  F: Write,
+{
   if let Some(ref e) = *est {
     show_expr(f, e);
   }
@@ -705,14 +1176,20 @@ pub fn show_expression_statement<F>(f: &mut F, est: &syntax::ExprStatement) wher
   let _ = f.write_str(";\n");
 }
 
-pub fn show_selection_statement<F>(f: &mut F, sst: &syntax::SelectionStatement) where F: Write {
+pub fn show_selection_statement<F>(f: &mut F, sst: &syntax::SelectionStatement)
+where
+  F: Write,
+{
   let _ = f.write_str("if (");
   show_expr(f, &sst.cond);
-  let _= f.write_str(") {\n");
+  let _ = f.write_str(") {\n");
   show_selection_rest_statement(f, &sst.rest);
 }
 
-pub fn show_selection_rest_statement<F>(f: &mut F, sst: &syntax::SelectionRestStatement) where F: Write {
+pub fn show_selection_rest_statement<F>(f: &mut F, sst: &syntax::SelectionRestStatement)
+where
+  F: Write,
+{
   match *sst {
     syntax::SelectionRestStatement::Statement(ref if_st) => {
       show_statement(f, if_st);
@@ -726,7 +1203,10 @@ pub fn show_selection_rest_statement<F>(f: &mut F, sst: &syntax::SelectionRestSt
   }
 }
 
-pub fn show_switch_statement<F>(f: &mut F, sst: &syntax::SwitchStatement) where F: Write {
+pub fn show_switch_statement<F>(f: &mut F, sst: &syntax::SwitchStatement)
+where
+  F: Write,
+{
   let _ = f.write_str("switch (");
   show_expr(f, &sst.head);
   let _ = f.write_str(") {\n");
@@ -738,18 +1218,26 @@ pub fn show_switch_statement<F>(f: &mut F, sst: &syntax::SwitchStatement) where 
   let _ = f.write_str("}\n");
 }
 
-pub fn show_case_label<F>(f: &mut F, cl: &syntax::CaseLabel) where F: Write {
+pub fn show_case_label<F>(f: &mut F, cl: &syntax::CaseLabel)
+where
+  F: Write,
+{
   match *cl {
     syntax::CaseLabel::Case(ref e) => {
       let _ = f.write_str("case ");
       show_expr(f, e);
       let _ = f.write_str(":\n");
     }
-    syntax::CaseLabel::Def => { let _ = f.write_str("default:\n"); }
+    syntax::CaseLabel::Def => {
+      let _ = f.write_str("default:\n");
+    }
   }
 }
 
-pub fn show_iteration_statement<F>(f: &mut F, ist: &syntax::IterationStatement) where F: Write {
+pub fn show_iteration_statement<F>(f: &mut F, ist: &syntax::IterationStatement)
+where
+  F: Write,
+{
   match *ist {
     syntax::IterationStatement::While(ref cond, ref body) => {
       let _ = f.write_str("while (");
@@ -774,7 +1262,10 @@ pub fn show_iteration_statement<F>(f: &mut F, ist: &syntax::IterationStatement) 
   }
 }
 
-pub fn show_condition<F>(f: &mut F, c: &syntax::Condition) where F: Write {
+pub fn show_condition<F>(f: &mut F, c: &syntax::Condition)
+where
+  F: Write,
+{
   match *c {
     syntax::Condition::Expr(ref e) => show_expr(f, e),
     syntax::Condition::Assignment(ref ty, ref name, ref initializer) => {
@@ -787,18 +1278,24 @@ pub fn show_condition<F>(f: &mut F, c: &syntax::Condition) where F: Write {
   }
 }
 
-pub fn show_for_init_statement<F>(f: &mut F, i: &syntax::ForInitStatement) where F: Write {
+pub fn show_for_init_statement<F>(f: &mut F, i: &syntax::ForInitStatement)
+where
+  F: Write,
+{
   match *i {
     syntax::ForInitStatement::Expression(ref expr) => {
       if let Some(ref e) = *expr {
         show_expr(f, e);
       }
     }
-    syntax::ForInitStatement::Declaration(ref d) => show_declaration(f, d)
+    syntax::ForInitStatement::Declaration(ref d) => show_declaration(f, d),
   }
 }
 
-pub fn show_for_rest_statement<F>(f: &mut F, r: &syntax::ForRestStatement) where F: Write {
+pub fn show_for_rest_statement<F>(f: &mut F, r: &syntax::ForRestStatement)
+where
+  F: Write,
+{
   if let Some(ref cond) = r.condition {
     show_condition(f, cond);
   }
@@ -810,11 +1307,20 @@ pub fn show_for_rest_statement<F>(f: &mut F, r: &syntax::ForRestStatement) where
   }
 }
 
-pub fn show_jump_statement<F>(f: &mut F, j: &syntax::JumpStatement) where F: Write {
+pub fn show_jump_statement<F>(f: &mut F, j: &syntax::JumpStatement)
+where
+  F: Write,
+{
   match *j {
-    syntax::JumpStatement::Continue => { let _ = f.write_str("continue;\n"); }
-    syntax::JumpStatement::Break => { let _ = f.write_str("break;\n"); }
-    syntax::JumpStatement::Discard => { let _ = f.write_str("discard;\n"); }
+    syntax::JumpStatement::Continue => {
+      let _ = f.write_str("continue;\n");
+    }
+    syntax::JumpStatement::Break => {
+      let _ = f.write_str("break;\n");
+    }
+    syntax::JumpStatement::Discard => {
+      let _ = f.write_str("discard;\n");
+    }
     syntax::JumpStatement::Return(ref e) => {
       let _ = f.write_str("return ");
       show_expr(f, e);
@@ -823,63 +1329,99 @@ pub fn show_jump_statement<F>(f: &mut F, j: &syntax::JumpStatement) where F: Wri
   }
 }
 
-pub fn show_preprocessor<F>(f: &mut F, pp: &syntax::Preprocessor) where F: Write {
+pub fn show_preprocessor<F>(f: &mut F, pp: &syntax::Preprocessor)
+where
+  F: Write,
+{
   match *pp {
     syntax::Preprocessor::Define(ref pd) => show_preprocessor_define(f, pd),
     syntax::Preprocessor::Version(ref pv) => show_preprocessor_version(f, pv),
-    syntax::Preprocessor::Extension(ref pe) => show_preprocessor_extension(f, pe)
+    syntax::Preprocessor::Extension(ref pe) => show_preprocessor_extension(f, pe),
   }
 }
 
-pub fn show_preprocessor_define<F>(f: &mut F, pd: &syntax::PreprocessorDefine) where F: Write {
+pub fn show_preprocessor_define<F>(f: &mut F, pd: &syntax::PreprocessorDefine)
+where
+  F: Write,
+{
   let _ = write!(f, "#define {} ", pd.name);
   show_expr(f, &pd.value);
   let _ = f.write_str("\n");
 }
 
-pub fn show_preprocessor_version<F>(f: &mut F, pv: &syntax::PreprocessorVersion) where F: Write {
+pub fn show_preprocessor_version<F>(f: &mut F, pv: &syntax::PreprocessorVersion)
+where
+  F: Write,
+{
   let _ = write!(f, "#version {}", pv.version);
 
   if let Some(ref profile) = pv.profile {
     match *profile {
-      syntax::PreprocessorVersionProfile::Core => { let _ = f.write_str(" core"); }
-      syntax::PreprocessorVersionProfile::Compatibility => { let _ = f.write_str(" compatibility"); }
-      syntax::PreprocessorVersionProfile::ES => { let _ = f.write_str(" es"); }
+      syntax::PreprocessorVersionProfile::Core => {
+        let _ = f.write_str(" core");
+      }
+      syntax::PreprocessorVersionProfile::Compatibility => {
+        let _ = f.write_str(" compatibility");
+      }
+      syntax::PreprocessorVersionProfile::ES => {
+        let _ = f.write_str(" es");
+      }
     }
   }
 
   let _ = f.write_str("\n");
 }
 
-pub fn show_preprocessor_extension<F>(f: &mut F, pe: &syntax::PreprocessorExtension) where F: Write {
+pub fn show_preprocessor_extension<F>(f: &mut F, pe: &syntax::PreprocessorExtension)
+where
+  F: Write,
+{
   let _ = f.write_str("#extension ");
 
   match pe.name {
-    syntax::PreprocessorExtensionName::All => { let _ = f.write_str("all"); }
-    syntax::PreprocessorExtensionName::Specific(ref n) => { let _ = f.write_str(n); }
+    syntax::PreprocessorExtensionName::All => {
+      let _ = f.write_str("all");
+    }
+    syntax::PreprocessorExtensionName::Specific(ref n) => {
+      let _ = f.write_str(n);
+    }
   }
 
   if let Some(ref behavior) = pe.behavior {
     match *behavior {
-      syntax::PreprocessorExtensionBehavior::Require => { let _ = f.write_str(" : require"); }
-      syntax::PreprocessorExtensionBehavior::Enable => { let _ = f.write_str(" : enable"); }
-      syntax::PreprocessorExtensionBehavior::Warn => { let _ = f.write_str(" : warn"); }
-      syntax::PreprocessorExtensionBehavior::Disable => { let _ = f.write_str(" : disable"); }
+      syntax::PreprocessorExtensionBehavior::Require => {
+        let _ = f.write_str(" : require");
+      }
+      syntax::PreprocessorExtensionBehavior::Enable => {
+        let _ = f.write_str(" : enable");
+      }
+      syntax::PreprocessorExtensionBehavior::Warn => {
+        let _ = f.write_str(" : warn");
+      }
+      syntax::PreprocessorExtensionBehavior::Disable => {
+        let _ = f.write_str(" : disable");
+      }
     }
   }
 
   let _ = f.write_str("\n");
 }
 
-pub fn show_external_declaration<F>(f: &mut F, ed: &syntax::ExternalDeclaration) where F: Write {
+pub fn show_external_declaration<F>(f: &mut F, ed: &syntax::ExternalDeclaration)
+where
+  F: Write,
+{
   match *ed {
     syntax::ExternalDeclaration::Preprocessor(ref pp) => show_preprocessor(f, pp),
-  syntax::ExternalDeclaration::FunctionDefinition(ref fd) => show_function_definition(f, fd),
-  syntax::ExternalDeclaration::Declaration(ref d) => show_declaration(f, d)
+    syntax::ExternalDeclaration::FunctionDefinition(ref fd) => show_function_definition(f, fd),
+    syntax::ExternalDeclaration::Declaration(ref d) => show_declaration(f, d),
   }
 }
 
-pub fn show_translation_unit<F>(f: &mut F, tu: &syntax::TranslationUnit) where F: Write {
+pub fn show_translation_unit<F>(f: &mut F, tu: &syntax::TranslationUnit)
+where
+  F: Write,
+{
   for ed in &(tu.0).0 {
     show_external_declaration(f, ed);
   }
@@ -896,12 +1438,21 @@ mod tests {
     let zero = syntax::Expr::DoubleConst(0.);
     let ray = syntax::Expr::Variable("ray".into());
     let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
-    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".into()), vec![raydir, zero]);
+    let vec4 = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("vec4".into()),
+      vec![raydir, zero],
+    );
     let view = syntax::Expr::Variable("view".into());
-    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".into()), vec![view]);
+    let iview = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("inverse".into()),
+      vec![view],
+    );
     let mul = syntax::Expr::Binary(syntax::BinaryOp::Mult, Box::new(iview), Box::new(vec4));
     let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".into());
-    let input = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".into()), vec![xyz]);
+    let input = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("normalize".into()),
+      vec![xyz],
+    );
 
     let mut output = String::new();
     show_expr(&mut output, &input);
@@ -909,10 +1460,6 @@ mod tests {
 
     let back = expr(&output);
 
-    assert_eq!(
-      back,
-      Ok((";", input)),
-      "intermediate source '{}'", output
-    );
+    assert_eq!(back, Ok((";", input)), "intermediate source '{}'", output);
   }
 }

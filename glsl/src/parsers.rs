@@ -7,16 +7,16 @@
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
 
-use nom::{Err as NomErr, IResult, ParseTo};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::{is_hex_digit, is_oct_digit};
 use nom::character::complete::{anychar, char, digit1, multispace0, newline, space0};
+use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{many0, many0_count,  many1, separated_list};
-use std::num::ParseIntError;
+use nom::multi::{many0, many0_count, many1, separated_list};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
+use nom::{Err as NomErr, IResult, ParseTo};
+use std::num::ParseIntError;
 
 use crate::syntax;
 
@@ -24,7 +24,10 @@ pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
 
 // A constant parser that just forwards the value it’s parametered with without reading anything
 // from the input. Especially useful as “fallback” in an alternative parser.
-fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T> where T: 'a + Clone {
+fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T>
+where
+  T: 'a + Clone,
+{
   move |i| Ok((i, t.clone()))
 }
 
@@ -32,7 +35,7 @@ fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T> where T: 'a + Cl
 fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
   terminated(
     tag(kwd),
-    not(verify(peek(anychar), |&c| identifier_pred(c)))
+    not(verify(peek(anychar), |&c| identifier_pred(c))),
   )
 }
 
@@ -46,9 +49,7 @@ pub fn comment(i: &str) -> ParserResult<&str> {
 
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
-  recognize(
-    many0_count(terminated(comment, multispace0))
-  )(i)
+  recognize(many0_count(terminated(comment, multispace0)))(i)
 }
 
 /// In-between token parser (spaces and comments).
@@ -217,7 +218,9 @@ pub fn type_specifier_non_struct(i: &str) -> ParserResult<syntax::TypeSpecifierN
     "uimageCubeArray" => Ok((i1, syntax::TypeSpecifierNonArray::UImageCubeArray)),
     _ => {
       let vek = VerboseErrorKind::Context("unknown type specifier non array");
-      let ve = VerboseError { errors: vec![(i1, vek)] };
+      let ve = VerboseError {
+        errors: vec![(i1, vek)],
+      };
       Err(NomErr::Error(ve))
     }
   }
@@ -228,7 +231,7 @@ pub fn type_specifier_non_array(i: &str) -> ParserResult<syntax::TypeSpecifierNo
   alt((
     type_specifier_non_struct,
     map(struct_specifier, syntax::TypeSpecifierNonArray::Struct),
-    map(type_name, syntax::TypeSpecifierNonArray::TypeName)
+    map(type_name, syntax::TypeSpecifierNonArray::TypeName),
   ))(i)
 }
 
@@ -237,9 +240,12 @@ pub fn type_specifier(i: &str) -> ParserResult<syntax::TypeSpecifier> {
   map(
     pair(
       type_specifier_non_array,
-      opt(preceded(blank, array_specifier))
+      opt(preceded(blank, array_specifier)),
     ),
-    |(ty, array_specifier)| syntax::TypeSpecifier { ty, array_specifier }
+    |(ty, array_specifier)| syntax::TypeSpecifier {
+      ty,
+      array_specifier,
+    },
   )(i)
 }
 
@@ -272,19 +278,17 @@ fn alphanumeric_no_u(c: char) -> bool {
 fn hexadecimal_lit(i: &str) -> ParserResult<Result<u32, ParseIntError>> {
   preceded(
     preceded(char('0'), alt((char('x'), char('X')))), // 0x | 0X
-    map(
-      verify(take_while1(alphanumeric_no_u), all_hexa),
-      |i| u32::from_str_radix(i, 16)
-    )
+    map(verify(take_while1(alphanumeric_no_u), all_hexa), |i| {
+      u32::from_str_radix(i, 16)
+    }),
   )(i)
 }
 
 /// Parse an octal literal.
 fn octal_lit(i: &str) -> ParserResult<Result<u32, ParseIntError>> {
-  map(
-    verify(take_while1(alphanumeric_no_u), is_octal),
-    |i| u32::from_str_radix(i, 8)
-  )(i)
+  map(verify(take_while1(alphanumeric_no_u), is_octal), |i| {
+    u32::from_str_radix(i, 8)
+  })(i)
 }
 
 /// Parse a decimal literal.
@@ -314,38 +318,32 @@ fn decimal_lit(i: &str) -> ParserResult<Result<u32, ParseIntError>> {
 pub fn integral_lit_try(i: &str) -> ParserResult<Result<i32, ParseIntError>> {
   let (i, sign) = opt(char('-'))(i)?;
 
-  map(
-    alt((
-      octal_lit,
-      hexadecimal_lit,
-      decimal_lit
-    )),
-    move |lit| {
-      lit.map(|v| {
-        let v = v as i32;
+  map(alt((octal_lit, hexadecimal_lit, decimal_lit)), move |lit| {
+    lit.map(|v| {
+      let v = v as i32;
 
-        if sign.is_some() {
-          -v
-        } else {
-          v
-        }
-      })
-    }
-  )(i)
+      if sign.is_some() {
+        -v
+      } else {
+        v
+      }
+    })
+  })(i)
 }
 
 pub fn integral_lit(i: &str) -> ParserResult<i32> {
   match integral_lit_try(i) {
-    Ok((i, v)) => {
-      match v {
-        Ok(v) => Ok((i, v)),
-        _ => Err(NomErr::Failure(VerboseError::from_error_kind(i, ErrorKind::AlphaNumeric))),
-      }
-    }
+    Ok((i, v)) => match v {
+      Ok(v) => Ok((i, v)),
+      _ => Err(NomErr::Failure(VerboseError::from_error_kind(
+        i,
+        ErrorKind::AlphaNumeric,
+      ))),
+    },
 
     Err(NomErr::Failure(x)) | Err(NomErr::Error(x)) => Err(NomErr::Error(x)),
 
-    Err(NomErr::Incomplete(n)) => Err(NomErr::Incomplete(n))
+    Err(NomErr::Incomplete(n)) => Err(NomErr::Incomplete(n)),
   }
 }
 
@@ -356,10 +354,7 @@ fn unsigned_suffix(i: &str) -> ParserResult<char> {
 
 /// Parse a literal unsigned string.
 pub fn unsigned_lit(i: &str) -> ParserResult<u32> {
-  map(
-    terminated(integral_lit, unsigned_suffix),
-    |lit| lit as u32
-  )(i)
+  map(terminated(integral_lit, unsigned_suffix), |lit| lit as u32)(i)
 }
 
 /// Parse a floating point suffix.
@@ -378,11 +373,8 @@ fn floating_exponent(i: &str) -> ParserResult<()> {
     (),
     preceded(
       alt((char('e'), char('E'))),
-      preceded(
-        opt(alt((char('+'), char('-')))),
-        digit1
-      )
-    )
+      preceded(opt(alt((char('+'), char('-')))), digit1),
+    ),
   )(i)
 }
 
@@ -406,7 +398,7 @@ fn floating_middle(i: &str) -> ParserResult<&str> {
 pub fn float_lit(i: &str) -> ParserResult<f32> {
   let (i, (sign, f)) = tuple((
     opt(char('-')),
-    terminated(floating_middle, opt(float_suffix))
+    terminated(floating_middle, opt(float_suffix)),
   ))(i)?;
 
   // if the parsed data is in the accepted form ".394634…", we parse it as if it was < 0
@@ -428,7 +420,7 @@ pub fn float_lit(i: &str) -> ParserResult<f32> {
 pub fn double_lit(i: &str) -> ParserResult<f64> {
   let (i, (sign, f)) = tuple((
     opt(char('-')),
-    terminated(floating_middle, pair(not(float_suffix), opt(double_suffix)))
+    terminated(floating_middle, pair(not(float_suffix), opt(double_suffix))),
   ))(i)?;
 
   // if the parsed data is in the accepted form ".394634…", we parse it as if it was < 0
@@ -447,10 +439,7 @@ pub fn double_lit(i: &str) -> ParserResult<f64> {
 
 /// Parse a constant boolean.
 pub fn bool_lit(i: &str) -> ParserResult<bool> {
-  alt((
-    value(true, keyword("true")),
-    value(false, keyword("false"))
-  ))(i)
+  alt((value(true, keyword("true")), value(false, keyword("false"))))(i)
 }
 
 /// Parse a unary operator.
@@ -461,8 +450,7 @@ pub fn unary_op(i: &str) -> ParserResult<syntax::UnaryOp> {
     value(syntax::UnaryOp::Add, char('+')),
     value(syntax::UnaryOp::Minus, char('-')),
     value(syntax::UnaryOp::Not, char('!')),
-    value(syntax::UnaryOp::Complement, char('~'))
-
+    value(syntax::UnaryOp::Complement, char('~')),
   ))(i)
 }
 
@@ -470,7 +458,7 @@ pub fn unary_op(i: &str) -> ParserResult<syntax::UnaryOp> {
 pub fn arrayed_identifier(i: &str) -> ParserResult<syntax::ArrayedIdentifier> {
   map(
     pair(identifier, opt(preceded(blank, array_specifier))),
-    |(i, a)| syntax::ArrayedIdentifier::new(i, a)
+    |(i, a)| syntax::ArrayedIdentifier::new(i, a),
   )(i)
 }
 
@@ -479,14 +467,17 @@ pub fn struct_field_specifier(i: &str) -> ParserResult<syntax::StructFieldSpecif
   let (i, (qualifier, ty, identifiers, _)) = tuple((
     opt(terminated(type_qualifier, blank)),
     terminated(type_specifier, blank),
-    separated_list(terminated(char(','), blank), terminated(arrayed_identifier, blank)),
-    char(';')
+    separated_list(
+      terminated(char(','), blank),
+      terminated(arrayed_identifier, blank),
+    ),
+    char(';'),
   ))(i)?;
 
   let r = syntax::StructFieldSpecifier {
     qualifier,
     ty,
-    identifiers: syntax::NonEmpty(identifiers)
+    identifiers: syntax::NonEmpty(identifiers),
   };
 
   Ok((i, r))
@@ -499,10 +490,17 @@ pub fn struct_specifier(i: &str) -> ParserResult<syntax::StructSpecifier> {
     map(
       pair(
         opt(terminated(type_name, blank)),
-        delimited(terminated(char('{'), blank), many1(terminated(struct_field_specifier, blank)), char('}'))
+        delimited(
+          terminated(char('{'), blank),
+          many1(terminated(struct_field_specifier, blank)),
+          char('}'),
+        ),
       ),
-      |(name, fields)| syntax::StructSpecifier { name, fields: syntax::NonEmpty(fields) }
-    )
+      |(name, fields)| syntax::StructSpecifier {
+        name,
+        fields: syntax::NonEmpty(fields),
+      },
+    ),
   )(i)
 }
 
@@ -514,10 +512,10 @@ pub fn storage_qualifier_subroutine_list(i: &str) -> ParserResult<syntax::Storag
       delimited(
         terminated(char('('), blank),
         terminated(nonempty_type_names, blank),
-        char(')')
-      )
+        char(')'),
+      ),
     ),
-    syntax::StorageQualifier::Subroutine
+    syntax::StorageQualifier::Subroutine,
   )(i)
 }
 
@@ -525,7 +523,10 @@ pub fn storage_qualifier_subroutine_list(i: &str) -> ParserResult<syntax::Storag
 pub fn storage_qualifier_subroutine(i: &str) -> ParserResult<syntax::StorageQualifier> {
   alt((
     storage_qualifier_subroutine_list,
-    value(syntax::StorageQualifier::Subroutine(Vec::new()), keyword("subroutine"))
+    value(
+      syntax::StorageQualifier::Subroutine(Vec::new()),
+      keyword("subroutine"),
+    ),
   ))(i)
 }
 
@@ -547,7 +548,7 @@ pub fn storage_qualifier(i: &str) -> ParserResult<syntax::StorageQualifier> {
     value(syntax::StorageQualifier::Restrict, keyword("restrict")),
     value(syntax::StorageQualifier::ReadOnly, keyword("readonly")),
     value(syntax::StorageQualifier::WriteOnly, keyword("writeonly")),
-    storage_qualifier_subroutine
+    storage_qualifier_subroutine,
   ))(i)
 }
 
@@ -558,15 +559,20 @@ pub fn layout_qualifier(i: &str) -> ParserResult<syntax::LayoutQualifier> {
     delimited(
       terminated(char('('), blank),
       layout_qualifier_inner,
-      char(')')
-    )
+      char(')'),
+    ),
   )(i)
 }
 
 fn layout_qualifier_inner(i: &str) -> ParserResult<syntax::LayoutQualifier> {
   map(
-    separated_list(terminated(char(','), blank), terminated(layout_qualifier_spec, blank)),
-    |ids| syntax::LayoutQualifier { ids: syntax::NonEmpty(ids) }
+    separated_list(
+      terminated(char(','), blank),
+      terminated(layout_qualifier_spec, blank),
+    ),
+    |ids| syntax::LayoutQualifier {
+      ids: syntax::NonEmpty(ids),
+    },
   )(i)
 }
 
@@ -577,11 +583,13 @@ fn layout_qualifier_spec(i: &str) -> ParserResult<syntax::LayoutQualifierSpec> {
       separated_pair(
         terminated(identifier, blank),
         terminated(char('='), blank),
-        cond_expr
+        cond_expr,
       ),
-      |(i, e)| syntax::LayoutQualifierSpec::Identifier(i, Some(Box::new(e)))
+      |(i, e)| syntax::LayoutQualifierSpec::Identifier(i, Some(Box::new(e))),
     ),
-    map(identifier, |i| syntax::LayoutQualifierSpec::Identifier(i, None))
+    map(identifier, |i| {
+      syntax::LayoutQualifierSpec::Identifier(i, None)
+    }),
   ))(i)
 }
 
@@ -599,7 +607,10 @@ pub fn interpolation_qualifier(i: &str) -> ParserResult<syntax::InterpolationQua
   alt((
     value(syntax::InterpolationQualifier::Smooth, keyword("smooth")),
     value(syntax::InterpolationQualifier::Flat, keyword("flat")),
-    value(syntax::InterpolationQualifier::NoPerspective, keyword("noperspective")),
+    value(
+      syntax::InterpolationQualifier::NoPerspective,
+      keyword("noperspective"),
+    ),
   ))(i)
 }
 
@@ -615,10 +626,11 @@ pub fn precise_qualifier(i: &str) -> ParserResult<()> {
 
 /// Parse a type qualifier.
 pub fn type_qualifier(i: &str) -> ParserResult<syntax::TypeQualifier> {
-  map(
-    many1(terminated(type_qualifier_spec, blank)),
-    |qlfs| syntax::TypeQualifier { qualifiers: syntax::NonEmpty(qlfs) }
-  )(i)
+  map(many1(terminated(type_qualifier_spec, blank)), |qlfs| {
+    syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(qlfs),
+    }
+  })(i)
 }
 
 /// Parse a type qualifier spec.
@@ -627,7 +639,10 @@ pub fn type_qualifier_spec(i: &str) -> ParserResult<syntax::TypeQualifierSpec> {
     map(storage_qualifier, syntax::TypeQualifierSpec::Storage),
     map(layout_qualifier, syntax::TypeQualifierSpec::Layout),
     map(precision_qualifier, syntax::TypeQualifierSpec::Precision),
-    map(interpolation_qualifier, syntax::TypeQualifierSpec::Interpolation),
+    map(
+      interpolation_qualifier,
+      syntax::TypeQualifierSpec::Interpolation,
+    ),
     value(syntax::TypeQualifierSpec::Invariant, invariant_qualifier),
     value(syntax::TypeQualifierSpec::Precise, precise_qualifier),
   ))(i)
@@ -636,22 +651,26 @@ pub fn type_qualifier_spec(i: &str) -> ParserResult<syntax::TypeQualifierSpec> {
 /// Parse a fully specified type.
 pub fn fully_specified_type(i: &str) -> ParserResult<syntax::FullySpecifiedType> {
   map(
-    pair(
-      opt(type_qualifier),
-      type_specifier
-    ),
-    |(qualifier, ty)| syntax::FullySpecifiedType { qualifier, ty }
+    pair(opt(type_qualifier), type_specifier),
+    |(qualifier, ty)| syntax::FullySpecifiedType { qualifier, ty },
   )(i)
 }
 
 /// Parse an array specifier with no size information.
 pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
   alt((
-    value(syntax::ArraySpecifier::Unsized, delimited(char('['), blank, char(']'))),
+    value(
+      syntax::ArraySpecifier::Unsized,
+      delimited(char('['), blank, char(']')),
+    ),
     map(
-      delimited(terminated(char('['), blank), cond_expr, preceded(blank, char(']'))),
-      |e| syntax::ArraySpecifier::ExplicitlySized(Box::new(e))
-    )
+      delimited(
+        terminated(char('['), blank),
+        cond_expr,
+        preceded(blank, char(']')),
+      ),
+      |e| syntax::ArraySpecifier::ExplicitlySized(Box::new(e)),
+    ),
   ))(i)
 }
 
@@ -664,16 +683,13 @@ pub fn primary_expr(i: &str) -> ParserResult<syntax::Expr> {
     map(unsigned_lit, syntax::Expr::UIntConst),
     map(integral_lit, syntax::Expr::IntConst),
     map(bool_lit, syntax::Expr::BoolConst),
-    map(identifier, syntax::Expr::Variable)
+    map(identifier, syntax::Expr::Variable),
   ))(i)
 }
 
 /// Parse a postfix expression.
 pub fn postfix_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, e) = alt((
-    function_call,
-    primary_expr
-  ))(i)?;
+  let (i, e) = alt((function_call, primary_expr))(i)?;
 
   postfix_part(i, e)
 }
@@ -682,37 +698,46 @@ pub fn postfix_expr(i: &str) -> ParserResult<syntax::Expr> {
 // find any more postfix construct.
 fn postfix_part(i: &str, e: syntax::Expr) -> ParserResult<syntax::Expr> {
   let r = alt((
-    map(preceded(blank, array_specifier), |a| syntax::Expr::Bracket(Box::new(e.clone()), a)),
-    map(preceded(blank, dot_field_selection), |i| syntax::Expr::Dot(Box::new(e.clone()), i)),
-    value(syntax::Expr::PostInc(Box::new(e.clone())), preceded(blank, tag("++"))),
-    value(syntax::Expr::PostDec(Box::new(e.clone())), preceded(blank, tag("--")))
+    map(preceded(blank, array_specifier), |a| {
+      syntax::Expr::Bracket(Box::new(e.clone()), a)
+    }),
+    map(preceded(blank, dot_field_selection), |i| {
+      syntax::Expr::Dot(Box::new(e.clone()), i)
+    }),
+    value(
+      syntax::Expr::PostInc(Box::new(e.clone())),
+      preceded(blank, tag("++")),
+    ),
+    value(
+      syntax::Expr::PostDec(Box::new(e.clone())),
+      preceded(blank, tag("--")),
+    ),
   ))(i);
 
   match r {
     Ok((i, e)) => postfix_part(i, e),
     Err(NomErr::Error(_)) => Ok((i, e)),
-    _ => r
+    _ => r,
   }
 }
 
 /// Parse a unary expression.
 pub fn unary_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
-    map(
-      separated_pair(
-        unary_op,
-        blank,
-        unary_expr
-      ),
-      |(op, e)| syntax::Expr::Unary(op, Box::new(e))
-    ),
-    postfix_expr
+    map(separated_pair(unary_op, blank, unary_expr), |(op, e)| {
+      syntax::Expr::Unary(op, Box::new(e))
+    }),
+    postfix_expr,
   ))(i)
 }
 
 /// Parse an expression between parens.
 pub fn parens_expr(i: &str) -> ParserResult<syntax::Expr> {
-  delimited(terminated(char('('), blank), expr, preceded(blank, char(')')))(i)
+  delimited(
+    terminated(char('('), blank),
+    expr,
+    preceded(blank, char(')')),
+  )(i)
 }
 
 /// Parse a dot field selection identifier.
@@ -723,11 +748,17 @@ pub fn dot_field_selection(i: &str) -> ParserResult<syntax::Identifier> {
 /// Parse a declaration.
 pub fn declaration(i: &str) -> ParserResult<syntax::Declaration> {
   alt((
-    map(terminated(function_prototype, terminated(blank, char(';'))), syntax::Declaration::FunctionPrototype),
-    map(terminated(init_declarator_list, terminated(blank, char(';'))), syntax::Declaration::InitDeclaratorList),
+    map(
+      terminated(function_prototype, terminated(blank, char(';'))),
+      syntax::Declaration::FunctionPrototype,
+    ),
+    map(
+      terminated(init_declarator_list, terminated(blank, char(';'))),
+      syntax::Declaration::InitDeclaratorList,
+    ),
     precision_declaration,
     block_declaration,
-    global_declaration
+    global_declaration,
   ))(i)
 }
 
@@ -738,11 +769,11 @@ pub fn precision_declaration(i: &str) -> ParserResult<syntax::Declaration> {
     map(
       pair(
         terminated(precision_qualifier, blank),
-        terminated(type_specifier, blank)
-        ),
-      |(qual, ty)| syntax::Declaration::Precision(qual, ty)
+        terminated(type_specifier, blank),
+      ),
+      |(qual, ty)| syntax::Declaration::Precision(qual, ty),
     ),
-    char(';')
+    char(';'),
   )(i)
 }
 
@@ -755,18 +786,24 @@ pub fn block_declaration(i: &str) -> ParserResult<syntax::Declaration> {
       delimited(
         terminated(char('{'), blank),
         many1(terminated(struct_field_specifier, blank)),
-        terminated(char('}'), blank)
+        terminated(char('}'), blank),
       ),
       alt((
         value(None, preceded(blank, char(';'))),
-        terminated(opt(preceded(blank, arrayed_identifier)), preceded(blank, char(';')))
-      ))
+        terminated(
+          opt(preceded(blank, arrayed_identifier)),
+          preceded(blank, char(';')),
+        ),
+      )),
     )),
     |(qualifier, name, fields, identifier)| {
-      syntax::Declaration::Block(
-        syntax::Block { qualifier, name, fields, identifier }
-      )
-    }
+      syntax::Declaration::Block(syntax::Block {
+        qualifier,
+        name,
+        fields,
+        identifier,
+      })
+    },
   )(i)
 }
 
@@ -775,15 +812,9 @@ pub fn global_declaration(i: &str) -> ParserResult<syntax::Declaration> {
   map(
     pair(
       terminated(type_qualifier, blank),
-      many0(
-        delimited(
-          terminated(char(','), blank),
-          identifier,
-          blank
-        )
-      )
+      many0(delimited(terminated(char(','), blank), identifier, blank)),
     ),
-    |(qual, idents)| syntax::Declaration::Global(qual, idents)
+    |(qual, idents)| syntax::Declaration::Global(qual, idents),
   )(i)
 }
 
@@ -797,21 +828,19 @@ pub fn init_declarator_list(i: &str) -> ParserResult<syntax::InitDeclaratorList>
   map(
     pair(
       single_declaration,
-      many0(
-        map(
-          tuple((
-              preceded(delimited(blank, char(','), blank), identifier),
-              opt(preceded(blank, array_specifier)),
-              opt(preceded(delimited(blank, char('='), blank), initializer))
-          )),
-          |(name, arr_spec, init)| syntax::SingleDeclarationNoType {
-            ident: syntax::ArrayedIdentifier::new(name, arr_spec),
-            initializer: init
-          }
-        )
-      )
+      many0(map(
+        tuple((
+          preceded(delimited(blank, char(','), blank), identifier),
+          opt(preceded(blank, array_specifier)),
+          opt(preceded(delimited(blank, char('='), blank), initializer)),
+        )),
+        |(name, arr_spec, init)| syntax::SingleDeclarationNoType {
+          ident: syntax::ArrayedIdentifier::new(name, arr_spec),
+          initializer: init,
+        },
+      )),
     ),
-    |(head, tail)| syntax::InitDeclaratorList { head, tail }
+    |(head, tail)| syntax::InitDeclaratorList { head, tail },
   )(i)
 }
 
@@ -825,38 +854,41 @@ pub fn single_declaration(i: &str) -> ParserResult<syntax::SingleDeclaration> {
       tuple((
         preceded(blank, identifier),
         opt(preceded(blank, array_specifier)),
-        opt(preceded(delimited(blank, char('='), blank), initializer))
+        opt(preceded(delimited(blank, char('='), blank), initializer)),
       )),
       move |(name, array_specifier, initializer)| syntax::SingleDeclaration {
         ty: ty_.clone(),
         name: Some(name),
         array_specifier,
-        initializer
-      }
+        initializer,
+      },
     ),
-    cnst(
-      syntax::SingleDeclaration {
-        ty,
-        name: None,
-        array_specifier: None,
-        initializer: None
-      }
-    )
+    cnst(syntax::SingleDeclaration {
+      ty,
+      name: None,
+      array_specifier: None,
+      initializer: None,
+    }),
   ))(i)
 }
 
 /// Parse an initializer.
 pub fn initializer(i: &str) -> ParserResult<syntax::Initializer> {
   alt((
-    map(assignment_expr, |e| syntax::Initializer::Simple(Box::new(e))),
+    map(assignment_expr, |e| {
+      syntax::Initializer::Simple(Box::new(e))
+    }),
     map(
       delimited(
         terminated(char('{'), blank),
-        terminated(initializer_list, terminated(blank, opt(terminated(char(','), blank)))),
-        char('}')
+        terminated(
+          initializer_list,
+          terminated(blank, opt(terminated(char(','), blank))),
+        ),
+        char('}'),
       ),
-      |il| syntax::Initializer::List(syntax::NonEmpty(il))
-    )
+      |il| syntax::Initializer::List(syntax::NonEmpty(il)),
+    ),
   ))(i)
 }
 
@@ -868,17 +900,18 @@ pub fn initializer_list(i: &str) -> ParserResult<Vec<syntax::Initializer>> {
 fn function_declarator(i: &str) -> ParserResult<syntax::FunctionPrototype> {
   alt((
     function_header_with_parameters,
-    map(
-      function_header,
-      |(ty, name)| syntax::FunctionPrototype { ty, name, parameters: Vec::new() }
-    )
+    map(function_header, |(ty, name)| syntax::FunctionPrototype {
+      ty,
+      name,
+      parameters: Vec::new(),
+    }),
   ))(i)
 }
 
 fn function_header(i: &str) -> ParserResult<(syntax::FullySpecifiedType, syntax::Identifier)> {
   pair(
     terminated(fully_specified_type, blank),
-    terminated(identifier, terminated(blank, char('(')))
+    terminated(identifier, terminated(blank, char('('))),
   )(i)
 }
 
@@ -886,40 +919,44 @@ fn function_header_with_parameters(i: &str) -> ParserResult<syntax::FunctionProt
   map(
     pair(
       function_header,
-      separated_list(preceded(blank, char(',')), preceded(blank, function_parameter_declaration))
+      separated_list(
+        preceded(blank, char(',')),
+        preceded(blank, function_parameter_declaration),
+      ),
     ),
     |(header, parameters)| syntax::FunctionPrototype {
       ty: header.0,
       name: header.1,
-      parameters
-    }
+      parameters,
+    },
   )(i)
 }
 
 fn function_parameter_declaration(i: &str) -> ParserResult<syntax::FunctionParameterDeclaration> {
   alt((
     function_parameter_declaration_named,
-    function_parameter_declaration_unnamed
+    function_parameter_declaration_unnamed,
   ))(i)
 }
 
-fn function_parameter_declaration_named(i: &str) -> ParserResult<syntax::FunctionParameterDeclaration> {
+fn function_parameter_declaration_named(
+  i: &str,
+) -> ParserResult<syntax::FunctionParameterDeclaration> {
   map(
     pair(
       opt(terminated(type_qualifier, blank)),
-      function_parameter_declarator
+      function_parameter_declarator,
     ),
-    |(ty_qual, fpd)| syntax::FunctionParameterDeclaration::Named(ty_qual, fpd)
+    |(ty_qual, fpd)| syntax::FunctionParameterDeclaration::Named(ty_qual, fpd),
   )(i)
 }
 
-fn function_parameter_declaration_unnamed(i: &str) -> ParserResult<syntax::FunctionParameterDeclaration> {
+fn function_parameter_declaration_unnamed(
+  i: &str,
+) -> ParserResult<syntax::FunctionParameterDeclaration> {
   map(
-    pair(
-      opt(terminated(type_qualifier, blank)),
-      type_specifier
-    ),
-    |(ty_qual, ty_spec)| syntax::FunctionParameterDeclaration::Unnamed(ty_qual, ty_spec)
+    pair(opt(terminated(type_qualifier, blank)), type_specifier),
+    |(ty_qual, ty_spec)| syntax::FunctionParameterDeclaration::Unnamed(ty_qual, ty_spec),
   )(i)
 }
 
@@ -928,12 +965,12 @@ fn function_parameter_declarator(i: &str) -> ParserResult<syntax::FunctionParame
     tuple((
       terminated(type_specifier, blank),
       terminated(identifier, blank),
-      opt(array_specifier)
+      opt(array_specifier),
     )),
     |(ty, name, a)| syntax::FunctionParameterDeclarator {
       ty,
-      ident: syntax::ArrayedIdentifier::new(name, a)
-    }
+      ident: syntax::ArrayedIdentifier::new(name, a),
+    },
   )(i)
 }
 
@@ -941,14 +978,17 @@ fn function_parameter_declarator(i: &str) -> ParserResult<syntax::FunctionParame
 pub fn function_call(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     function_call_header_no_parameter,
-    function_call_header_with_parameters
+    function_call_header_with_parameters,
   ))(i)
 }
 
 fn function_call_header_no_parameter(i: &str) -> ParserResult<syntax::Expr> {
   map(
-    terminated(function_call_header, terminated(blank, terminated(opt(void), terminated(blank, char(')'))))),
-    |fi| syntax::Expr::FunCall(fi, Vec::new())
+    terminated(
+      function_call_header,
+      terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
+    ),
+    |fi| syntax::Expr::FunCall(fi, Vec::new()),
   )(i)
 }
 
@@ -957,11 +997,14 @@ fn function_call_header_with_parameters(i: &str) -> ParserResult<syntax::Expr> {
     pair(
       terminated(function_call_header, blank),
       terminated(
-        separated_list(terminated(char(','), blank), terminated(assignment_expr, blank)),
-        char(')')
-      )
+        separated_list(
+          terminated(char(','), blank),
+          terminated(assignment_expr, blank),
+        ),
+        char(')'),
+      ),
     ),
-    |(fi, args)| syntax::Expr::FunCall(fi, args)
+    |(fi, args)| syntax::Expr::FunCall(fi, args),
   )(i)
 }
 
@@ -974,12 +1017,12 @@ pub fn function_identifier(i: &str) -> ParserResult<syntax::FunIdentifier> {
   alt((
     map(
       terminated(identifier, terminated(blank, peek(char('(')))),
-      syntax::FunIdentifier::Identifier
+      syntax::FunIdentifier::Identifier,
     ),
     |i| {
       let (i, e) = primary_expr(i)?;
       postfix_part(i, e).map(|(i, pfe)| (i, syntax::FunIdentifier::Expr(Box::new(pfe))))
-    }
+    },
   ))(i)
 }
 
@@ -989,11 +1032,10 @@ pub fn expr(i: &str) -> ParserResult<syntax::Expr> {
   let first_ = first.clone();
 
   alt((
-    map(
-      preceded(terminated(char(','), blank), expr),
-      move |next| syntax::Expr::Comma(Box::new(first_.clone()), Box::new(next))
-    ),
-    cnst(first)
+    map(preceded(terminated(char(','), blank), expr), move |next| {
+      syntax::Expr::Comma(Box::new(first_.clone()), Box::new(next))
+    }),
+    cnst(first),
   ))(i)
 }
 
@@ -1004,11 +1046,11 @@ pub fn assignment_expr(i: &str) -> ParserResult<syntax::Expr> {
       tuple((
         terminated(unary_expr, blank),
         terminated(assignment_op, blank),
-        assignment_expr
+        assignment_expr,
       )),
-      |(e, o, v)| syntax::Expr::Assignment(Box::new(e), o, Box::new(v))
+      |(e, o, v)| syntax::Expr::Assignment(Box::new(e), o, Box::new(v)),
     ),
-    cond_expr
+    cond_expr,
   ))(i)
 }
 
@@ -1025,7 +1067,7 @@ pub fn assignment_op(i: &str) -> ParserResult<syntax::AssignmentOp> {
     value(syntax::AssignmentOp::RShift, tag(">>=")),
     value(syntax::AssignmentOp::And, tag("&=")),
     value(syntax::AssignmentOp::Xor, tag("^=")),
-    value(syntax::AssignmentOp::Or, tag("|="))
+    value(syntax::AssignmentOp::Or, tag("|=")),
   ))(i)
 }
 
@@ -1040,11 +1082,11 @@ pub fn cond_expr(i: &str) -> ParserResult<syntax::Expr> {
         delimited(blank, char('?'), blank),
         terminated(expr, blank),
         terminated(char(':'), blank),
-        assignment_expr
+        assignment_expr,
       )),
-      move |(_, b, _, c)| syntax::Expr::Ternary(Box::new(a_.clone()), Box::new(b), Box::new(c))
+      move |(_, b, _, c)| syntax::Expr::Ternary(Box::new(a_.clone()), Box::new(b), Box::new(c)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1056,9 +1098,9 @@ pub fn logical_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, tag("||"), blank), logical_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1070,9 +1112,9 @@ pub fn logical_xor_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, tag("^^"), blank), logical_xor_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1084,9 +1126,9 @@ pub fn logical_and_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, tag("&&"), blank), logical_and_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1098,9 +1140,9 @@ pub fn inclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, char('|'), blank), inclusive_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1112,9 +1154,9 @@ pub fn exclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, char('^'), blank), exclusive_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1126,9 +1168,9 @@ pub fn and_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     map(
       preceded(delimited(blank, char('&'), blank), and_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a_.clone()), Box::new(b))
+      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1143,16 +1185,16 @@ pub fn equality_expr(i: &str) -> ParserResult<syntax::Expr> {
         delimited(
           blank,
           alt((
-            value(syntax::BinaryOp::Equal,    tag("==")),
-            value(syntax::BinaryOp::NonEqual, tag("!="))
+            value(syntax::BinaryOp::Equal, tag("==")),
+            value(syntax::BinaryOp::NonEqual, tag("!=")),
           )),
-          blank
+          blank,
         ),
-        equality_expr
+        equality_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b))
+      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1169,16 +1211,16 @@ pub fn rel_expr(i: &str) -> ParserResult<syntax::Expr> {
           alt((
             value(syntax::BinaryOp::LTE, tag("<=")),
             value(syntax::BinaryOp::GTE, tag(">=")),
-            value(syntax::BinaryOp::LT,  char('<')),
-            value(syntax::BinaryOp::GT,  char('>')),
+            value(syntax::BinaryOp::LT, char('<')),
+            value(syntax::BinaryOp::GT, char('>')),
           )),
-          blank
+          blank,
         ),
-        rel_expr
+        rel_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b))
+      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1194,15 +1236,15 @@ pub fn shift_expr(i: &str) -> ParserResult<syntax::Expr> {
           blank,
           alt((
             value(syntax::BinaryOp::LShift, tag("<<")),
-            value(syntax::BinaryOp::RShift, tag(">>"))
+            value(syntax::BinaryOp::RShift, tag(">>")),
           )),
-          blank
+          blank,
         ),
-        shift_expr
+        shift_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b))
+      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1218,15 +1260,15 @@ pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
           blank,
           alt((
             value(syntax::BinaryOp::Add, char('+')),
-            value(syntax::BinaryOp::Sub, char('-'))
+            value(syntax::BinaryOp::Sub, char('-')),
           )),
-          blank
+          blank,
         ),
-        additive_expr
+        additive_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b))
+      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1242,16 +1284,16 @@ pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
           blank,
           alt((
             value(syntax::BinaryOp::Mult, char('*')),
-            value(syntax::BinaryOp::Div,  char('/')),
-            value(syntax::BinaryOp::Mod,  char('%'))
+            value(syntax::BinaryOp::Div, char('/')),
+            value(syntax::BinaryOp::Mod, char('%')),
           )),
-          blank
+          blank,
         ),
-       multiplicative_expr
+        multiplicative_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b))
+      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
     ),
-    cnst(a)
+    cnst(a),
   ))(i)
 }
 
@@ -1264,7 +1306,7 @@ pub fn simple_statement(i: &str) -> ParserResult<syntax::SimpleStatement> {
     map(switch_statement, syntax::SimpleStatement::Switch),
     map(selection_statement, syntax::SimpleStatement::Selection),
     map(declaration, syntax::SimpleStatement::Declaration),
-    map(expr_statement, syntax::SimpleStatement::Expression)
+    map(expr_statement, syntax::SimpleStatement::Expression),
   ))(i)
 }
 
@@ -1277,16 +1319,16 @@ pub fn expr_statement(i: &str) -> ParserResult<syntax::ExprStatement> {
 pub fn selection_statement(i: &str) -> ParserResult<syntax::SelectionStatement> {
   map(
     tuple((
-        terminated(keyword("if"), blank),
-        terminated(char('('), blank),
-        terminated(expr, blank),
-        terminated(char(')'), blank),
-        selection_rest_statement
+      terminated(keyword("if"), blank),
+      terminated(char('('), blank),
+      terminated(expr, blank),
+      terminated(char(')'), blank),
+      selection_rest_statement,
     )),
     |(_, _, cond_expr, _, rest)| syntax::SelectionStatement {
       cond: Box::new(cond_expr),
-      rest
-    }
+      rest,
+    },
   )(i)
 }
 
@@ -1296,13 +1338,10 @@ fn selection_rest_statement(i: &str) -> ParserResult<syntax::SelectionRestStatem
 
   alt((
     map(
-      preceded(
-        delimited(blank, keyword("else"), blank),
-        statement
-      ),
-      move |rest| syntax::SelectionRestStatement::Else(Box::new(st_.clone()), Box::new(rest))
+      preceded(delimited(blank, keyword("else"), blank), statement),
+      move |rest| syntax::SelectionRestStatement::Else(Box::new(st_.clone()), Box::new(rest)),
     ),
-    cnst(syntax::SelectionRestStatement::Statement(Box::new(st)))
+    cnst(syntax::SelectionRestStatement::Statement(Box::new(st))),
   ))(i)
 }
 
@@ -1316,9 +1355,12 @@ pub fn switch_statement(i: &str) -> ParserResult<syntax::SwitchStatement> {
       terminated(char(')'), blank),
       terminated(char('{'), blank),
       many0(terminated(statement, blank)),
-      char('}')
+      char('}'),
     )),
-    |(_, _, head, _, _, body, _)| syntax::SwitchStatement { head: Box::new(head), body }
+    |(_, _, head, _, _, body, _)| syntax::SwitchStatement {
+      head: Box::new(head),
+      body,
+    },
   )(i)
 }
 
@@ -1329,14 +1371,14 @@ pub fn case_label(i: &str) -> ParserResult<syntax::CaseLabel> {
       delimited(
         terminated(keyword("case"), blank),
         terminated(expr, blank),
-        char(':')
+        char(':'),
       ),
-      |e| syntax::CaseLabel::Case(Box::new(e))
+      |e| syntax::CaseLabel::Case(Box::new(e)),
     ),
     value(
       syntax::CaseLabel::Def,
-      preceded(terminated(keyword("default"), blank), char(':'))
-    )
+      preceded(terminated(keyword("default"), blank), char(':')),
+    ),
   ))(i)
 }
 
@@ -1345,7 +1387,7 @@ pub fn iteration_statement(i: &str) -> ParserResult<syntax::IterationStatement> 
   alt((
     iteration_statement_while,
     iteration_statement_do_while,
-    iteration_statement_for
+    iteration_statement_for,
   ))(i)
 }
 
@@ -1357,9 +1399,9 @@ pub fn iteration_statement_while(i: &str) -> ParserResult<syntax::IterationState
       terminated(char('('), blank),
       terminated(condition, blank),
       terminated(char(')'), blank),
-      statement
+      statement,
     )),
-    |(_, _, cond, _, st)| syntax::IterationStatement::While(cond, Box::new(st))
+    |(_, _, cond, _, st)| syntax::IterationStatement::While(cond, Box::new(st)),
   )(i)
 }
 
@@ -1373,9 +1415,9 @@ pub fn iteration_statement_do_while(i: &str) -> ParserResult<syntax::IterationSt
       terminated(char('('), blank),
       terminated(expr, blank),
       terminated(char(')'), blank),
-      char(';')
+      char(';'),
     )),
-    |(_, st, _, _, e, _, _)| syntax::IterationStatement::DoWhile(Box::new(st), Box::new(e))
+    |(_, st, _, _, e, _, _)| syntax::IterationStatement::DoWhile(Box::new(st), Box::new(e)),
   )(i)
 }
 
@@ -1388,16 +1430,18 @@ pub fn iteration_statement_for(i: &str) -> ParserResult<syntax::IterationStateme
       terminated(iteration_statement_for_init_statement, blank),
       terminated(iteration_statement_for_rest_statement, blank),
       terminated(char(')'), blank),
-      statement
+      statement,
     )),
-    |(_, _, head, rest, _, body)| syntax::IterationStatement::For(head, rest, Box::new(body))
+    |(_, _, head, rest, _, body)| syntax::IterationStatement::For(head, rest, Box::new(body)),
   )(i)
 }
 
 fn iteration_statement_for_init_statement(i: &str) -> ParserResult<syntax::ForInitStatement> {
   alt((
     map(expr_statement, syntax::ForInitStatement::Expression),
-    map(declaration, |d| syntax::ForInitStatement::Declaration(Box::new(d)))
+    map(declaration, |d| {
+      syntax::ForInitStatement::Declaration(Box::new(d))
+    }),
   ))(i)
 }
 
@@ -1406,9 +1450,12 @@ fn iteration_statement_for_rest_statement(i: &str) -> ParserResult<syntax::ForRe
     separated_pair(
       opt(terminated(condition, blank)),
       terminated(char(';'), blank),
-      opt(expr)
+      opt(expr),
     ),
-    |(condition, e)| syntax::ForRestStatement { condition, post_expr: e.map(Box::new) }
+    |(condition, e)| syntax::ForRestStatement {
+      condition,
+      post_expr: e.map(Box::new),
+    },
   )(i)
 }
 
@@ -1418,7 +1465,7 @@ pub fn jump_statement(i: &str) -> ParserResult<syntax::JumpStatement> {
     jump_statement_continue,
     jump_statement_break,
     jump_statement_return,
-    jump_statement_discard
+    jump_statement_discard,
   ))(i)
 }
 
@@ -1426,7 +1473,7 @@ pub fn jump_statement(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Continue,
-    terminated(keyword("continue"), terminated(blank, char(';')))
+    terminated(keyword("continue"), terminated(blank, char(';'))),
   )(i)
 }
 
@@ -1434,7 +1481,7 @@ pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Break,
-    terminated(keyword("break"), terminated(blank, char(';')))
+    terminated(keyword("break"), terminated(blank, char(';'))),
   )(i)
 }
 
@@ -1442,7 +1489,7 @@ pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_discard(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Discard,
-    terminated(keyword("discard"), terminated(blank, char(';')))
+    terminated(keyword("discard"), terminated(blank, char(';'))),
   )(i)
 }
 
@@ -1452,9 +1499,9 @@ pub fn jump_statement_return(i: &str) -> ParserResult<syntax::JumpStatement> {
     delimited(
       terminated(keyword("return"), blank),
       terminated(expr, blank),
-      char(';')
+      char(';'),
     ),
-    |e| syntax::JumpStatement::Return(Box::new(e))
+    |e| syntax::JumpStatement::Return(Box::new(e)),
   )(i)
 }
 
@@ -1462,7 +1509,7 @@ pub fn jump_statement_return(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn condition(i: &str) -> ParserResult<syntax::Condition> {
   alt((
     map(expr, |e| syntax::Condition::Expr(Box::new(e))),
-    condition_assignment
+    condition_assignment,
   ))(i)
 }
 
@@ -1472,16 +1519,18 @@ fn condition_assignment(i: &str) -> ParserResult<syntax::Condition> {
       terminated(fully_specified_type, blank),
       terminated(identifier, blank),
       terminated(char('='), blank),
-      initializer
+      initializer,
     )),
-    |(ty, id, _, ini)| syntax::Condition::Assignment(ty, id, ini)
+    |(ty, id, _, ini)| syntax::Condition::Assignment(ty, id, ini),
   )(i)
 }
 
 /// Parse a statement.
 pub fn statement(i: &str) -> ParserResult<syntax::Statement> {
   alt((
-    map(compound_statement, |c| syntax::Statement::Compound(Box::new(c))),
+    map(compound_statement, |c| {
+      syntax::Statement::Compound(Box::new(c))
+    }),
     map(simple_statement, |s| syntax::Statement::Simple(Box::new(s))),
   ))(i)
 }
@@ -1492,20 +1541,20 @@ pub fn compound_statement(i: &str) -> ParserResult<syntax::CompoundStatement> {
     delimited(
       terminated(char('{'), blank),
       many0(terminated(statement, blank)),
-      char('}')
+      char('}'),
     ),
-    |statement_list| syntax::CompoundStatement { statement_list }
+    |statement_list| syntax::CompoundStatement { statement_list },
   )(i)
 }
 
 /// Parse a function definition.
 pub fn function_definition(i: &str) -> ParserResult<syntax::FunctionDefinition> {
   map(
-    pair(
-      terminated(function_prototype, blank),
-      compound_statement
-    ),
-    |(prototype, statement)| syntax::FunctionDefinition { prototype, statement }
+    pair(terminated(function_prototype, blank), compound_statement),
+    |(prototype, statement)| syntax::FunctionDefinition {
+      prototype,
+      statement,
+    },
   )(i)
 }
 
@@ -1513,9 +1562,12 @@ pub fn function_definition(i: &str) -> ParserResult<syntax::FunctionDefinition> 
 pub fn external_declaration(i: &str) -> ParserResult<syntax::ExternalDeclaration> {
   alt((
     map(preprocessor, syntax::ExternalDeclaration::Preprocessor),
-    map(function_definition, syntax::ExternalDeclaration::FunctionDefinition),
+    map(
+      function_definition,
+      syntax::ExternalDeclaration::FunctionDefinition,
+    ),
     map(declaration, syntax::ExternalDeclaration::Declaration),
-    preceded(delimited(blank, char(';'), blank), external_declaration)
+    preceded(delimited(blank, char(';'), blank), external_declaration),
   ))(i)
 }
 
@@ -1523,7 +1575,7 @@ pub fn external_declaration(i: &str) -> ParserResult<syntax::ExternalDeclaration
 pub fn translation_unit(i: &str) -> ParserResult<syntax::TranslationUnit> {
   map(
     many1(delimited(blank, external_declaration, blank)),
-    |eds| syntax::TranslationUnit(syntax::NonEmpty(eds))
+    |eds| syntax::TranslationUnit(syntax::NonEmpty(eds)),
   )(i)
 }
 
@@ -1545,7 +1597,10 @@ pub fn pp_version_number(i: &str) -> ParserResult<u16> {
 pub fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionProfile> {
   alt((
     value(syntax::PreprocessorVersionProfile::Core, keyword("core")),
-    value(syntax::PreprocessorVersionProfile::Compatibility, keyword("compatibility")),
+    value(
+      syntax::PreprocessorVersionProfile::Compatibility,
+      keyword("compatibility"),
+    ),
     value(syntax::PreprocessorVersionProfile::ES, keyword("es")),
   ))(i)
 }
@@ -1558,9 +1613,9 @@ pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
       terminated(keyword("define"), space0),
       terminated(identifier, space0),
       terminated(primary_expr, space0),
-      newline
+      newline,
     )),
-    |(_, _, name, value, _)| syntax::PreprocessorDefine { name, value }
+    |(_, _, name, value, _)| syntax::PreprocessorDefine { name, value },
   )(i)
 }
 
@@ -1572,9 +1627,9 @@ pub fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
       terminated(keyword("version"), space0),
       terminated(pp_version_number, space0),
       opt(terminated(pp_version_profile, space0)),
-      newline
+      newline,
     )),
-    |(_, _, version, profile, _)| syntax::PreprocessorVersion { version, profile }
+    |(_, _, version, profile, _)| syntax::PreprocessorVersion { version, profile },
   )(i)
 }
 
@@ -1582,17 +1637,26 @@ pub fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
 pub fn pp_extension_name(i: &str) -> ParserResult<syntax::PreprocessorExtensionName> {
   alt((
     value(syntax::PreprocessorExtensionName::All, keyword("all")),
-    map(string, syntax::PreprocessorExtensionName::Specific)
+    map(string, syntax::PreprocessorExtensionName::Specific),
   ))(i)
 }
 
 /// Parse an #extension behavior.
 pub fn pp_extension_behavior(i: &str) -> ParserResult<syntax::PreprocessorExtensionBehavior> {
   alt((
-    value(syntax::PreprocessorExtensionBehavior::Require, keyword("require")),
-    value(syntax::PreprocessorExtensionBehavior::Enable, keyword("enable")),
+    value(
+      syntax::PreprocessorExtensionBehavior::Require,
+      keyword("require"),
+    ),
+    value(
+      syntax::PreprocessorExtensionBehavior::Enable,
+      keyword("enable"),
+    ),
     value(syntax::PreprocessorExtensionBehavior::Warn, keyword("warn")),
-    value(syntax::PreprocessorExtensionBehavior::Disable, keyword("disable")),
+    value(
+      syntax::PreprocessorExtensionBehavior::Disable,
+      keyword("disable"),
+    ),
   ))(i)
 }
 
@@ -1603,10 +1667,13 @@ pub fn pp_extension(i: &str) -> ParserResult<syntax::PreprocessorExtension> {
       terminated(char('#'), space0),
       terminated(keyword("extension"), space0),
       terminated(pp_extension_name, space0),
-      opt(preceded(terminated(char(':'), space0), terminated(pp_extension_behavior, space0))),
-      newline
+      opt(preceded(
+        terminated(char(':'), space0),
+        terminated(pp_extension_behavior, space0),
+      )),
+      newline,
     )),
-    |(_, _, name, behavior, _)| syntax::PreprocessorExtension { name, behavior }
+    |(_, _, name, behavior, _)| syntax::PreprocessorExtension { name, behavior },
   )(i)
 }
 
@@ -1844,17 +1911,35 @@ mod tests {
 
   #[test]
   fn parse_array_specifier_unsized() {
-    assert_eq!(array_specifier("[]"), Ok(("", syntax::ArraySpecifier::Unsized)));
-    assert_eq!(array_specifier("[ ]"), Ok(("", syntax::ArraySpecifier::Unsized)));
-    assert_eq!(array_specifier("[\n]"), Ok(("", syntax::ArraySpecifier::Unsized)));
+    assert_eq!(
+      array_specifier("[]"),
+      Ok(("", syntax::ArraySpecifier::Unsized))
+    );
+    assert_eq!(
+      array_specifier("[ ]"),
+      Ok(("", syntax::ArraySpecifier::Unsized))
+    );
+    assert_eq!(
+      array_specifier("[\n]"),
+      Ok(("", syntax::ArraySpecifier::Unsized))
+    );
   }
 
   #[test]
   fn parse_array_specifier_sized() {
     let ix = syntax::Expr::IntConst(0);
 
-    assert_eq!(array_specifier("[0]"), Ok(("", syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone())))));
-    assert_eq!(array_specifier("[\n0   \t]"), Ok(("", syntax::ArraySpecifier::ExplicitlySized(Box::new(ix)))));
+    assert_eq!(
+      array_specifier("[0]"),
+      Ok((
+        "",
+        syntax::ArraySpecifier::ExplicitlySized(Box::new(ix.clone()))
+      ))
+    );
+    assert_eq!(
+      array_specifier("[\n0   \t]"),
+      Ok(("", syntax::ArraySpecifier::ExplicitlySized(Box::new(ix))))
+    );
   }
 
   #[test]
@@ -1869,64 +1954,151 @@ mod tests {
 
   #[test]
   fn parse_interpolation_qualifier() {
-    assert_eq!(interpolation_qualifier("smooth "), Ok((" ", syntax::InterpolationQualifier::Smooth)));
-    assert_eq!(interpolation_qualifier("flat "), Ok((" ", syntax::InterpolationQualifier::Flat)));
-    assert_eq!(interpolation_qualifier("noperspective "), Ok((" ", syntax::InterpolationQualifier::NoPerspective)));
+    assert_eq!(
+      interpolation_qualifier("smooth "),
+      Ok((" ", syntax::InterpolationQualifier::Smooth))
+    );
+    assert_eq!(
+      interpolation_qualifier("flat "),
+      Ok((" ", syntax::InterpolationQualifier::Flat))
+    );
+    assert_eq!(
+      interpolation_qualifier("noperspective "),
+      Ok((" ", syntax::InterpolationQualifier::NoPerspective))
+    );
   }
 
   #[test]
   fn parse_precision_qualifier() {
-    assert_eq!(precision_qualifier("highp "), Ok((" ", syntax::PrecisionQualifier::High)));
-    assert_eq!(precision_qualifier("mediump "), Ok((" ", syntax::PrecisionQualifier::Medium)));
-    assert_eq!(precision_qualifier("lowp "), Ok((" ", syntax::PrecisionQualifier::Low)));
+    assert_eq!(
+      precision_qualifier("highp "),
+      Ok((" ", syntax::PrecisionQualifier::High))
+    );
+    assert_eq!(
+      precision_qualifier("mediump "),
+      Ok((" ", syntax::PrecisionQualifier::Medium))
+    );
+    assert_eq!(
+      precision_qualifier("lowp "),
+      Ok((" ", syntax::PrecisionQualifier::Low))
+    );
   }
 
   #[test]
   fn parse_storage_qualifier() {
-    assert_eq!(storage_qualifier("const "), Ok((" ", syntax::StorageQualifier::Const)));
-    assert_eq!(storage_qualifier("inout "), Ok((" ", syntax::StorageQualifier::InOut)));
-    assert_eq!(storage_qualifier("in "), Ok((" ", syntax::StorageQualifier::In)));
-    assert_eq!(storage_qualifier("out "), Ok((" ", syntax::StorageQualifier::Out)));
-    assert_eq!(storage_qualifier("centroid "), Ok((" ", syntax::StorageQualifier::Centroid)));
-    assert_eq!(storage_qualifier("patch "), Ok((" ", syntax::StorageQualifier::Patch)));
-    assert_eq!(storage_qualifier("sample "), Ok((" ", syntax::StorageQualifier::Sample)));
-    assert_eq!(storage_qualifier("uniform "), Ok((" ", syntax::StorageQualifier::Uniform)));
-    assert_eq!(storage_qualifier("buffer "), Ok((" ", syntax::StorageQualifier::Buffer)));
-    assert_eq!(storage_qualifier("shared "), Ok((" ", syntax::StorageQualifier::Shared)));
-    assert_eq!(storage_qualifier("coherent "), Ok((" ", syntax::StorageQualifier::Coherent)));
-    assert_eq!(storage_qualifier("volatile "), Ok((" ", syntax::StorageQualifier::Volatile)));
-    assert_eq!(storage_qualifier("restrict "), Ok((" ", syntax::StorageQualifier::Restrict)));
-    assert_eq!(storage_qualifier("readonly "), Ok((" ", syntax::StorageQualifier::ReadOnly)));
-    assert_eq!(storage_qualifier("writeonly "), Ok((" ", syntax::StorageQualifier::WriteOnly)));
-    assert_eq!(storage_qualifier("subroutine a"), Ok((" a", syntax::StorageQualifier::Subroutine(vec![]))));
+    assert_eq!(
+      storage_qualifier("const "),
+      Ok((" ", syntax::StorageQualifier::Const))
+    );
+    assert_eq!(
+      storage_qualifier("inout "),
+      Ok((" ", syntax::StorageQualifier::InOut))
+    );
+    assert_eq!(
+      storage_qualifier("in "),
+      Ok((" ", syntax::StorageQualifier::In))
+    );
+    assert_eq!(
+      storage_qualifier("out "),
+      Ok((" ", syntax::StorageQualifier::Out))
+    );
+    assert_eq!(
+      storage_qualifier("centroid "),
+      Ok((" ", syntax::StorageQualifier::Centroid))
+    );
+    assert_eq!(
+      storage_qualifier("patch "),
+      Ok((" ", syntax::StorageQualifier::Patch))
+    );
+    assert_eq!(
+      storage_qualifier("sample "),
+      Ok((" ", syntax::StorageQualifier::Sample))
+    );
+    assert_eq!(
+      storage_qualifier("uniform "),
+      Ok((" ", syntax::StorageQualifier::Uniform))
+    );
+    assert_eq!(
+      storage_qualifier("buffer "),
+      Ok((" ", syntax::StorageQualifier::Buffer))
+    );
+    assert_eq!(
+      storage_qualifier("shared "),
+      Ok((" ", syntax::StorageQualifier::Shared))
+    );
+    assert_eq!(
+      storage_qualifier("coherent "),
+      Ok((" ", syntax::StorageQualifier::Coherent))
+    );
+    assert_eq!(
+      storage_qualifier("volatile "),
+      Ok((" ", syntax::StorageQualifier::Volatile))
+    );
+    assert_eq!(
+      storage_qualifier("restrict "),
+      Ok((" ", syntax::StorageQualifier::Restrict))
+    );
+    assert_eq!(
+      storage_qualifier("readonly "),
+      Ok((" ", syntax::StorageQualifier::ReadOnly))
+    );
+    assert_eq!(
+      storage_qualifier("writeonly "),
+      Ok((" ", syntax::StorageQualifier::WriteOnly))
+    );
+    assert_eq!(
+      storage_qualifier("subroutine a"),
+      Ok((" a", syntax::StorageQualifier::Subroutine(vec![])))
+    );
 
     let a = syntax::TypeName("vec3".to_owned());
     let b = syntax::TypeName("float".to_owned());
     let c = syntax::TypeName("dmat43".to_owned());
     let types = vec![a, b, c];
-    assert_eq!(storage_qualifier("subroutine (vec3, float, dmat43)"), Ok(("", syntax::StorageQualifier::Subroutine(types))));
+    assert_eq!(
+      storage_qualifier("subroutine (vec3, float, dmat43)"),
+      Ok(("", syntax::StorageQualifier::Subroutine(types)))
+    );
   }
 
   #[test]
   fn parse_layout_qualifier_std430() {
     let expected = syntax::LayoutQualifier {
-      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Identifier("std430".into(), None)])
+      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Identifier(
+        "std430".into(),
+        None,
+      )]),
     };
 
-    assert_eq!(layout_qualifier("layout (std430)"), Ok(("", expected.clone())));
-    assert_eq!(layout_qualifier("layout  (std430   )"), Ok(("", expected.clone())));
-    assert_eq!(layout_qualifier("layout \n\t (  std430  )"), Ok(("", expected.clone())));
+    assert_eq!(
+      layout_qualifier("layout (std430)"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      layout_qualifier("layout  (std430   )"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      layout_qualifier("layout \n\t (  std430  )"),
+      Ok(("", expected.clone()))
+    );
     assert_eq!(layout_qualifier("layout(std430)"), Ok(("", expected)));
   }
 
   #[test]
   fn parse_layout_qualifier_shared() {
     let expected = syntax::LayoutQualifier {
-      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Shared])
+      ids: syntax::NonEmpty(vec![syntax::LayoutQualifierSpec::Shared]),
     };
 
-    assert_eq!(layout_qualifier("layout (shared)"), Ok(("", expected.clone())));
-    assert_eq!(layout_qualifier("layout ( shared )"), Ok(("", expected.clone())));
+    assert_eq!(
+      layout_qualifier("layout (shared)"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      layout_qualifier("layout ( shared )"),
+      Ok(("", expected.clone()))
+    );
     assert_eq!(layout_qualifier("layout(shared)"), Ok(("", expected)));
   }
 
@@ -1934,12 +2106,26 @@ mod tests {
   fn parse_layout_qualifier_list() {
     let id_0 = syntax::LayoutQualifierSpec::Shared;
     let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".into(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".into(), Some(Box::new(syntax::Expr::IntConst(3))));
-    let expected = syntax::LayoutQualifier { ids: syntax::NonEmpty(vec![id_0, id_1, id_2]) };
+    let id_2 = syntax::LayoutQualifierSpec::Identifier(
+      "max_vertices".into(),
+      Some(Box::new(syntax::Expr::IntConst(3))),
+    );
+    let expected = syntax::LayoutQualifier {
+      ids: syntax::NonEmpty(vec![id_0, id_1, id_2]),
+    };
 
-    assert_eq!(layout_qualifier("layout (shared, std140, max_vertices = 3)"), Ok(("", expected.clone())));
-    assert_eq!(layout_qualifier("layout(shared,std140,max_vertices=3)"), Ok(("", expected.clone())));
-    assert_eq!(layout_qualifier("layout\n\n\t (    shared , std140, max_vertices= 3)"), Ok(("", expected.clone())));
+    assert_eq!(
+      layout_qualifier("layout (shared, std140, max_vertices = 3)"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      layout_qualifier("layout(shared,std140,max_vertices=3)"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      layout_qualifier("layout\n\n\t (    shared , std140, max_vertices= 3)"),
+      Ok(("", expected.clone()))
+    );
   }
 
   #[test]
@@ -1947,14 +2133,25 @@ mod tests {
     let storage_qual = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Const);
     let id_0 = syntax::LayoutQualifierSpec::Shared;
     let id_1 = syntax::LayoutQualifierSpec::Identifier("std140".into(), None);
-    let id_2 = syntax::LayoutQualifierSpec::Identifier("max_vertices".into(), Some(Box::new(syntax::Expr::IntConst(3))));
+    let id_2 = syntax::LayoutQualifierSpec::Identifier(
+      "max_vertices".into(),
+      Some(Box::new(syntax::Expr::IntConst(3))),
+    );
     let layout_qual = syntax::TypeQualifierSpec::Layout(syntax::LayoutQualifier {
-      ids: syntax::NonEmpty(vec![id_0, id_1, id_2])
+      ids: syntax::NonEmpty(vec![id_0, id_1, id_2]),
     });
-    let expected = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![storage_qual, layout_qual]) };
+    let expected = syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(vec![storage_qual, layout_qual]),
+    };
 
-    assert_eq!(type_qualifier("const layout (shared, std140, max_vertices = 3)"), Ok(("", expected.clone())));
-    assert_eq!(type_qualifier("const layout(shared,std140,max_vertices=3)"), Ok(("", expected)));
+    assert_eq!(
+      type_qualifier("const layout (shared, std140, max_vertices = 3)"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      type_qualifier("const layout(shared,std140,max_vertices=3)"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -1963,13 +2160,19 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec4,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["foo".into()])
+      identifiers: syntax::NonEmpty(vec!["foo".into()]),
     };
 
-    assert_eq!(struct_field_specifier("vec4 foo;"), Ok(("", expected.clone())));
-    assert_eq!(struct_field_specifier("vec4     foo ; "), Ok((" ", expected.clone())));
+    assert_eq!(
+      struct_field_specifier("vec4 foo;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      struct_field_specifier("vec4     foo ; "),
+      Ok((" ", expected.clone()))
+    );
   }
 
   #[test]
@@ -1978,13 +2181,19 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".into()),
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["x".into()])
+      identifiers: syntax::NonEmpty(vec!["x".into()]),
     };
 
-    assert_eq!(struct_field_specifier("S0238_3 x;"), Ok(("", expected.clone())));
-    assert_eq!(struct_field_specifier("S0238_3     x ;"), Ok(("", expected.clone())));
+    assert_eq!(
+      struct_field_specifier("S0238_3 x;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      struct_field_specifier("S0238_3     x ;"),
+      Ok(("", expected.clone()))
+    );
   }
 
   #[test]
@@ -1993,13 +2202,19 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec4,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["foo".into(), "bar".into(), "zoo".into()])
+      identifiers: syntax::NonEmpty(vec!["foo".into(), "bar".into(), "zoo".into()]),
     };
 
-    assert_eq!(struct_field_specifier("vec4 foo, bar, zoo;"), Ok(("", expected.clone())));
-    assert_eq!(struct_field_specifier("vec4     foo , bar  , zoo ;"), Ok(("", expected.clone())));
+    assert_eq!(
+      struct_field_specifier("vec4 foo, bar, zoo;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      struct_field_specifier("vec4     foo , bar  , zoo ;"),
+      Ok(("", expected.clone()))
+    );
   }
 
   #[test]
@@ -2008,17 +2223,23 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec4,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["foo".into()])
+      identifiers: syntax::NonEmpty(vec!["foo".into()]),
     };
     let expected = syntax::StructSpecifier {
       name: Some("TestStruct".into()),
-      fields: syntax::NonEmpty(vec![field])
+      fields: syntax::NonEmpty(vec![field]),
     };
 
-    assert_eq!(struct_specifier("struct TestStruct { vec4 foo; }"), Ok(("", expected.clone())));
-    assert_eq!(struct_specifier("struct      TestStruct \n \n\n {\n    vec4   foo  ;}"), Ok(("", expected)));
+    assert_eq!(
+      struct_specifier("struct TestStruct { vec4 foo; }"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      struct_specifier("struct      TestStruct \n \n\n {\n    vec4   foo  ;}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -2027,214 +2248,618 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec4,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["foo".into()])
+      identifiers: syntax::NonEmpty(vec!["foo".into()]),
     };
     let b = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["bar".into()])
+      identifiers: syntax::NonEmpty(vec!["bar".into()]),
     };
     let c = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::UInt,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["zoo".into()])
+      identifiers: syntax::NonEmpty(vec!["zoo".into()]),
     };
     let d = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::BVec3,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["foo_BAR_zoo3497_34".into()])
+      identifiers: syntax::NonEmpty(vec!["foo_BAR_zoo3497_34".into()]),
     };
     let e = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::TypeName("S0238_3".into()),
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["x".into()])
+      identifiers: syntax::NonEmpty(vec!["x".into()]),
     };
     let expected = syntax::StructSpecifier {
       name: Some("_TestStruct_934i".into()),
-      fields: syntax::NonEmpty(vec![a, b, c, d, e])
+      fields: syntax::NonEmpty(vec![a, b, c, d, e]),
     };
 
-    assert_eq!(struct_specifier("struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"), Ok(("", expected.clone())));
-    assert_eq!(struct_specifier("struct _TestStruct_934i{vec4 foo;float bar;uint zoo;bvec3 foo_BAR_zoo3497_34;S0238_3 x;}"), Ok(("", expected.clone())));
+    assert_eq!(
+      struct_specifier(
+        "struct _TestStruct_934i { vec4 foo; float bar; uint zoo; bvec3 foo_BAR_zoo3497_34; S0238_3 x; }"
+      ),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      struct_specifier(
+        "struct _TestStruct_934i{vec4 foo;float bar;uint zoo;bvec3 foo_BAR_zoo3497_34;S0238_3 x;}"
+      ),
+      Ok(("", expected.clone()))
+    );
     assert_eq!(struct_specifier("struct _TestStruct_934i\n   {  vec4\nfoo ;   \n\t float\n\t\t  bar  ;   \nuint   zoo;    \n bvec3   foo_BAR_zoo3497_34\n\n\t\n\t\n  ; S0238_3 x;}"), Ok(("", expected)));
   }
 
   #[test]
   fn parse_type_specifier_non_array() {
-    assert_eq!(type_specifier_non_array("bool"), Ok(("", syntax::TypeSpecifierNonArray::Bool)));
-    assert_eq!(type_specifier_non_array("int"), Ok(("", syntax::TypeSpecifierNonArray::Int)));
-    assert_eq!(type_specifier_non_array("uint"), Ok(("", syntax::TypeSpecifierNonArray::UInt)));
-    assert_eq!(type_specifier_non_array("float"), Ok(("", syntax::TypeSpecifierNonArray::Float)));
-    assert_eq!(type_specifier_non_array("double"), Ok(("", syntax::TypeSpecifierNonArray::Double)));
-    assert_eq!(type_specifier_non_array("vec2"), Ok(("", syntax::TypeSpecifierNonArray::Vec2)));
-    assert_eq!(type_specifier_non_array("vec3"), Ok(("", syntax::TypeSpecifierNonArray::Vec3)));
-    assert_eq!(type_specifier_non_array("vec4"), Ok(("", syntax::TypeSpecifierNonArray::Vec4)));
-    assert_eq!(type_specifier_non_array("dvec2"), Ok(("", syntax::TypeSpecifierNonArray::DVec2)));
-    assert_eq!(type_specifier_non_array("dvec3"), Ok(("", syntax::TypeSpecifierNonArray::DVec3)));
-    assert_eq!(type_specifier_non_array("dvec4"), Ok(("", syntax::TypeSpecifierNonArray::DVec4)));
-    assert_eq!(type_specifier_non_array("bvec2"), Ok(("", syntax::TypeSpecifierNonArray::BVec2)));
-    assert_eq!(type_specifier_non_array("bvec3"), Ok(("", syntax::TypeSpecifierNonArray::BVec3)));
-    assert_eq!(type_specifier_non_array("bvec4"), Ok(("", syntax::TypeSpecifierNonArray::BVec4)));
-    assert_eq!(type_specifier_non_array("ivec2"), Ok(("", syntax::TypeSpecifierNonArray::IVec2)));
-    assert_eq!(type_specifier_non_array("ivec3"), Ok(("", syntax::TypeSpecifierNonArray::IVec3)));
-    assert_eq!(type_specifier_non_array("ivec4"), Ok(("", syntax::TypeSpecifierNonArray::IVec4)));
-    assert_eq!(type_specifier_non_array("uvec2"), Ok(("", syntax::TypeSpecifierNonArray::UVec2)));
-    assert_eq!(type_specifier_non_array("uvec3"), Ok(("", syntax::TypeSpecifierNonArray::UVec3)));
-    assert_eq!(type_specifier_non_array("uvec4"), Ok(("", syntax::TypeSpecifierNonArray::UVec4)));
-    assert_eq!(type_specifier_non_array("mat2"), Ok(("", syntax::TypeSpecifierNonArray::Mat2)));
-    assert_eq!(type_specifier_non_array("mat3"), Ok(("", syntax::TypeSpecifierNonArray::Mat3)));
-    assert_eq!(type_specifier_non_array("mat4"), Ok(("", syntax::TypeSpecifierNonArray::Mat4)));
-    assert_eq!(type_specifier_non_array("mat2x2"), Ok(("", syntax::TypeSpecifierNonArray::Mat2)));
-    assert_eq!(type_specifier_non_array("mat2x3"), Ok(("", syntax::TypeSpecifierNonArray::Mat23)));
-    assert_eq!(type_specifier_non_array("mat2x4"), Ok(("", syntax::TypeSpecifierNonArray::Mat24)));
-    assert_eq!(type_specifier_non_array("mat3x2"), Ok(("", syntax::TypeSpecifierNonArray::Mat32)));
-    assert_eq!(type_specifier_non_array("mat3x3"), Ok(("", syntax::TypeSpecifierNonArray::Mat3)));
-    assert_eq!(type_specifier_non_array("mat3x4"), Ok(("", syntax::TypeSpecifierNonArray::Mat34)));
-    assert_eq!(type_specifier_non_array("mat4x2"), Ok(("", syntax::TypeSpecifierNonArray::Mat42)));
-    assert_eq!(type_specifier_non_array("mat4x3"), Ok(("", syntax::TypeSpecifierNonArray::Mat43)));
-    assert_eq!(type_specifier_non_array("mat4x4"), Ok(("", syntax::TypeSpecifierNonArray::Mat4)));
-    assert_eq!(type_specifier_non_array("dmat2"), Ok(("", syntax::TypeSpecifierNonArray::DMat2)));
-    assert_eq!(type_specifier_non_array("dmat3"), Ok(("", syntax::TypeSpecifierNonArray::DMat3)));
-    assert_eq!(type_specifier_non_array("dmat4"), Ok(("", syntax::TypeSpecifierNonArray::DMat4)));
-    assert_eq!(type_specifier_non_array("dmat2x2"), Ok(("", syntax::TypeSpecifierNonArray::DMat2)));
-    assert_eq!(type_specifier_non_array("dmat2x3"), Ok(("", syntax::TypeSpecifierNonArray::DMat23)));
-    assert_eq!(type_specifier_non_array("dmat2x4"), Ok(("", syntax::TypeSpecifierNonArray::DMat24)));
-    assert_eq!(type_specifier_non_array("dmat3x2"), Ok(("", syntax::TypeSpecifierNonArray::DMat32)));
-    assert_eq!(type_specifier_non_array("dmat3x3"), Ok(("", syntax::TypeSpecifierNonArray::DMat3)));
-    assert_eq!(type_specifier_non_array("dmat3x4"), Ok(("", syntax::TypeSpecifierNonArray::DMat34)));
-    assert_eq!(type_specifier_non_array("dmat4x2"), Ok(("", syntax::TypeSpecifierNonArray::DMat42)));
-    assert_eq!(type_specifier_non_array("dmat4x3"), Ok(("", syntax::TypeSpecifierNonArray::DMat43)));
-    assert_eq!(type_specifier_non_array("dmat4x4"), Ok(("", syntax::TypeSpecifierNonArray::DMat4)));
-    assert_eq!(type_specifier_non_array("sampler1D"), Ok(("", syntax::TypeSpecifierNonArray::Sampler1D)));
-    assert_eq!(type_specifier_non_array("image1D"), Ok(("", syntax::TypeSpecifierNonArray::Image1D)));
-    assert_eq!(type_specifier_non_array("sampler2D"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2D)));
-    assert_eq!(type_specifier_non_array("image2D"), Ok(("", syntax::TypeSpecifierNonArray::Image2D)));
-    assert_eq!(type_specifier_non_array("sampler3D"), Ok(("", syntax::TypeSpecifierNonArray::Sampler3D)));
-    assert_eq!(type_specifier_non_array("image3D"), Ok(("", syntax::TypeSpecifierNonArray::Image3D)));
-    assert_eq!(type_specifier_non_array("samplerCube"), Ok(("", syntax::TypeSpecifierNonArray::SamplerCube)));
-    assert_eq!(type_specifier_non_array("imageCube"), Ok(("", syntax::TypeSpecifierNonArray::ImageCube)));
-    assert_eq!(type_specifier_non_array("sampler2DRect"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DRect)));
-    assert_eq!(type_specifier_non_array("image2DRect"), Ok(("", syntax::TypeSpecifierNonArray::Image2DRect)));
-    assert_eq!(type_specifier_non_array("sampler1DArray"), Ok(("", syntax::TypeSpecifierNonArray::Sampler1DArray)));
-    assert_eq!(type_specifier_non_array("image1DArray"), Ok(("", syntax::TypeSpecifierNonArray::Image1DArray)));
-    assert_eq!(type_specifier_non_array("sampler2DArray"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DArray)));
-    assert_eq!(type_specifier_non_array("image2DArray"), Ok(("", syntax::TypeSpecifierNonArray::Image2DArray)));
-    assert_eq!(type_specifier_non_array("samplerBuffer"), Ok(("", syntax::TypeSpecifierNonArray::SamplerBuffer)));
-    assert_eq!(type_specifier_non_array("imageBuffer"), Ok(("", syntax::TypeSpecifierNonArray::ImageBuffer)));
-    assert_eq!(type_specifier_non_array("sampler2DMS"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DMS)));
-    assert_eq!(type_specifier_non_array("image2DMS"), Ok(("", syntax::TypeSpecifierNonArray::Image2DMS)));
-    assert_eq!(type_specifier_non_array("sampler2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DMSArray)));
-    assert_eq!(type_specifier_non_array("image2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::Image2DMSArray)));
-    assert_eq!(type_specifier_non_array("samplerCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeArray)));
-    assert_eq!(type_specifier_non_array("imageCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::ImageCubeArray)));
-    assert_eq!(type_specifier_non_array("sampler1DShadow"), Ok(("", syntax::TypeSpecifierNonArray::Sampler1DShadow)));
-    assert_eq!(type_specifier_non_array("sampler2DShadow"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DShadow)));
-    assert_eq!(type_specifier_non_array("sampler2DRectShadow"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DRectShadow)));
-    assert_eq!(type_specifier_non_array("sampler1DArrayShadow"), Ok(("", syntax::TypeSpecifierNonArray::Sampler1DArrayShadow)));
-    assert_eq!(type_specifier_non_array("sampler2DArrayShadow"), Ok(("", syntax::TypeSpecifierNonArray::Sampler2DArrayShadow)));
-    assert_eq!(type_specifier_non_array("samplerCubeShadow"), Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeShadow)));
-    assert_eq!(type_specifier_non_array("samplerCubeArrayShadow"), Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow)));
-    assert_eq!(type_specifier_non_array("isampler1D"), Ok(("", syntax::TypeSpecifierNonArray::ISampler1D)));
-    assert_eq!(type_specifier_non_array("iimage1D"), Ok(("", syntax::TypeSpecifierNonArray::IImage1D)));
-    assert_eq!(type_specifier_non_array("isampler2D"), Ok(("", syntax::TypeSpecifierNonArray::ISampler2D)));
-    assert_eq!(type_specifier_non_array("iimage2D"), Ok(("", syntax::TypeSpecifierNonArray::IImage2D)));
-    assert_eq!(type_specifier_non_array("isampler3D"), Ok(("", syntax::TypeSpecifierNonArray::ISampler3D)));
-    assert_eq!(type_specifier_non_array("iimage3D"), Ok(("", syntax::TypeSpecifierNonArray::IImage3D)));
-    assert_eq!(type_specifier_non_array("isamplerCube"), Ok(("", syntax::TypeSpecifierNonArray::ISamplerCube)));
-    assert_eq!(type_specifier_non_array("iimageCube"), Ok(("", syntax::TypeSpecifierNonArray::IImageCube)));
-    assert_eq!(type_specifier_non_array("isampler2DRect"), Ok(("", syntax::TypeSpecifierNonArray::ISampler2DRect)));
-    assert_eq!(type_specifier_non_array("iimage2DRect"), Ok(("", syntax::TypeSpecifierNonArray::IImage2DRect)));
-    assert_eq!(type_specifier_non_array("isampler1DArray"), Ok(("", syntax::TypeSpecifierNonArray::ISampler1DArray)));
-    assert_eq!(type_specifier_non_array("iimage1DArray"), Ok(("", syntax::TypeSpecifierNonArray::IImage1DArray)));
-    assert_eq!(type_specifier_non_array("isampler2DArray"), Ok(("", syntax::TypeSpecifierNonArray::ISampler2DArray)));
-    assert_eq!(type_specifier_non_array("iimage2DArray"), Ok(("", syntax::TypeSpecifierNonArray::IImage2DArray)));
-    assert_eq!(type_specifier_non_array("isamplerBuffer"), Ok(("", syntax::TypeSpecifierNonArray::ISamplerBuffer)));
-    assert_eq!(type_specifier_non_array("iimageBuffer"), Ok(("", syntax::TypeSpecifierNonArray::IImageBuffer)));
-    assert_eq!(type_specifier_non_array("isampler2DMS"), Ok(("", syntax::TypeSpecifierNonArray::ISampler2DMS)));
-    assert_eq!(type_specifier_non_array("iimage2DMS"), Ok(("", syntax::TypeSpecifierNonArray::IImage2DMS)));
-    assert_eq!(type_specifier_non_array("isampler2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::ISampler2DMSArray)));
-    assert_eq!(type_specifier_non_array("iimage2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::IImage2DMSArray)));
-    assert_eq!(type_specifier_non_array("isamplerCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::ISamplerCubeArray)));
-    assert_eq!(type_specifier_non_array("iimageCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::IImageCubeArray)));
-    assert_eq!(type_specifier_non_array("atomic_uint"), Ok(("", syntax::TypeSpecifierNonArray::AtomicUInt)));
-    assert_eq!(type_specifier_non_array("usampler1D"), Ok(("", syntax::TypeSpecifierNonArray::USampler1D)));
-    assert_eq!(type_specifier_non_array("uimage1D"), Ok(("", syntax::TypeSpecifierNonArray::UImage1D)));
-    assert_eq!(type_specifier_non_array("usampler2D"), Ok(("", syntax::TypeSpecifierNonArray::USampler2D)));
-    assert_eq!(type_specifier_non_array("uimage2D"), Ok(("", syntax::TypeSpecifierNonArray::UImage2D)));
-    assert_eq!(type_specifier_non_array("usampler3D"), Ok(("", syntax::TypeSpecifierNonArray::USampler3D)));
-    assert_eq!(type_specifier_non_array("uimage3D"), Ok(("", syntax::TypeSpecifierNonArray::UImage3D)));
-    assert_eq!(type_specifier_non_array("usamplerCube"), Ok(("", syntax::TypeSpecifierNonArray::USamplerCube)));
-    assert_eq!(type_specifier_non_array("uimageCube"), Ok(("", syntax::TypeSpecifierNonArray::UImageCube)));
-    assert_eq!(type_specifier_non_array("usampler2DRect"), Ok(("", syntax::TypeSpecifierNonArray::USampler2DRect)));
-    assert_eq!(type_specifier_non_array("uimage2DRect"), Ok(("", syntax::TypeSpecifierNonArray::UImage2DRect)));
-    assert_eq!(type_specifier_non_array("usampler1DArray"), Ok(("", syntax::TypeSpecifierNonArray::USampler1DArray)));
-    assert_eq!(type_specifier_non_array("uimage1DArray"), Ok(("", syntax::TypeSpecifierNonArray::UImage1DArray)));
-    assert_eq!(type_specifier_non_array("usampler2DArray"), Ok(("", syntax::TypeSpecifierNonArray::USampler2DArray)));
-    assert_eq!(type_specifier_non_array("uimage2DArray"), Ok(("", syntax::TypeSpecifierNonArray::UImage2DArray)));
-    assert_eq!(type_specifier_non_array("usamplerBuffer"), Ok(("", syntax::TypeSpecifierNonArray::USamplerBuffer)));
-    assert_eq!(type_specifier_non_array("uimageBuffer"), Ok(("", syntax::TypeSpecifierNonArray::UImageBuffer)));
-    assert_eq!(type_specifier_non_array("usampler2DMS"), Ok(("", syntax::TypeSpecifierNonArray::USampler2DMS)));
-    assert_eq!(type_specifier_non_array("uimage2DMS"), Ok(("", syntax::TypeSpecifierNonArray::UImage2DMS)));
-    assert_eq!(type_specifier_non_array("usampler2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::USampler2DMSArray)));
-    assert_eq!(type_specifier_non_array("uimage2DMSArray"), Ok(("", syntax::TypeSpecifierNonArray::UImage2DMSArray)));
-    assert_eq!(type_specifier_non_array("usamplerCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::USamplerCubeArray)));
-    assert_eq!(type_specifier_non_array("uimageCubeArray"), Ok(("", syntax::TypeSpecifierNonArray::UImageCubeArray)));
-    assert_eq!(type_specifier_non_array(
-      "ReturnType"),
-      Ok(("", syntax::TypeSpecifierNonArray::TypeName(syntax::TypeName::new("ReturnType").unwrap()))
-    ));
+    assert_eq!(
+      type_specifier_non_array("bool"),
+      Ok(("", syntax::TypeSpecifierNonArray::Bool))
+    );
+    assert_eq!(
+      type_specifier_non_array("int"),
+      Ok(("", syntax::TypeSpecifierNonArray::Int))
+    );
+    assert_eq!(
+      type_specifier_non_array("uint"),
+      Ok(("", syntax::TypeSpecifierNonArray::UInt))
+    );
+    assert_eq!(
+      type_specifier_non_array("float"),
+      Ok(("", syntax::TypeSpecifierNonArray::Float))
+    );
+    assert_eq!(
+      type_specifier_non_array("double"),
+      Ok(("", syntax::TypeSpecifierNonArray::Double))
+    );
+    assert_eq!(
+      type_specifier_non_array("vec2"),
+      Ok(("", syntax::TypeSpecifierNonArray::Vec2))
+    );
+    assert_eq!(
+      type_specifier_non_array("vec3"),
+      Ok(("", syntax::TypeSpecifierNonArray::Vec3))
+    );
+    assert_eq!(
+      type_specifier_non_array("vec4"),
+      Ok(("", syntax::TypeSpecifierNonArray::Vec4))
+    );
+    assert_eq!(
+      type_specifier_non_array("dvec2"),
+      Ok(("", syntax::TypeSpecifierNonArray::DVec2))
+    );
+    assert_eq!(
+      type_specifier_non_array("dvec3"),
+      Ok(("", syntax::TypeSpecifierNonArray::DVec3))
+    );
+    assert_eq!(
+      type_specifier_non_array("dvec4"),
+      Ok(("", syntax::TypeSpecifierNonArray::DVec4))
+    );
+    assert_eq!(
+      type_specifier_non_array("bvec2"),
+      Ok(("", syntax::TypeSpecifierNonArray::BVec2))
+    );
+    assert_eq!(
+      type_specifier_non_array("bvec3"),
+      Ok(("", syntax::TypeSpecifierNonArray::BVec3))
+    );
+    assert_eq!(
+      type_specifier_non_array("bvec4"),
+      Ok(("", syntax::TypeSpecifierNonArray::BVec4))
+    );
+    assert_eq!(
+      type_specifier_non_array("ivec2"),
+      Ok(("", syntax::TypeSpecifierNonArray::IVec2))
+    );
+    assert_eq!(
+      type_specifier_non_array("ivec3"),
+      Ok(("", syntax::TypeSpecifierNonArray::IVec3))
+    );
+    assert_eq!(
+      type_specifier_non_array("ivec4"),
+      Ok(("", syntax::TypeSpecifierNonArray::IVec4))
+    );
+    assert_eq!(
+      type_specifier_non_array("uvec2"),
+      Ok(("", syntax::TypeSpecifierNonArray::UVec2))
+    );
+    assert_eq!(
+      type_specifier_non_array("uvec3"),
+      Ok(("", syntax::TypeSpecifierNonArray::UVec3))
+    );
+    assert_eq!(
+      type_specifier_non_array("uvec4"),
+      Ok(("", syntax::TypeSpecifierNonArray::UVec4))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat2"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat2))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat3"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat3))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat4"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat4))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat2x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat2))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat2x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat23))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat2x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat24))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat3x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat32))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat3x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat3))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat3x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat34))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat4x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat42))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat4x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat43))
+    );
+    assert_eq!(
+      type_specifier_non_array("mat4x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::Mat4))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat2"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat2))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat3"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat3))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat4"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat4))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat2x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat2))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat2x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat23))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat2x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat24))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat3x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat32))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat3x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat3))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat3x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat34))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat4x2"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat42))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat4x3"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat43))
+    );
+    assert_eq!(
+      type_specifier_non_array("dmat4x4"),
+      Ok(("", syntax::TypeSpecifierNonArray::DMat4))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("image1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("image2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("image3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("samplerCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::SamplerCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("imageCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::ImageCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("image2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("image1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("image2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("samplerBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::SamplerBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("imageBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::ImageBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("image2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("image2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::Image2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("samplerCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("imageCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::ImageCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler1DShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler1DShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DRectShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DRectShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler1DArrayShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler1DArrayShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("sampler2DArrayShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::Sampler2DArrayShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("samplerCubeShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("samplerCubeArrayShadow"),
+      Ok(("", syntax::TypeSpecifierNonArray::SamplerCubeArrayShadow))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("isamplerCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISamplerCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimageCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImageCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("isamplerBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISamplerBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimageBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImageBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("isampler2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISampler2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimage2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImage2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("isamplerCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::ISamplerCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("iimageCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::IImageCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("atomic_uint"),
+      Ok(("", syntax::TypeSpecifierNonArray::AtomicUInt))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage1D"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage1D))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage2D"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage2D))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage3D"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage3D))
+    );
+    assert_eq!(
+      type_specifier_non_array("usamplerCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::USamplerCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimageCube"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImageCube))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage2DRect"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage2DRect))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage1DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage1DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage2DArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage2DArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("usamplerBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::USamplerBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimageBuffer"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImageBuffer))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage2DMS"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage2DMS))
+    );
+    assert_eq!(
+      type_specifier_non_array("usampler2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::USampler2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimage2DMSArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImage2DMSArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("usamplerCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::USamplerCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("uimageCubeArray"),
+      Ok(("", syntax::TypeSpecifierNonArray::UImageCubeArray))
+    );
+    assert_eq!(
+      type_specifier_non_array("ReturnType"),
+      Ok((
+        "",
+        syntax::TypeSpecifierNonArray::TypeName(syntax::TypeName::new("ReturnType").unwrap())
+      ))
+    );
   }
 
   #[test]
   fn parse_type_specifier() {
-    assert_eq!(type_specifier("uint;"), Ok((";", syntax::TypeSpecifier {
-      ty: syntax::TypeSpecifierNonArray::UInt,
-      array_specifier: None
-    })));
-    assert_eq!(type_specifier("iimage2DMSArray[35];"), Ok((";", syntax::TypeSpecifier {
-      ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
-      array_specifier: Some(syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(35))))
-    })));
+    assert_eq!(
+      type_specifier("uint;"),
+      Ok((
+        ";",
+        syntax::TypeSpecifier {
+          ty: syntax::TypeSpecifierNonArray::UInt,
+          array_specifier: None
+        }
+      ))
+    );
+    assert_eq!(
+      type_specifier("iimage2DMSArray[35];"),
+      Ok((
+        ";",
+        syntax::TypeSpecifier {
+          ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
+          array_specifier: Some(syntax::ArraySpecifier::ExplicitlySized(Box::new(
+            syntax::Expr::IntConst(35)
+          )))
+        }
+      ))
+    );
   }
 
   #[test]
   fn parse_fully_specified_type() {
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
-      array_specifier: None
+      array_specifier: None,
     };
-    let expected = syntax::FullySpecifiedType { qualifier: None, ty };
+    let expected = syntax::FullySpecifiedType {
+      qualifier: None,
+      ty,
+    };
 
-    assert_eq!(fully_specified_type("iimage2DMSArray;"), Ok((";", expected.clone())));
+    assert_eq!(
+      fully_specified_type("iimage2DMSArray;"),
+      Ok((";", expected.clone()))
+    );
   }
 
   #[test]
   fn parse_fully_specified_type_with_qualifier() {
-    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec!["vec2".into(), "S032_29k".into()]));
-    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
+    let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Subroutine(vec![
+      "vec2".into(),
+      "S032_29k".into(),
+    ]));
+    let qual = syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(vec![qual_spec]),
+    };
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::IImage2DMSArray,
-      array_specifier: None
+      array_specifier: None,
     };
-    let expected = syntax::FullySpecifiedType { qualifier: Some(qual), ty };
+    let expected = syntax::FullySpecifiedType {
+      qualifier: Some(qual),
+      ty,
+    };
 
-    assert_eq!(fully_specified_type("subroutine (vec2, S032_29k) iimage2DMSArray;"), Ok((";", expected.clone())));
-    assert_eq!(fully_specified_type("subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"), Ok((" ;", expected.clone())));
-    assert_eq!(fully_specified_type("subroutine(vec2,S032_29k)iimage2DMSArray;"), Ok((";", expected)));
+    assert_eq!(
+      fully_specified_type("subroutine (vec2, S032_29k) iimage2DMSArray;"),
+      Ok((";", expected.clone()))
+    );
+    assert_eq!(
+      fully_specified_type("subroutine (  vec2\t\n \t , \n S032_29k   )\n iimage2DMSArray ;"),
+      Ok((" ;", expected.clone()))
+    );
+    assert_eq!(
+      fully_specified_type("subroutine(vec2,S032_29k)iimage2DMSArray;"),
+      Ok((";", expected))
+    );
   }
 
   #[test]
@@ -2251,35 +2876,80 @@ mod tests {
 
   #[test]
   fn parse_primary_expr_floatconst() {
-    assert_eq!(primary_expr("0.f "), Ok((" ", syntax::Expr::FloatConst(0.))));
-    assert_eq!(primary_expr("1.f "), Ok((" ", syntax::Expr::FloatConst(1.))));
-    assert_eq!(primary_expr("0.F "), Ok((" ", syntax::Expr::FloatConst(0.))));
-    assert_eq!(primary_expr("1.F "), Ok((" ", syntax::Expr::FloatConst(1.))));
+    assert_eq!(
+      primary_expr("0.f "),
+      Ok((" ", syntax::Expr::FloatConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("1.f "),
+      Ok((" ", syntax::Expr::FloatConst(1.)))
+    );
+    assert_eq!(
+      primary_expr("0.F "),
+      Ok((" ", syntax::Expr::FloatConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("1.F "),
+      Ok((" ", syntax::Expr::FloatConst(1.)))
+    );
   }
 
   #[test]
   fn parse_primary_expr_doubleconst() {
-    assert_eq!(primary_expr("0. "), Ok((" ", syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr("1. "), Ok((" ", syntax::Expr::DoubleConst(1.))));
-    assert_eq!(primary_expr("0.lf "), Ok((" ", syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr("1.lf "), Ok((" ", syntax::Expr::DoubleConst(1.))));
-    assert_eq!(primary_expr("0.LF "), Ok((" ", syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr("1.LF "), Ok((" ", syntax::Expr::DoubleConst(1.))));
+    assert_eq!(
+      primary_expr("0. "),
+      Ok((" ", syntax::Expr::DoubleConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("1. "),
+      Ok((" ", syntax::Expr::DoubleConst(1.)))
+    );
+    assert_eq!(
+      primary_expr("0.lf "),
+      Ok((" ", syntax::Expr::DoubleConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("1.lf "),
+      Ok((" ", syntax::Expr::DoubleConst(1.)))
+    );
+    assert_eq!(
+      primary_expr("0.LF "),
+      Ok((" ", syntax::Expr::DoubleConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("1.LF "),
+      Ok((" ", syntax::Expr::DoubleConst(1.)))
+    );
   }
 
   #[test]
   fn parse_primary_expr_boolconst() {
-    assert_eq!(primary_expr("false"), Ok(("", syntax::Expr::BoolConst(false.to_owned()))));
-    assert_eq!(primary_expr("true"), Ok(("", syntax::Expr::BoolConst(true.to_owned()))));
+    assert_eq!(
+      primary_expr("false"),
+      Ok(("", syntax::Expr::BoolConst(false.to_owned())))
+    );
+    assert_eq!(
+      primary_expr("true"),
+      Ok(("", syntax::Expr::BoolConst(true.to_owned())))
+    );
   }
 
   #[test]
   fn parse_primary_expr_parens() {
     assert_eq!(primary_expr("(0)"), Ok(("", syntax::Expr::IntConst(0))));
     assert_eq!(primary_expr("(  0 )"), Ok(("", syntax::Expr::IntConst(0))));
-    assert_eq!(primary_expr("(  .0 )"), Ok(("", syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr("(  (.0) )"), Ok(("", syntax::Expr::DoubleConst(0.))));
-    assert_eq!(primary_expr("(true) "), Ok((" ", syntax::Expr::BoolConst(true))));
+    assert_eq!(
+      primary_expr("(  .0 )"),
+      Ok(("", syntax::Expr::DoubleConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("(  (.0) )"),
+      Ok(("", syntax::Expr::DoubleConst(0.)))
+    );
+    assert_eq!(
+      primary_expr("(true) "),
+      Ok((" ", syntax::Expr::BoolConst(true)))
+    );
   }
 
   #[test]
@@ -2311,17 +2981,24 @@ mod tests {
       syntax::Expr::IntConst(0),
       syntax::Expr::BoolConst(false),
       syntax::Expr::Variable("bar".into()),
-   ];
+    ];
     let expected = syntax::Expr::FunCall(fun, args);
 
-    assert_eq!(postfix_expr("foo(0, false, bar);"), Ok((";", expected.clone())));
-    assert_eq!(postfix_expr("foo   ( 0\t, false    ,\t\tbar) ;"), Ok((" ;", expected)));
+    assert_eq!(
+      postfix_expr("foo(0, false, bar);"),
+      Ok((";", expected.clone()))
+    );
+    assert_eq!(
+      postfix_expr("foo   ( 0\t, false    ,\t\tbar) ;"),
+      Ok((" ;", expected))
+    );
   }
 
   #[test]
   fn parse_postfix_expr_bracket() {
     let id = syntax::Expr::Variable("foo".into());
-    let array_spec = syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
+    let array_spec =
+      syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(7354)));
     let expected = syntax::Expr::Bracket(Box::new(id), array_spec);
 
     assert_eq!(postfix_expr("foo[7354];"), Ok((";", expected.clone())));
@@ -2432,7 +3109,11 @@ mod tests {
     let one = Box::new(syntax::Expr::UIntConst(1));
     let two = Box::new(syntax::Expr::UIntConst(2));
     let three = Box::new(syntax::Expr::UIntConst(3));
-    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)));
+    let expected = syntax::Expr::Binary(
+      syntax::BinaryOp::Add,
+      one,
+      Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)),
+    );
 
     assert_eq!(expr("1u + 2u + 3u"), Ok(("", expected.clone())));
     assert_eq!(expr("1u + 2u + 3u   "), Ok(("   ", expected.clone())));
@@ -2445,7 +3126,11 @@ mod tests {
     let one = Box::new(syntax::Expr::UIntConst(1));
     let two = Box::new(syntax::Expr::UIntConst(2));
     let three = Box::new(syntax::Expr::UIntConst(3));
-    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, two)), three);
+    let expected = syntax::Expr::Binary(
+      syntax::BinaryOp::Add,
+      Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, two)),
+      three,
+    );
 
     assert_eq!(expr("1u * 2u + 3u ;"), Ok((" ;", expected.clone())));
     assert_eq!(expr("1u*2u+3u;"), Ok((";", expected.clone())));
@@ -2460,9 +3145,24 @@ mod tests {
     let four = Box::new(syntax::Expr::IntConst(4));
     let five = Box::new(syntax::Expr::IntConst(5));
     let six = Box::new(syntax::Expr::IntConst(6));
-    let expected = syntax::Expr::Binary(syntax::BinaryOp::Add, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Mult, one, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)))), Box::new(syntax::Expr::Binary(syntax::BinaryOp::Div, four, Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)))));
+    let expected = syntax::Expr::Binary(
+      syntax::BinaryOp::Add,
+      Box::new(syntax::Expr::Binary(
+        syntax::BinaryOp::Mult,
+        one,
+        Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)),
+      )),
+      Box::new(syntax::Expr::Binary(
+        syntax::BinaryOp::Div,
+        four,
+        Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, five, six)),
+      )),
+    );
 
-    assert_eq!(expr("1 * (2 + 3) + 4 / (5 + 6);"), Ok((";", expected.clone())));
+    assert_eq!(
+      expr("1 * (2 + 3) + 4 / (5 + 6);"),
+      Ok((";", expected.clone()))
+    );
   }
 
   #[test]
@@ -2471,12 +3171,21 @@ mod tests {
     let zero = syntax::Expr::DoubleConst(0.);
     let ray = syntax::Expr::Variable("ray".into());
     let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
-    let vec4 = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec4".into()), vec![raydir, zero]);
+    let vec4 = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("vec4".into()),
+      vec![raydir, zero],
+    );
     let view = syntax::Expr::Variable("view".into());
-    let iview = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("inverse".into()), vec![view]);
+    let iview = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("inverse".into()),
+      vec![view],
+    );
     let mul = syntax::Expr::Binary(syntax::BinaryOp::Mult, Box::new(iview), Box::new(vec4));
     let xyz = syntax::Expr::Dot(Box::new(mul), "xyz".into());
-    let normalize = syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("normalize".into()), vec![xyz]);
+    let normalize = syntax::Expr::FunCall(
+      syntax::FunIdentifier::Identifier("normalize".into()),
+      vec![xyz],
+    );
     let expected = normalize;
 
     assert_eq!(expr(&input[..]), Ok((";", expected)));
@@ -2500,15 +3209,10 @@ mod tests {
 
   #[test]
   fn parse_function_identifier_cast_array_unsized() {
-    let expected =
-      syntax::FunIdentifier::Expr(
-        Box::new(
-          syntax::Expr::Bracket(
-            Box::new(syntax::Expr::Variable("vec3".into())),
-            syntax::ArraySpecifier::Unsized
-          )
-        )
-      );
+    let expected = syntax::FunIdentifier::Expr(Box::new(syntax::Expr::Bracket(
+      Box::new(syntax::Expr::Variable("vec3".into())),
+      syntax::ArraySpecifier::Unsized,
+    )));
 
     assert_eq!(function_identifier("vec3[]("), Ok(("(", expected.clone())));
     assert_eq!(function_identifier("vec3  [\t\n]("), Ok(("(", expected)));
@@ -2516,21 +3220,15 @@ mod tests {
 
   #[test]
   fn parse_function_identifier_cast_array_sized() {
-    let expected =
-      syntax::FunIdentifier::Expr(
-        Box::new(
-          syntax::Expr::Bracket(
-            Box::new(syntax::Expr::Variable("vec3".into())),
-            syntax::ArraySpecifier::ExplicitlySized(
-              Box::new(
-                syntax::Expr::IntConst(12)
-              )
-            )
-          )
-        )
-      );
+    let expected = syntax::FunIdentifier::Expr(Box::new(syntax::Expr::Bracket(
+      Box::new(syntax::Expr::Variable("vec3".into())),
+      syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(12))),
+    )));
 
-    assert_eq!(function_identifier("vec3[12]("), Ok(("(", expected.clone())));
+    assert_eq!(
+      function_identifier("vec3[12]("),
+      Ok(("(", expected.clone()))
+    );
     assert_eq!(function_identifier("vec3  [\t 12\n]("), Ok(("(", expected)));
   }
 
@@ -2571,12 +3269,18 @@ mod tests {
 
   #[test]
   fn parse_assignment_op_lshift() {
-    assert_eq!(assignment_op("<<= "), Ok((" ", syntax::AssignmentOp::LShift)));
+    assert_eq!(
+      assignment_op("<<= "),
+      Ok((" ", syntax::AssignmentOp::LShift))
+    );
   }
 
   #[test]
   fn parse_assignment_op_rshift() {
-    assert_eq!(assignment_op(">>= "), Ok((" ", syntax::AssignmentOp::RShift)));
+    assert_eq!(
+      assignment_op(">>= "),
+      Ok((" ", syntax::AssignmentOp::RShift))
+    );
   }
 
   #[test]
@@ -2596,16 +3300,11 @@ mod tests {
 
   #[test]
   fn parse_expr_statement() {
-    let expected =
-      Some(
-        syntax::Expr::Assignment(
-          Box::new(
-            syntax::Expr::Variable("foo".into())
-          ),
-          syntax::AssignmentOp::Equal,
-          Box::new(syntax::Expr::FloatConst(314.))
-        )
-      );
+    let expected = Some(syntax::Expr::Assignment(
+      Box::new(syntax::Expr::Variable("foo".into())),
+      syntax::AssignmentOp::Equal,
+      Box::new(syntax::Expr::FloatConst(314.)),
+    ));
 
     assert_eq!(expr_statement("foo = 314.f;"), Ok(("", expected.clone())));
     assert_eq!(expr_statement("foo=314.f;"), Ok(("", expected.clone())));
@@ -2618,33 +3317,47 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec3,
-        array_specifier: None
-      }
+        array_specifier: None,
+      },
     };
     let arg0_ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::Vec2,
-      array_specifier: None
+      array_specifier: None,
     };
     let arg0 = syntax::FunctionParameterDeclaration::Unnamed(None, arg0_ty);
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Out);
-    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
-    let arg1 = syntax::FunctionParameterDeclaration::Named(Some(qual), syntax::FunctionParameterDeclarator {
-      ty: syntax::TypeSpecifier {
-        ty: syntax::TypeSpecifierNonArray::Float,
-        array_specifier: None
+    let qual = syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(vec![qual_spec]),
+    };
+    let arg1 = syntax::FunctionParameterDeclaration::Named(
+      Some(qual),
+      syntax::FunctionParameterDeclarator {
+        ty: syntax::TypeSpecifier {
+          ty: syntax::TypeSpecifierNonArray::Float,
+          array_specifier: None,
+        },
+        ident: "the_arg".into(),
       },
-      ident: "the_arg".into(),
-    });
+    );
     let fp = syntax::FunctionPrototype {
       ty: rt,
       name: "foo".into(),
-      parameters: vec![arg0, arg1]
+      parameters: vec![arg0, arg1],
     };
     let expected = syntax::Declaration::FunctionPrototype(fp);
 
-    assert_eq!(declaration("vec3 foo(vec2, out float the_arg);"), Ok(("", expected.clone())));
-    assert_eq!(declaration("vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"), Ok(("", expected.clone())));
-    assert_eq!(declaration("vec3 foo(vec2,out float the_arg);"), Ok(("", expected)));
+    assert_eq!(
+      declaration("vec3 foo(vec2, out float the_arg);"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      declaration("vec3 \nfoo ( vec2\n, out float \n\tthe_arg )\n;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      declaration("vec3 foo(vec2,out float the_arg);"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -2653,16 +3366,21 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Int,
-        array_specifier: None
-      }
+        array_specifier: None,
+      },
     };
     let sd = syntax::SingleDeclaration {
       ty,
       name: Some("foo".into()),
       array_specifier: None,
-      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
+      initializer: Some(syntax::Initializer::Simple(Box::new(
+        syntax::Expr::IntConst(34),
+      ))),
     };
-    let idl = syntax::InitDeclaratorList { head: sd, tail: Vec::new() };
+    let idl = syntax::InitDeclaratorList {
+      head: sd,
+      tail: Vec::new(),
+    };
     let expected = syntax::Declaration::InitDeclaratorList(idl);
 
     assert_eq!(declaration("int foo = 34;"), Ok(("", expected.clone())));
@@ -2676,27 +3394,40 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Int,
-        array_specifier: None
-      }
+        array_specifier: None,
+      },
     };
     let sd = syntax::SingleDeclaration {
       ty,
       name: Some("foo".into()),
       array_specifier: None,
-      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(34))))
+      initializer: Some(syntax::Initializer::Simple(Box::new(
+        syntax::Expr::IntConst(34),
+      ))),
     };
     let sdnt = syntax::SingleDeclarationNoType {
       ident: "bar".into(),
-      initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::IntConst(12))))
+      initializer: Some(syntax::Initializer::Simple(Box::new(
+        syntax::Expr::IntConst(12),
+      ))),
     };
     let expected = syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
       head: sd,
-      tail: vec![sdnt]
+      tail: vec![sdnt],
     });
 
-    assert_eq!(declaration("int foo = 34, bar = 12;"), Ok(("", expected.clone())));
-    assert_eq!(declaration("int foo=34,bar=12;"), Ok(("", expected.clone())));
-    assert_eq!(declaration("int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"), Ok(("", expected)));
+    assert_eq!(
+      declaration("int foo = 34, bar = 12;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      declaration("int foo=34,bar=12;"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      declaration("int    \t  \nfoo =\t34 \n,\tbar=      12\n ;"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -2704,7 +3435,7 @@ mod tests {
     let qual = syntax::PrecisionQualifier::Low;
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::Float,
-      array_specifier: None
+      array_specifier: None,
     };
     let expected = syntax::Declaration::Precision(qual, ty);
 
@@ -2716,7 +3447,7 @@ mod tests {
     let qual = syntax::PrecisionQualifier::Medium;
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::Float,
-      array_specifier: None
+      array_specifier: None,
     };
     let expected = syntax::Declaration::Precision(qual, ty);
 
@@ -2728,7 +3459,7 @@ mod tests {
     let qual = syntax::PrecisionQualifier::High;
     let ty = syntax::TypeSpecifier {
       ty: syntax::TypeSpecifierNonArray::Float,
-      array_specifier: None
+      array_specifier: None,
     };
     let expected = syntax::Declaration::Precision(qual, ty);
 
@@ -2738,124 +3469,159 @@ mod tests {
   #[test]
   fn parse_declaration_uniform_block() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Uniform);
-    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
+    let qual = syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(vec![qual_spec]),
+    };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["a".into()])
+      identifiers: syntax::NonEmpty(vec!["a".into()]),
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec3,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["b".into()])
+      identifiers: syntax::NonEmpty(vec!["b".into()]),
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::TypeName("foo".into()),
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()])
+      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()]),
     };
-    let expected =
-      syntax::Declaration::Block(
-        syntax::Block {
-          qualifier: qual,
-          name: "UniformBlockTest".into(),
-          fields: vec![f0, f1, f2],
-          identifier: None
-        }
-      );
+    let expected = syntax::Declaration::Block(syntax::Block {
+      qualifier: qual,
+      name: "UniformBlockTest".into(),
+      fields: vec![f0, f1, f2],
+      identifier: None,
+    });
 
-    assert_eq!(declaration("uniform UniformBlockTest { float a; vec3 b; foo c, d; };"), Ok(("", expected.clone())));
+    assert_eq!(
+      declaration("uniform UniformBlockTest { float a; vec3 b; foo c, d; };"),
+      Ok(("", expected.clone()))
+    );
     assert_eq!(declaration("uniform   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"), Ok(("", expected)));
   }
 
   #[test]
   fn parse_declaration_buffer_block() {
     let qual_spec = syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer);
-    let qual = syntax::TypeQualifier { qualifiers: syntax::NonEmpty(vec![qual_spec]) };
+    let qual = syntax::TypeQualifier {
+      qualifiers: syntax::NonEmpty(vec![qual_spec]),
+    };
     let f0 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Float,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["a".into()])
+      identifiers: syntax::NonEmpty(vec!["a".into()]),
     };
     let f1 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::Vec3,
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new("b", Some(syntax::ArraySpecifier::Unsized))])
+      identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new(
+        "b",
+        Some(syntax::ArraySpecifier::Unsized),
+      )]),
     };
     let f2 = syntax::StructFieldSpecifier {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::TypeName("foo".into()),
-        array_specifier: None
+        array_specifier: None,
       },
-      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()])
+      identifiers: syntax::NonEmpty(vec!["c".into(), "d".into()]),
     };
-    let expected =
-      syntax::Declaration::Block(
-        syntax::Block {
-          qualifier: qual,
-          name: "UniformBlockTest".into(),
-          fields: vec![f0, f1, f2],
-          identifier: None
-        }
-      );
+    let expected = syntax::Declaration::Block(syntax::Block {
+      qualifier: qual,
+      name: "UniformBlockTest".into(),
+      fields: vec![f0, f1, f2],
+      identifier: None,
+    });
 
-    assert_eq!(declaration("buffer UniformBlockTest { float a; vec3 b[]; foo c, d; };"), Ok(("", expected.clone())));
+    assert_eq!(
+      declaration("buffer UniformBlockTest { float a; vec3 b[]; foo c, d; };"),
+      Ok(("", expected.clone()))
+    );
     assert_eq!(declaration("buffer   \nUniformBlockTest\n {\n \t float   a  \n; \nvec3 b   [   ]\n; foo \nc\n, \nd\n;\n }\n\t\n\t\t \t;"), Ok(("", expected)));
   }
 
   #[test]
   fn parse_selection_statement_if() {
-    let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
-                                    Box::new(syntax::Expr::Variable("foo".into())),
-                                    Box::new(syntax::Expr::IntConst(10)));
+    let cond = syntax::Expr::Binary(
+      syntax::BinaryOp::LT,
+      Box::new(syntax::Expr::Variable("foo".into())),
+      Box::new(syntax::Expr::IntConst(10)),
+    );
     let ret = Box::new(syntax::Expr::BoolConst(false));
-    let st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(ret))));
-    let body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![st] }));
+    let st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(ret),
+    )));
+    let body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: vec![st],
+    }));
     let rest = syntax::SelectionRestStatement::Statement(Box::new(body));
     let expected = syntax::SelectionStatement {
       cond: Box::new(cond),
       rest,
     };
 
-    assert_eq!(selection_statement("if (foo < 10) { return false; }K"), Ok(("K", expected.clone())));
-    assert_eq!(selection_statement("if \n(foo<10\n) \t{return false;}K"), Ok(("K", expected)));
+    assert_eq!(
+      selection_statement("if (foo < 10) { return false; }K"),
+      Ok(("K", expected.clone()))
+    );
+    assert_eq!(
+      selection_statement("if \n(foo<10\n) \t{return false;}K"),
+      Ok(("K", expected))
+    );
   }
 
   #[test]
   fn parse_selection_statement_if_else() {
-    let cond = syntax::Expr::Binary(syntax::BinaryOp::LT,
-                                    Box::new(syntax::Expr::Variable("foo".into())),
-                                    Box::new(syntax::Expr::IntConst(10)));
+    let cond = syntax::Expr::Binary(
+      syntax::BinaryOp::LT,
+      Box::new(syntax::Expr::Variable("foo".into())),
+      Box::new(syntax::Expr::IntConst(10)),
+    );
     let if_ret = Box::new(syntax::Expr::FloatConst(0.));
-    let if_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(if_ret))));
-    let if_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![if_st] }));
+    let if_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(if_ret),
+    )));
+    let if_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: vec![if_st],
+    }));
     let else_ret = Box::new(syntax::Expr::Variable("foo".into()));
-    let else_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(else_ret))));
-    let else_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: vec![else_st] }));
+    let else_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(else_ret),
+    )));
+    let else_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: vec![else_st],
+    }));
     let rest = syntax::SelectionRestStatement::Else(Box::new(if_body), Box::new(else_body));
     let expected = syntax::SelectionStatement {
       cond: Box::new(cond),
       rest,
     };
 
-    assert_eq!(selection_statement("if (foo < 10) { return 0.f; } else { return foo; }"), Ok(("", expected.clone())));
-    assert_eq!(selection_statement("if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"), Ok(("", expected)));
+    assert_eq!(
+      selection_statement("if (foo < 10) { return 0.f; } else { return foo; }"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      selection_statement("if \n(foo<10\n) \t{return 0.f\t;\n\n}\n else{\n\t return foo   ;}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -2863,53 +3629,44 @@ mod tests {
     let head = Box::new(syntax::Expr::Variable("foo".into()));
     let expected = syntax::SwitchStatement {
       head,
-      body: Vec::new()
+      body: Vec::new(),
     };
 
-    assert_eq!(switch_statement("switch (foo) {}"), Ok(("", expected.clone())));
-    assert_eq!(switch_statement("switch(foo){}"), Ok(("", expected.clone())));
-    assert_eq!(switch_statement("switch\n\n (  foo  \t   \n) { \n\n   }"), Ok(("", expected)));
+    assert_eq!(
+      switch_statement("switch (foo) {}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      switch_statement("switch(foo){}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      switch_statement("switch\n\n (  foo  \t   \n) { \n\n   }"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
   fn parse_switch_statement_cases() {
     let head = Box::new(syntax::Expr::Variable("foo".into()));
-    let case0 = syntax::Statement::Simple(
-                  Box::new(
-                    syntax::SimpleStatement::CaseLabel(
-                      syntax::CaseLabel::Case(
-                        Box::new(
-                          syntax::Expr::IntConst(0)
-                        )
-                      )
-                    )
-                  ));
-    let case1 = syntax::Statement::Simple(
-                  Box::new(
-                    syntax::SimpleStatement::CaseLabel(
-                      syntax::CaseLabel::Case(
-                        Box::new(
-                          syntax::Expr::IntConst(1)
-                        )
-                      )
-                    )
-                  ));
-    let ret = syntax::Statement::Simple(
-                  Box::new(
-                    syntax::SimpleStatement::Jump(
-                      syntax::JumpStatement::Return(
-                        Box::new(
-                          syntax::Expr::UIntConst(12)
-                        )
-                      )
-                    )
-                  ));
+    let case0 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::CaseLabel(
+      syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(0))),
+    )));
+    let case1 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::CaseLabel(
+      syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(1))),
+    )));
+    let ret = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(Box::new(syntax::Expr::UIntConst(12))),
+    )));
     let expected = syntax::SwitchStatement {
       head,
-      body: vec![case0, case1, ret]
+      body: vec![case0, case1, ret],
     };
 
-    assert_eq!(switch_statement("switch (foo) { case 0: case 1: return 12u; }"), Ok(("", expected.clone())));
+    assert_eq!(
+      switch_statement("switch (foo) { case 0: case 1: return 12u; }"),
+      Ok(("", expected.clone()))
+    );
   }
 
   #[test]
@@ -2928,100 +3685,121 @@ mod tests {
 
   #[test]
   fn parse_iteration_statement_while_empty() {
-    let cond = syntax::Condition::Expr(
-                 Box::new(
-                   syntax::Expr::Binary(syntax::BinaryOp::GTE,
-                                        Box::new(syntax::Expr::Variable("a".into())),
-                                        Box::new(syntax::Expr::Variable("b".into())))
-                 )
-               );
-    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
+    let cond = syntax::Condition::Expr(Box::new(syntax::Expr::Binary(
+      syntax::BinaryOp::GTE,
+      Box::new(syntax::Expr::Variable("a".into())),
+      Box::new(syntax::Expr::Variable("b".into())),
+    )));
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: Vec::new(),
+    }));
     let expected = syntax::IterationStatement::While(cond, Box::new(st));
 
-    assert_eq!(iteration_statement("while (a >= b) {}"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("while(a>=b){}"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("while (  a >=\n\tb  )\t  {   \n}"), Ok(("", expected)));
+    assert_eq!(
+      iteration_statement("while (a >= b) {}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("while(a>=b){}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("while (  a >=\n\tb  )\t  {   \n}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
   fn parse_iteration_statement_do_while_empty() {
-    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
-    let cond = Box::new(
-                 syntax::Expr::Binary(syntax::BinaryOp::GTE,
-                                      Box::new(syntax::Expr::Variable("a".into())),
-                                      Box::new(syntax::Expr::Variable("b".into())))
-               );
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: Vec::new(),
+    }));
+    let cond = Box::new(syntax::Expr::Binary(
+      syntax::BinaryOp::GTE,
+      Box::new(syntax::Expr::Variable("a".into())),
+      Box::new(syntax::Expr::Variable("b".into())),
+    ));
     let expected = syntax::IterationStatement::DoWhile(Box::new(st), cond);
 
-    assert_eq!(iteration_statement("do {} while (a >= b);"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("do{}while(a>=b);"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("do \n {\n} while (  a >=\n\tb  )\t  \n;"), Ok(("", expected)));
+    assert_eq!(
+      iteration_statement("do {} while (a >= b);"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("do{}while(a>=b);"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("do \n {\n} while (  a >=\n\tb  )\t  \n;"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
   fn parse_iteration_statement_for_empty() {
-    let init =
-      syntax::ForInitStatement::Declaration(
-        Box::new(
-          syntax::Declaration::InitDeclaratorList(
-            syntax::InitDeclaratorList {
-              head: syntax::SingleDeclaration {
-                ty: syntax::FullySpecifiedType {
-                  qualifier: None,
-                  ty: syntax::TypeSpecifier {
-                    ty: syntax::TypeSpecifierNonArray::Float,
-                    array_specifier: None
-                  }
-                },
-                name: Some("i".into()),
-                array_specifier: None,
-                initializer: Some(syntax::Initializer::Simple(Box::new(syntax::Expr::FloatConst(0.))))
-              },
-              tail: Vec::new()
-            }
-          )
-        )
-      );
-    let rest =
-      syntax::ForRestStatement {
-        condition:
-          Some(
-            syntax::Condition::Expr(
-              Box::new(
-                syntax::Expr::Binary(
-                  syntax::BinaryOp::LTE,
-                  Box::new(syntax::Expr::Variable("i".into())),
-                  Box::new(syntax::Expr::FloatConst(10.))
-                )
-              )
-            )
-          ),
-        post_expr:
-          Some(
-            Box::new(
-              syntax::Expr::Unary(
-                syntax::UnaryOp::Inc,
-                Box::new(syntax::Expr::Variable("i".into()))
-              )
-            )
-          )
-      };
-    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement { statement_list: Vec::new() }));
+    let init = syntax::ForInitStatement::Declaration(Box::new(
+      syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
+        head: syntax::SingleDeclaration {
+          ty: syntax::FullySpecifiedType {
+            qualifier: None,
+            ty: syntax::TypeSpecifier {
+              ty: syntax::TypeSpecifierNonArray::Float,
+              array_specifier: None,
+            },
+          },
+          name: Some("i".into()),
+          array_specifier: None,
+          initializer: Some(syntax::Initializer::Simple(Box::new(
+            syntax::Expr::FloatConst(0.),
+          ))),
+        },
+        tail: Vec::new(),
+      }),
+    ));
+    let rest = syntax::ForRestStatement {
+      condition: Some(syntax::Condition::Expr(Box::new(syntax::Expr::Binary(
+        syntax::BinaryOp::LTE,
+        Box::new(syntax::Expr::Variable("i".into())),
+        Box::new(syntax::Expr::FloatConst(10.)),
+      )))),
+      post_expr: Some(Box::new(syntax::Expr::Unary(
+        syntax::UnaryOp::Inc,
+        Box::new(syntax::Expr::Variable("i".into())),
+      ))),
+    };
+    let st = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
+      statement_list: Vec::new(),
+    }));
     let expected = syntax::IterationStatement::For(init, rest, Box::new(st));
 
-    assert_eq!(iteration_statement("for (float i = 0.f; i <= 10.f; ++i) {}"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("for(float i=0.f;i<=10.f;++i){}"), Ok(("", expected.clone())));
-    assert_eq!(iteration_statement("for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<=  10.f; \n++i\n)\n{\n}"), Ok(("", expected)));
+    assert_eq!(
+      iteration_statement("for (float i = 0.f; i <= 10.f; ++i) {}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("for(float i=0.f;i<=10.f;++i){}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      iteration_statement("for\n\t (  \t\n\nfloat \ni \t=\n0.f\n;\ni\t<=  10.f; \n++i\n)\n{\n}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
   fn parse_jump_continue() {
-    assert_eq!(jump_statement("continue;"), Ok(("", syntax::JumpStatement::Continue)));
+    assert_eq!(
+      jump_statement("continue;"),
+      Ok(("", syntax::JumpStatement::Continue))
+    );
   }
 
   #[test]
   fn parse_jump_break() {
-    assert_eq!(jump_statement("break;"), Ok(("", syntax::JumpStatement::Break)));
+    assert_eq!(
+      jump_statement("break;"),
+      Ok(("", syntax::JumpStatement::Break))
+    );
   }
 
   #[test]
@@ -3032,7 +3810,10 @@ mod tests {
 
   #[test]
   fn parse_jump_discard() {
-    assert_eq!(jump_statement("discard;"), Ok(("", syntax::JumpStatement::Discard)));
+    assert_eq!(
+      jump_statement("discard;"),
+      Ok(("", syntax::JumpStatement::Discard))
+    );
   }
 
   #[test]
@@ -3045,69 +3826,57 @@ mod tests {
 
   #[test]
   fn parse_compound_statement_empty() {
-    let expected = syntax::CompoundStatement { statement_list: Vec::new() };
+    let expected = syntax::CompoundStatement {
+      statement_list: Vec::new(),
+    };
 
     assert_eq!(compound_statement("{}"), Ok(("", expected)));
   }
 
   #[test]
   fn parse_compound_statement() {
-    let st0 = syntax::Statement::Simple(
-                Box::new(
-                  syntax::SimpleStatement::Selection(
-                    syntax::SelectionStatement {
-                      cond: Box::new(syntax::Expr::BoolConst(true)),
-                      rest: syntax::SelectionRestStatement::Statement(
-                              Box::new(
-                                syntax::Statement::Compound(
-                                  Box::new(syntax::CompoundStatement { statement_list: Vec::new() })
-                                )
-                              )
-                            )
-                    }
-                  )
-                )
-              );
-    let st1 = syntax::Statement::Simple(
-                Box::new(
-                  syntax::SimpleStatement::Declaration(
-                    syntax::Declaration::InitDeclaratorList(
-                      syntax::InitDeclaratorList {
-                        head: syntax::SingleDeclaration {
-                          ty: syntax::FullySpecifiedType {
-                            qualifier: None,
-                            ty: syntax::TypeSpecifier {
-                              ty: syntax::TypeSpecifierNonArray::ISampler3D,
-                              array_specifier: None
-                            }
-                          },
-                          name: Some("x".into()),
-                          array_specifier: None,
-                          initializer: None
-                        },
-                        tail: Vec::new()
-                      }
-                    )
-                  )
-                )
-              );
-    let st2 = syntax::Statement::Simple(
-                Box::new(
-                  syntax::SimpleStatement::Jump(
-                    syntax::JumpStatement::Return(
-                      Box::new(
-                        syntax::Expr::IntConst(42)
-                      )
-                    )
-                  )
-                )
-              );
+    let st0 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Selection(
+      syntax::SelectionStatement {
+        cond: Box::new(syntax::Expr::BoolConst(true)),
+        rest: syntax::SelectionRestStatement::Statement(Box::new(syntax::Statement::Compound(
+          Box::new(syntax::CompoundStatement {
+            statement_list: Vec::new(),
+          }),
+        ))),
+      },
+    )));
+    let st1 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Declaration(
+      syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
+        head: syntax::SingleDeclaration {
+          ty: syntax::FullySpecifiedType {
+            qualifier: None,
+            ty: syntax::TypeSpecifier {
+              ty: syntax::TypeSpecifierNonArray::ISampler3D,
+              array_specifier: None,
+            },
+          },
+          name: Some("x".into()),
+          array_specifier: None,
+          initializer: None,
+        },
+        tail: Vec::new(),
+      }),
+    )));
+    let st2 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(Box::new(syntax::Expr::IntConst(42))),
+    )));
     let expected = syntax::CompoundStatement {
-      statement_list: vec![st0, st1, st2]
+      statement_list: vec![st0, st1, st2],
     };
 
-    assert_eq!(compound_statement("{ if (true) {} isampler3D x; return 42 ; }"), Ok(("", expected.clone())));
-    assert_eq!(compound_statement("{if(true){}isampler3D x;return 42;}"), Ok(("", expected)));
+    assert_eq!(
+      compound_statement("{ if (true) {} isampler3D x; return 42 ; }"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      compound_statement("{if(true){}isampler3D x;return 42;}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -3116,35 +3885,36 @@ mod tests {
       qualifier: None,
       ty: syntax::TypeSpecifier {
         ty: syntax::TypeSpecifierNonArray::IImage2DArray,
-        array_specifier: None
-      }
+        array_specifier: None,
+      },
     };
     let fp = syntax::FunctionPrototype {
       ty: rt,
       name: "foo".into(),
-      parameters: Vec::new()
+      parameters: Vec::new(),
     };
-    let st0 = syntax::Statement::Simple(
-                Box::new(
-                  syntax::SimpleStatement::Jump(
-                    syntax::JumpStatement::Return(
-                      Box::new(
-                        syntax::Expr::Variable("bar".into())
-                      )
-                    )
-                  )
-                )
-              );
+    let st0 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
+      syntax::JumpStatement::Return(Box::new(syntax::Expr::Variable("bar".into()))),
+    )));
     let expected = syntax::FunctionDefinition {
       prototype: fp,
       statement: syntax::CompoundStatement {
-        statement_list: vec![st0]
-      }
+        statement_list: vec![st0],
+      },
     };
 
-    assert_eq!(function_definition("iimage2DArray foo() { return bar; }"), Ok(("", expected.clone())));
-    assert_eq!(function_definition("iimage2DArray \tfoo\n()\n \n{\n return \nbar\n;}"), Ok(("", expected.clone())));
-    assert_eq!(function_definition("iimage2DArray foo(){return bar;}"), Ok(("", expected)));
+    assert_eq!(
+      function_definition("iimage2DArray foo() { return bar; }"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      function_definition("iimage2DArray \tfoo\n()\n \n{\n return \nbar\n;}"),
+      Ok(("", expected.clone()))
+    );
+    assert_eq!(
+      function_definition("iimage2DArray foo(){return bar;}"),
+      Ok(("", expected))
+    );
   }
 
   #[test]
@@ -3156,38 +3926,37 @@ mod tests {
           qualifier: None,
           ty: syntax::TypeSpecifier {
             ty: syntax::TypeSpecifierNonArray::Void,
-            array_specifier: None
-          }
+            array_specifier: None,
+          },
         },
         name: "main".into(),
         parameters: Vec::new(),
       },
       statement: syntax::CompoundStatement {
-        statement_list: Vec::new()
-      }
+        statement_list: Vec::new(),
+      },
     });
     let buffer_block =
-      syntax::ExternalDeclaration::Declaration(
-        syntax::Declaration::Block(
-          syntax::Block {
-            qualifier: syntax::TypeQualifier {
-              qualifiers: syntax::NonEmpty(vec![syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)])
-            },
-            name: "Foo".into(),
-            fields: vec![
-              syntax::StructFieldSpecifier {
-                qualifier: None,
-                ty: syntax::TypeSpecifier {
-                  ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
-                  array_specifier: None
-                },
-                identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new("tiles", Some(syntax::ArraySpecifier::Unsized))])
-              }
-            ],
-            identifier: Some("main_tiles".into())
-          }
-        )
-      );
+      syntax::ExternalDeclaration::Declaration(syntax::Declaration::Block(syntax::Block {
+        qualifier: syntax::TypeQualifier {
+          qualifiers: syntax::NonEmpty(vec![syntax::TypeQualifierSpec::Storage(
+            syntax::StorageQualifier::Buffer,
+          )]),
+        },
+        name: "Foo".into(),
+        fields: vec![syntax::StructFieldSpecifier {
+          qualifier: None,
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
+            array_specifier: None,
+          },
+          identifiers: syntax::NonEmpty(vec![syntax::ArrayedIdentifier::new(
+            "tiles",
+            Some(syntax::ArraySpecifier::Unsized),
+          )]),
+        }],
+        identifier: Some("main_tiles".into()),
+      }));
     let expected = syntax::TranslationUnit(syntax::NonEmpty(vec![buffer_block, main_fn]));
 
     assert_eq!(translation_unit(src), Ok(("", expected)));
@@ -3198,36 +3967,36 @@ mod tests {
     let src = include_str!("../data/tests/layout_buffer_block_0.glsl");
     let layout = syntax::LayoutQualifier {
       ids: syntax::NonEmpty(vec![
-        syntax::LayoutQualifierSpec::Identifier("set".into(), Some(Box::new(syntax::Expr::IntConst(0)))),
-        syntax::LayoutQualifierSpec::Identifier("binding".into(), Some(Box::new(syntax::Expr::IntConst(0)))),
-      ])
+        syntax::LayoutQualifierSpec::Identifier(
+          "set".into(),
+          Some(Box::new(syntax::Expr::IntConst(0))),
+        ),
+        syntax::LayoutQualifierSpec::Identifier(
+          "binding".into(),
+          Some(Box::new(syntax::Expr::IntConst(0))),
+        ),
+      ]),
     };
     let type_qual = syntax::TypeQualifier {
       qualifiers: syntax::NonEmpty(vec![
         syntax::TypeQualifierSpec::Layout(layout),
-        syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer)
-      ])
+        syntax::TypeQualifierSpec::Storage(syntax::StorageQualifier::Buffer),
+      ]),
     };
     let block =
-      syntax::ExternalDeclaration::Declaration(
-        syntax::Declaration::Block(
-          syntax::Block {
-            qualifier: type_qual,
-            name: "Foo".into(),
-            fields: vec![
-              syntax::StructFieldSpecifier {
-                qualifier: None,
-                ty: syntax::TypeSpecifier {
-                  ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
-                  array_specifier: None
-                },
-                identifiers: syntax::NonEmpty(vec!["a".into()])
-              }
-            ],
-            identifier: Some("foo".into())
-          }
-        )
-      );
+      syntax::ExternalDeclaration::Declaration(syntax::Declaration::Block(syntax::Block {
+        qualifier: type_qual,
+        name: "Foo".into(),
+        fields: vec![syntax::StructFieldSpecifier {
+          qualifier: None,
+          ty: syntax::TypeSpecifier {
+            ty: syntax::TypeSpecifierNonArray::TypeName("char".into()),
+            array_specifier: None,
+          },
+          identifiers: syntax::NonEmpty(vec!["a".into()]),
+        }],
+        identifier: Some("foo".into()),
+      }));
 
     let expected = syntax::TranslationUnit(syntax::NonEmpty(vec![block]));
 
@@ -3241,30 +4010,41 @@ mod tests {
 
   #[test]
   fn parse_pp_version_profile() {
-    assert_eq!(pp_version_profile("core"), Ok(("", syntax::PreprocessorVersionProfile::Core)));
-    assert_eq!(pp_version_profile("compatibility"), Ok(("", syntax::PreprocessorVersionProfile::Compatibility)));
-    assert_eq!(pp_version_profile("es"), Ok(("", syntax::PreprocessorVersionProfile::ES)));
+    assert_eq!(
+      pp_version_profile("core"),
+      Ok(("", syntax::PreprocessorVersionProfile::Core))
+    );
+    assert_eq!(
+      pp_version_profile("compatibility"),
+      Ok(("", syntax::PreprocessorVersionProfile::Compatibility))
+    );
+    assert_eq!(
+      pp_version_profile("es"),
+      Ok(("", syntax::PreprocessorVersionProfile::ES))
+    );
   }
 
   #[test]
   fn parse_pp_version() {
     assert_eq!(
       pp_version("#version 450\n"),
-      Ok(("",
-         syntax::PreprocessorVersion {
-           version: 450,
-           profile: None,
-         }
+      Ok((
+        "",
+        syntax::PreprocessorVersion {
+          version: 450,
+          profile: None,
+        }
       ))
     );
 
     assert_eq!(
       pp_version("#version 450 core\n"),
-      Ok(("",
-         syntax::PreprocessorVersion {
-           version: 450,
-           profile: Some(syntax::PreprocessorVersionProfile::Core)
-         }
+      Ok((
+        "",
+        syntax::PreprocessorVersion {
+          version: 450,
+          profile: Some(syntax::PreprocessorVersionProfile::Core)
+        }
       ))
     );
   }
@@ -3273,21 +4053,23 @@ mod tests {
   fn parse_pp_version_newline() {
     assert_eq!(
       preprocessor("#version 450\n"),
-      Ok(("",
-         syntax::Preprocessor::Version(syntax::PreprocessorVersion {
-           version: 450,
-           profile: None,
-         })
+      Ok((
+        "",
+        syntax::Preprocessor::Version(syntax::PreprocessorVersion {
+          version: 450,
+          profile: None,
+        })
       ))
     );
 
     assert_eq!(
       preprocessor("#version 450 core\n"),
-      Ok(("",
-         syntax::Preprocessor::Version(syntax::PreprocessorVersion {
-           version: 450,
-           profile: Some(syntax::PreprocessorVersionProfile::Core)
-         })
+      Ok((
+        "",
+        syntax::Preprocessor::Version(syntax::PreprocessorVersion {
+          version: 450,
+          profile: Some(syntax::PreprocessorVersionProfile::Core)
+        })
       ))
     );
   }
@@ -3296,58 +4078,83 @@ mod tests {
   fn parse_define() {
     assert_eq!(
       preprocessor("#define test 1.0\n"),
-      Ok(("",
-         syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-           name: "test".into(),
-           value: syntax::Expr::DoubleConst(1.0)
-         })
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+          name: "test".into(),
+          value: syntax::Expr::DoubleConst(1.0)
+        })
       ))
     );
 
     assert_eq!(
       preprocessor("#define test123 .0f\n"),
-      Ok(("",
-         syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-           name: "test123".into(),
-           value: syntax::Expr::FloatConst(0.0)
-         })
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+          name: "test123".into(),
+          value: syntax::Expr::FloatConst(0.0)
+        })
       ))
     );
 
     assert_eq!(
       preprocessor("#define test 1\n"),
-      Ok(("",
-         syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-           name: "test".into(),
-           value: syntax::Expr::IntConst(1)
-         })
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+          name: "test".into(),
+          value: syntax::Expr::IntConst(1)
+        })
       ))
     );
   }
 
   #[test]
   fn parse_pp_extension_name() {
-    assert_eq!(pp_extension_name("all"), Ok(("", syntax::PreprocessorExtensionName::All)));
-    assert_eq!(pp_extension_name("GL_foobar_extension "), Ok((" ", syntax::PreprocessorExtensionName::Specific("GL_foobar_extension".to_owned()))));
+    assert_eq!(
+      pp_extension_name("all"),
+      Ok(("", syntax::PreprocessorExtensionName::All))
+    );
+    assert_eq!(
+      pp_extension_name("GL_foobar_extension "),
+      Ok((
+        " ",
+        syntax::PreprocessorExtensionName::Specific("GL_foobar_extension".to_owned())
+      ))
+    );
   }
 
   #[test]
   fn parse_pp_extension_behavior() {
-    assert_eq!(pp_extension_behavior("require"), Ok(("", syntax::PreprocessorExtensionBehavior::Require)));
-    assert_eq!(pp_extension_behavior("enable"), Ok(("", syntax::PreprocessorExtensionBehavior::Enable)));
-    assert_eq!(pp_extension_behavior("warn"), Ok(("", syntax::PreprocessorExtensionBehavior::Warn)));
-    assert_eq!(pp_extension_behavior("disable"), Ok(("", syntax::PreprocessorExtensionBehavior::Disable)));
+    assert_eq!(
+      pp_extension_behavior("require"),
+      Ok(("", syntax::PreprocessorExtensionBehavior::Require))
+    );
+    assert_eq!(
+      pp_extension_behavior("enable"),
+      Ok(("", syntax::PreprocessorExtensionBehavior::Enable))
+    );
+    assert_eq!(
+      pp_extension_behavior("warn"),
+      Ok(("", syntax::PreprocessorExtensionBehavior::Warn))
+    );
+    assert_eq!(
+      pp_extension_behavior("disable"),
+      Ok(("", syntax::PreprocessorExtensionBehavior::Disable))
+    );
   }
 
   #[test]
   fn parse_pp_extension() {
     assert_eq!(
       pp_extension("#extension all: require\n"),
-      Ok(("",
-         syntax::PreprocessorExtension {
-           name: syntax::PreprocessorExtensionName::All,
-           behavior: Some(syntax::PreprocessorExtensionBehavior::Require)
-         }
+      Ok((
+        "",
+        syntax::PreprocessorExtension {
+          name: syntax::PreprocessorExtensionName::All,
+          behavior: Some(syntax::PreprocessorExtensionBehavior::Require)
+        }
       ))
     );
   }
@@ -3355,13 +4162,13 @@ mod tests {
   #[test]
   fn parse_dot_field_expr_array() {
     let src = "a[0].xyz;";
-    let expected =
-      syntax::Expr::Dot(
-        Box::new(syntax::Expr::Bracket(
-          Box::new(syntax::Expr::Variable("a".into())),
-          syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(0))))),
-        "xyz".into()
-      );
+    let expected = syntax::Expr::Dot(
+      Box::new(syntax::Expr::Bracket(
+        Box::new(syntax::Expr::Variable("a".into())),
+        syntax::ArraySpecifier::ExplicitlySized(Box::new(syntax::Expr::IntConst(0))),
+      )),
+      "xyz".into(),
+    );
 
     assert_eq!(expr(src), Ok((";", expected)));
   }
@@ -3370,43 +4177,39 @@ mod tests {
   fn parse_dot_field_expr_statement() {
     let src = "vec3 v = smoothstep(vec3(border_width), vec3(0.0), v_barycenter).zyx;";
     let fun = syntax::FunIdentifier::Identifier("smoothstep".into());
-    let args =
-      vec![
-        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".into()), vec![syntax::Expr::Variable("border_width".into())]),
-        syntax::Expr::FunCall(syntax::FunIdentifier::Identifier("vec3".into()), vec![syntax::Expr::DoubleConst(0.)]),
-        syntax::Expr::Variable("v_barycenter".into())
-      ];
-    let ini =
-      syntax::Initializer::Simple(
-        Box::new(
-          syntax::Expr::Dot(Box::new(syntax::Expr::FunCall(fun, args)), "zyx".into())
-        )
-      );
+    let args = vec![
+      syntax::Expr::FunCall(
+        syntax::FunIdentifier::Identifier("vec3".into()),
+        vec![syntax::Expr::Variable("border_width".into())],
+      ),
+      syntax::Expr::FunCall(
+        syntax::FunIdentifier::Identifier("vec3".into()),
+        vec![syntax::Expr::DoubleConst(0.)],
+      ),
+      syntax::Expr::Variable("v_barycenter".into()),
+    ];
+    let ini = syntax::Initializer::Simple(Box::new(syntax::Expr::Dot(
+      Box::new(syntax::Expr::FunCall(fun, args)),
+      "zyx".into(),
+    )));
     let sd = syntax::SingleDeclaration {
       ty: syntax::FullySpecifiedType {
-          qualifier: None,
-          ty: syntax::TypeSpecifier {
-            ty: syntax::TypeSpecifierNonArray::Vec3,
-            array_specifier: None
-          }
+        qualifier: None,
+        ty: syntax::TypeSpecifier {
+          ty: syntax::TypeSpecifierNonArray::Vec3,
+          array_specifier: None,
+        },
       },
       name: Some("v".into()),
       array_specifier: None,
-      initializer: Some(ini)
+      initializer: Some(ini),
     };
-    let expected =
-      syntax::Statement::Simple(
-        Box::new(
-          syntax::SimpleStatement::Declaration(
-            syntax::Declaration::InitDeclaratorList(
-              syntax::InitDeclaratorList {
-                head: sd,
-                tail: Vec::new()
-              }
-            )
-          )
-        )
-      );
+    let expected = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Declaration(
+      syntax::Declaration::InitDeclaratorList(syntax::InitDeclaratorList {
+        head: sd,
+        tail: Vec::new(),
+      }),
+    )));
 
     assert_eq!(statement(src), Ok(("", expected)));
   }
