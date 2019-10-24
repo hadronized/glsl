@@ -1121,7 +1121,7 @@ pub struct ForRestStatement {
 pub enum JumpStatement {
   Continue,
   Break,
-  Return(Box<Expr>),
+  Return(Option<Box<Expr>>),
   Discard,
 }
 
