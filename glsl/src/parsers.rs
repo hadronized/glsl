@@ -396,7 +396,10 @@ fn floating_frac(i: &str) -> ParserResult<()> {
 
 /// Parse the « middle » part of a floating value – i.e. fractional and exponential parts.
 fn floating_middle(i: &str) -> ParserResult<&str> {
-  recognize(preceded(floating_frac, opt(floating_exponent)))(i)
+  recognize(alt((
+    value((), preceded(floating_frac, opt(floating_exponent))),
+    value((), preceded(nonzero_digits, floating_exponent)),
+  )))(i)
 }
 
 /// Parse a float literal string.
