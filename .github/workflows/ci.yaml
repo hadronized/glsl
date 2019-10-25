@@ -66,23 +66,25 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cargo update
+        run: cargo update
       - name: Build glsl
         run: |
-          cd %GITHUB_WORKSPACE%\glsl
+          cd glsl
           cargo build --verbose
       - name: Test glsl
         run: |
-          cd %GITHUB_WORKSPACE%\glsl
+          cd glsl
           cargo test --verbose
       - name: Switch to nightly Rust
         run: rustup default nightly
       - name: Build glsl-quasiquote (nightly)
         run: |
-          cd %GITHUB_WORKSPACE%\glsl-quasiquote
+          cd glsl-quasiquote
           cargo build --verbose
       - name: Test glsl-quasiquote (nightly)
         run: |
-          cd %GITHUB_WORKSPACE%\glsl-quasiquote
+          cd glsl-quasiquote
           cargo test --verbose
 
   check-readme:
@@ -97,3 +99,10 @@ jobs:
           cargo sync-readme -c
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo sync-readme -c
+
+  check-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Ensure code is correctly formatted
+        run: cargo fmt -q -- --check
