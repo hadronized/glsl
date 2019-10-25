@@ -97,3 +97,10 @@ jobs:
           cargo sync-readme -c
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo sync-readme -c
+
+  check-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Ensure code is correctly formatted
+        run: cargo fmt -q -- --check
