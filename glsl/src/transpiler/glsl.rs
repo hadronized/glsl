@@ -1323,7 +1323,9 @@ where
     }
     syntax::JumpStatement::Return(ref e) => {
       let _ = f.write_str("return ");
-      show_expr(f, e);
+      if let Some(e) = e {
+        show_expr(f, e);
+      }
       let _ = f.write_str(";\n");
     }
   }

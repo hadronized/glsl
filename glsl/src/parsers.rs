@@ -1498,10 +1498,10 @@ pub fn jump_statement_return(i: &str) -> ParserResult<syntax::JumpStatement> {
   map(
     delimited(
       terminated(keyword("return"), blank),
-      terminated(expr, blank),
+      opt(terminated(expr, blank)),
       char(';'),
     ),
-    |e| syntax::JumpStatement::Return(Box::new(e)),
+    |e| syntax::JumpStatement::Return(e.map(|e| Box::new(e))),
   )(i)
 }
 
@@ -3566,7 +3566,7 @@ mod tests {
     );
     let ret = Box::new(syntax::Expr::BoolConst(false));
     let st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(ret),
+      syntax::JumpStatement::Return(Some(ret)),
     )));
     let body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
       statement_list: vec![st],
@@ -3596,14 +3596,14 @@ mod tests {
     );
     let if_ret = Box::new(syntax::Expr::FloatConst(0.));
     let if_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(if_ret),
+      syntax::JumpStatement::Return(Some(if_ret)),
     )));
     let if_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
       statement_list: vec![if_st],
     }));
     let else_ret = Box::new(syntax::Expr::Variable("foo".into()));
     let else_st = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(else_ret),
+      syntax::JumpStatement::Return(Some(else_ret)),
     )));
     let else_body = syntax::Statement::Compound(Box::new(syntax::CompoundStatement {
       statement_list: vec![else_st],
@@ -3656,7 +3656,7 @@ mod tests {
       syntax::CaseLabel::Case(Box::new(syntax::Expr::IntConst(1))),
     )));
     let ret = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(Box::new(syntax::Expr::UIntConst(12))),
+      syntax::JumpStatement::Return(Some(Box::new(syntax::Expr::UIntConst(12)))),
     )));
     let expected = syntax::SwitchStatement {
       head,
@@ -3804,8 +3804,14 @@ mod tests {
 
   #[test]
   fn parse_jump_return() {
-    let expected = syntax::JumpStatement::Return(Box::new(syntax::Expr::IntConst(3)));
+    let expected = syntax::JumpStatement::Return(Some(Box::new(syntax::Expr::IntConst(3))));
     assert_eq!(jump_statement("return 3;"), Ok(("", expected)));
+  }
+
+  #[test]
+  fn parse_jump_empty_return() {
+    let expected = syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(None));
+    assert_eq!(simple_statement("return;"), Ok(("", expected)));
   }
 
   #[test]
@@ -3819,7 +3825,7 @@ mod tests {
   #[test]
   fn parse_simple_statement_return() {
     let e = syntax::Expr::BoolConst(false);
-    let expected = syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(Box::new(e)));
+    let expected = syntax::SimpleStatement::Jump(syntax::JumpStatement::Return(Some(Box::new(e))));
 
     assert_eq!(simple_statement("return false;"), Ok(("", expected)));
   }
@@ -3863,7 +3869,7 @@ mod tests {
       }),
     )));
     let st2 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(Box::new(syntax::Expr::IntConst(42))),
+      syntax::JumpStatement::Return(Some(Box::new(syntax::Expr::IntConst(42)))),
     )));
     let expected = syntax::CompoundStatement {
       statement_list: vec![st0, st1, st2],
@@ -3894,7 +3900,7 @@ mod tests {
       parameters: Vec::new(),
     };
     let st0 = syntax::Statement::Simple(Box::new(syntax::SimpleStatement::Jump(
-      syntax::JumpStatement::Return(Box::new(syntax::Expr::Variable("bar".into()))),
+      syntax::JumpStatement::Return(Some(Box::new(syntax::Expr::Variable("bar".into())))),
     )));
     let expected = syntax::FunctionDefinition {
       prototype: fp,
