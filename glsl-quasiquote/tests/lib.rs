@@ -20,9 +20,54 @@ fn understands_version_and_extension() {
 }
 
 #[test]
-fn understands_define() {
+fn understands_pp_define_undef() {
   let _ = glsl! {
     #define foo 32
+    #undef foo
+    void main() {
+    }
+  };
+}
+
+#[test]
+fn understands_pp_tests() {
+  let _ = glsl! {
+    #else
+    #elseif 0
+    #endif
+    #if 0
+    #ifdef foo
+    #ifndef foo
+    void main() {
+    }
+  };
+}
+
+#[test]
+fn understands_pp_files() {
+  let _ = glsl! {
+    #include <filename>
+    #include "filename"
+    #line 2
+    #line 2 4
+    void main() {
+    }
+  };
+}
+
+#[test]
+fn understands_pp_error() {
+  let _ = glsl! {
+    #error some command
+    void main() {
+    }
+  };
+}
+
+#[test]
+fn understands_pp_pragma() {
+  let _ = glsl! {
+    #pragma some flag
     void main() {
     }
   };
