@@ -1094,7 +1094,10 @@ fn tokenize_jump_statement(j: &syntax::JumpStatement) -> TokenStream {
     syntax::JumpStatement::Break => quote! { glsl::syntax::JumpStatement::Break },
     syntax::JumpStatement::Discard => quote! { glsl::syntax::JumpStatement::Discard },
     syntax::JumpStatement::Return(ref e) => {
-      let e = e.as_ref().map(|e| Box::new(tokenize_expr(e)).quote()).quote();
+      let e = e
+        .as_ref()
+        .map(|e| Box::new(tokenize_expr(e)).quote())
+        .quote();
       quote! { glsl::syntax::JumpStatement::Return(#e) }
     }
   }
