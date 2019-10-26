@@ -467,8 +467,7 @@ impl Host for syntax::PreprocessorDefine {
     let visit = visitor.visit_preprocessor_define(self);
 
     if visit == Visit::Children {
-      self.name.visit(visitor);
-      self.value.visit(visitor);
+      self.ident.visit(visitor);
     }
   }
 }
@@ -478,11 +477,7 @@ impl Host for syntax::PreprocessorElseIf {
   where
     V: Visitor,
   {
-    let visit = visitor.visit_preprocessor_elseif(self);
-
-    if visit == Visit::Children {
-      self.expr.visit(visitor);
-    }
+    let _ = visitor.visit_preprocessor_elseif(self);
   }
 }
 
@@ -500,11 +495,7 @@ impl Host for syntax::PreprocessorIf {
   where
     V: Visitor,
   {
-    let visit = visitor.visit_preprocessor_if(self);
-
-    if visit == Visit::Children {
-      self.expr.visit(visitor);
-    }
+    let _ = visitor.visit_preprocessor_if(self);
   }
 }
 
@@ -516,7 +507,7 @@ impl Host for syntax::PreprocessorIfDef {
     let visit = visitor.visit_preprocessor_ifdef(self);
 
     if visit == Visit::Children {
-      self.name.visit(visitor);
+      self.ident.visit(visitor);
     }
   }
 }
@@ -529,7 +520,7 @@ impl Host for syntax::PreprocessorIfNDef {
     let visit = visitor.visit_preprocessor_ifndef(self);
 
     if visit == Visit::Children {
-      self.name.visit(visitor);
+      self.ident.visit(visitor);
     }
   }
 }

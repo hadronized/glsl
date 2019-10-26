@@ -1148,9 +1148,6 @@ pub enum JumpStatement {
 /// As it’s important to carry them around the AST because they cannot be substituted in a normal
 /// preprocessor (they’re used by GPU’s compilers), those preprocessor directives are available for
 /// inspection.
-///
-/// > Important note: so far, only `#version` and `#extension` are supported. Other pragmas will be
-/// > added in the future. Stay tuned.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Preprocessor {
   Define(PreprocessorDefine),
@@ -1170,41 +1167,42 @@ pub enum Preprocessor {
 }
 
 /// A #define preprocessor directive.
+///
 /// Allows any expression but only Integer and Float literals make sense
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorDefine {
-  pub name: Identifier,
-  pub value: Expr,
+  pub ident: Identifier,
+  pub value: String,
 }
 
-/// A #else preprocessor directive.
+/// An #else preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorElseIf {
-  pub expr: Expr,
+  pub condition: String,
 }
 
-/// A #error preprocessor directive.
+/// An #error preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorError {
   pub message: String,
 }
 
-/// A #if preprocessor directive.
+/// An #if preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorIf {
-  pub expr: Expr,
+  pub condition: String,
 }
 
-/// A #ifdef preprocessor directive.
+/// An #ifdef preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorIfDef {
-  pub name: Identifier,
+  pub ident: Identifier,
 }
 
 /// A #ifndef preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorIfNDef {
-  pub name: Identifier,
+  pub ident: Identifier,
 }
 
 /// An #include name annotation.
@@ -1216,8 +1214,8 @@ pub struct PreprocessorInclude {
 /// A #line preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
 pub struct PreprocessorLine {
-  pub line: i32,
-  pub source_string_number: Option<i32>,
+  pub line: u32,
+  pub source_string_number: Option<u32>,
 }
 
 /// A #pragma preprocessor directive.
