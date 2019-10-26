@@ -1,3 +1,32 @@
+# 3.0
+
+> ???
+
+## Major changes
+
+- `JumpStatement::Return` now takes an optional `Expr` instead of an `Expr` directly. That allows
+  for parsing statements such as `return;`, which should have
+  been supported from the beginning.
+- Support for missing preprocessor directives:
+  - `#if`.
+  - `#ifdef`.
+  - `#ifndef`.
+  - `#elseif`.
+  - `#else`.
+  - `#endif`.
+  - `#error`.
+  - `#include`.
+  - `#line`.
+  - `#pragma`.
+  - `#undef`.
+
+## Patch changes
+
+- Add a `rustfmt.toml` to reformat everything and stay consistent. If you want contribute, ensure
+  you are correctly using `rustfmt` (either by running `cargo fmt` before submitting a PR or by
+  configuring your editor to format the code for you). This is important, as not respecting the
+  formatting would make your contribution impossible to merge due to a CI check.
+
 # 2.0.1
 
 > Fri 8th Nov 2019
