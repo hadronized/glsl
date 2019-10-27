@@ -4315,6 +4315,37 @@ mod tests {
   }
 
   #[test]
+  fn parse_pp_define_with_args() {
+    assert_eq!(
+      preprocessor("#define add(x, y) (x + y)\n"),
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+          ident: "add".into(),
+          value: "(x + y)".to_owned(),
+        })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_define_multiline() {
+    assert_eq!(
+      preprocessor(
+        r#"#define foo \
+         32\n"#
+      ),
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+          ident: "foo".into(),
+          value: "32".to_owned(),
+        })
+      ))
+    );
+  }
+
+  #[test]
   fn parse_pp_else() {
     assert_eq!(
       preprocessor("#else\n"),
