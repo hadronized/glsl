@@ -4221,4 +4221,12 @@ mod tests {
     assert_eq!(arrayed_identifier("foo[]"), Ok(("", expected.clone())));
     assert_eq!(arrayed_identifier("foo \t\n  [\n\t ]"), Ok(("", expected)));
   }
+
+  #[test]
+  fn parse_nested_parens() {
+    let start = std::time::Instant::now();
+    parens_expr("((((((((1.0f))))))))").unwrap();
+    let elapsed = start.elapsed();
+    assert!(elapsed.as_millis() < 1000, "{} ms", elapsed.as_millis());
+  }
 }
