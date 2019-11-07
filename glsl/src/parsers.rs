@@ -4578,6 +4578,6 @@ mod tests {
     let start = std::time::Instant::now();
     parens_expr("((((((((1.0f))))))))").unwrap();
     let elapsed = start.elapsed();
-    assert!(elapsed.as_millis() < 5000, "{} ms", elapsed.as_millis());
+    assert!(elapsed.as_millis() < 100, "{} ms", elapsed.as_millis());
   }
 }
