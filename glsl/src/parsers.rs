@@ -713,7 +713,10 @@ pub fn primary_expr(i: &str) -> ParserResult<syntax::Expr> {
 
 /// Parse a postfix expression.
 pub fn postfix_expr(i: &str) -> ParserResult<syntax::Expr> {
-  let (i, e) = alt((function_call, primary_expr))(i)?;
+  let (i, e) = alt((
+    function_call_with_identifier,
+    function_call_with_expr_ident_or_expr,
+  ))(i)?;
 
   postfix_part(i, e)
 }
@@ -1006,20 +1009,49 @@ pub fn function_call(i: &str) -> ParserResult<syntax::Expr> {
   )(i)
 }
 
+fn function_call_with_identifier(i: &str) -> ParserResult<syntax::Expr> {
+  map(
+    tuple((
+      map(identifier, syntax::FunIdentifier::Identifier),
+      function_call_args,
+    )),
+    |(fi, args)| syntax::Expr::FunCall(fi, args),
+  )(i)
+}
+
+fn function_call_with_expr_ident_or_expr(i: &str) -> ParserResult<syntax::Expr> {
+  map(
+    tuple((
+      |i| {
+        let (i, e) = primary_expr(i)?;
+        postfix_part(i, e)
+      },
+      opt(function_call_args),
+    )),
+    |(expr, args)| match args {
+      Some(args) => syntax::Expr::FunCall(syntax::FunIdentifier::Expr(Box::new(expr)), args),
+      None => expr,
+    },
+  )(i)
+}
+
 fn function_call_args(i: &str) -> ParserResult<Vec<syntax::Expr>> {
-  alt((
-    map(
-      terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
-      |_| vec![],
-    ),
-    terminated(
-      separated_list(
-        terminated(char(','), blank),
-        terminated(assignment_expr, blank),
+  preceded(
+    terminated(terminated(blank, char('(')), blank),
+    alt((
+      map(
+        terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
+        |_| vec![],
       ),
-      char(')'),
-    ),
-  ))(i)
+      terminated(
+        separated_list(
+          terminated(char(','), blank),
+          terminated(assignment_expr, blank),
+        ),
+        char(')'),
+      ),
+    )),
+  )(i)
 }
 
 fn function_call_header(i: &str) -> ParserResult<syntax::FunIdentifier> {
