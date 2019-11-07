@@ -576,7 +576,7 @@ pub enum FunIdentifier {
   Expr(Box<Expr>),
 }
 
-impl FunIdentifier{
+impl FunIdentifier {
   pub(crate) fn into_expr(self) -> Option<Expr> {
     match self {
       FunIdentifier::Identifier(..) => None,
