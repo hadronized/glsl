@@ -977,24 +977,25 @@ fn function_parameter_declarator(i: &str) -> ParserResult<syntax::FunctionParame
 /// Parse a function call.
 pub fn function_call(i: &str) -> ParserResult<syntax::Expr> {
   map(
-    tuple((
-      terminated(function_call_header, blank),
-      alt((
-        map(
-          terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
-          |_| vec![],
-        ),
-        terminated(
-          separated_list(
-            terminated(char(','), blank),
-            terminated(assignment_expr, blank),
-          ),
-          char(')'),
-        ),
-      )),
-    )),
+    tuple((terminated(function_call_header, blank), function_call_args)),
     |(fi, args)| syntax::Expr::FunCall(fi, args),
   )(i)
+}
+
+fn function_call_args(i: &str) -> ParserResult<Vec<syntax::Expr>> {
+  alt((
+    map(
+      terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
+      |_| vec![],
+    ),
+    terminated(
+      separated_list(
+        terminated(char(','), blank),
+        terminated(assignment_expr, blank),
+      ),
+      char(')'),
+    ),
+  ))(i)
 }
 
 fn function_call_header(i: &str) -> ParserResult<syntax::FunIdentifier> {
