@@ -976,34 +976,23 @@ fn function_parameter_declarator(i: &str) -> ParserResult<syntax::FunctionParame
 
 /// Parse a function call.
 pub fn function_call(i: &str) -> ParserResult<syntax::Expr> {
-  alt((
-    function_call_header_no_parameter,
-    function_call_header_with_parameters,
-  ))(i)
-}
-
-fn function_call_header_no_parameter(i: &str) -> ParserResult<syntax::Expr> {
   map(
-    terminated(
-      function_call_header,
-      terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
-    ),
-    |fi| syntax::Expr::FunCall(fi, Vec::new()),
-  )(i)
-}
-
-fn function_call_header_with_parameters(i: &str) -> ParserResult<syntax::Expr> {
-  map(
-    pair(
+    tuple((
       terminated(function_call_header, blank),
-      terminated(
-        separated_list(
-          terminated(char(','), blank),
-          terminated(assignment_expr, blank),
+      alt((
+        map(
+          terminated(blank, terminated(opt(void), terminated(blank, char(')')))),
+          |_| vec![],
         ),
-        char(')'),
-      ),
-    ),
+        terminated(
+          separated_list(
+            terminated(char(','), blank),
+            terminated(assignment_expr, blank),
+          ),
+          char(')'),
+        ),
+      )),
+    )),
     |(fi, args)| syntax::Expr::FunCall(fi, args),
   )(i)
 }
@@ -4227,6 +4216,6 @@ mod tests {
     let start = std::time::Instant::now();
     parens_expr("((((((((1.0f))))))))").unwrap();
     let elapsed = start.elapsed();
-    assert!(elapsed.as_millis() < 1000, "{} ms", elapsed.as_millis());
+    assert!(elapsed.as_millis() < 5000, "{} ms", elapsed.as_millis());
   }
 }
