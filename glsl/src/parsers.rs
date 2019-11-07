@@ -1001,36 +1001,19 @@ fn function_parameter_declarator(i: &str) -> ParserResult<syntax::FunctionParame
   )(i)
 }
 
-/// Parse a function call.
-pub fn function_call(i: &str) -> ParserResult<syntax::Expr> {
-  map(
-    tuple((terminated(function_call_header, blank), function_call_args)),
-    |(fi, args)| syntax::Expr::FunCall(fi, args),
-  )(i)
-}
-
 fn function_call_with_identifier(i: &str) -> ParserResult<syntax::Expr> {
   map(
-    tuple((
-      map(identifier, syntax::FunIdentifier::Identifier),
-      function_call_args,
-    )),
+    tuple((function_identifier_identifier, function_call_args)),
     |(fi, args)| syntax::Expr::FunCall(fi, args),
   )(i)
 }
 
 fn function_call_with_expr_ident_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   map(
-    tuple((
-      |i| {
-        let (i, e) = primary_expr(i)?;
-        postfix_part(i, e)
-      },
-      opt(function_call_args),
-    )),
+    tuple((function_identifier_expr, opt(function_call_args))),
     |(expr, args)| match args {
-      Some(args) => syntax::Expr::FunCall(syntax::FunIdentifier::Expr(Box::new(expr)), args),
-      None => expr,
+      Some(args) => syntax::Expr::FunCall(expr, args),
+      None => expr.into_expr().unwrap(),
     },
   )(i)
 }
@@ -1054,22 +1037,23 @@ fn function_call_args(i: &str) -> ParserResult<Vec<syntax::Expr>> {
   )(i)
 }
 
-fn function_call_header(i: &str) -> ParserResult<syntax::FunIdentifier> {
-  terminated(function_identifier, terminated(blank, char('(')))(i)
+fn function_identifier_identifier(i: &str) -> ParserResult<syntax::FunIdentifier> {
+  map(
+    terminated(identifier, terminated(blank, peek(char('(')))),
+    syntax::FunIdentifier::Identifier,
+  )(i)
+}
+
+fn function_identifier_expr(i: &str) -> ParserResult<syntax::FunIdentifier> {
+  (|i| {
+    let (i, e) = primary_expr(i)?;
+    postfix_part(i, e).map(|(i, pfe)| (i, syntax::FunIdentifier::Expr(Box::new(pfe))))
+  })(i)
 }
 
 /// Parse a function identifier just behind a function list argument.
 pub fn function_identifier(i: &str) -> ParserResult<syntax::FunIdentifier> {
-  alt((
-    map(
-      terminated(identifier, terminated(blank, peek(char('(')))),
-      syntax::FunIdentifier::Identifier,
-    ),
-    |i| {
-      let (i, e) = primary_expr(i)?;
-      postfix_part(i, e).map(|(i, pfe)| (i, syntax::FunIdentifier::Expr(Box::new(pfe))))
-    },
-  ))(i)
+  alt((function_identifier_identifier, function_identifier_expr))(i)
 }
 
 /// Parse the most general expression.
