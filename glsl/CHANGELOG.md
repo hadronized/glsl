@@ -1,3 +1,9 @@
+# 2.0.1
+
+> Fri 8th Nov 2019
+
+- Improve performance of expression parsers.
+
 # 2.0
 
 > Thu 24th Oct 2019
