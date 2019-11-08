@@ -41,18 +41,31 @@ fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
 
 /// Parse a single comment.
 pub fn comment(i: &str) -> ParserResult<&str> {
-  alt((
-    preceded(tag("//"), terminated(take_until("\n"), newline)),
-    preceded(tag("/*"), terminated(take_until("*/"), tag("*/"))),
-  ))(i)
+  preceded(
+    char('/'),
+    alt((
+      preceded(char('/'), terminated(take_until("\n"), newline)),
+      preceded(char('*'), terminated(take_until("*/"), tag("*/"))),
+    ))
+  )(i)
+}
+
+/// Parse a multiline annotation and ignore it.
+///
+/// A multiline annotation is a two-character sequence that consists in a backlash ('\') and a
+/// newline ('\n').
+pub fn multiline_annotation(i: &str) -> ParserResult<&str> {
+  preceded(tag("\\"), tag("\n"))(i).map(|(i, _)| (i, i))
 }
 
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
-  recognize(many0_count(terminated(comment, multispace0)))(i)
+  recognize(many0_count(terminated(alt((comment, multiline_annotation)), multispace0)))(i)
 }
 
 /// In-between token parser (spaces and comments).
+///
+/// This parser also allows to break a line into two by finishing the line with a backslack ('\').
 fn blank(i: &str) -> ParserResult<()> {
   value((), preceded(multispace0, comments))(i)
 }
