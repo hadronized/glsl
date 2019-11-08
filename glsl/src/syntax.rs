@@ -576,6 +576,15 @@ pub enum FunIdentifier {
   Expr(Box<Expr>),
 }
 
+impl FunIdentifier {
+  pub(crate) fn into_expr(self) -> Option<Expr> {
+    match self {
+      FunIdentifier::Identifier(..) => None,
+      FunIdentifier::Expr(expr) => Some(*expr),
+    }
+  }
+}
+
 /// Function prototype.
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionPrototype {
