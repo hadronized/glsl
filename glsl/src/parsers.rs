@@ -9,7 +9,7 @@
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit1, multispace0, newline, space0};
+use nom::character::complete::{anychar, char, digit1, multispace0, newline, none_of, space0};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
@@ -31,6 +31,30 @@ where
   move |i| Ok((i, t.clone()))
 }
 
+// End-of-input parser.
+//
+// Yields `()` if the parser is at the end of the input; an error otherwise.
+fn eoi(i: &str) -> ParserResult<()> {
+  if i.is_empty() {
+    Ok((i, ()))
+  } else {
+    Err(NomErr::Error(VerboseError {
+      errors: vec![(i, VerboseErrorKind::Nom(ErrorKind::Eof))],
+    }))
+  }
+}
+
+// A newline parser that accepts:
+//
+// - A newline.
+// - The end of input.
+fn eol(i: &str) -> ParserResult<()> {
+  alt((
+    eoi, // this one goes first because it’s very cheap
+    value((), newline),
+  ))(i)
+}
+
 // Parse a keyword. A keyword is just a regular string that must be followed by punctuation.
 fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
   terminated(
@@ -39,28 +63,51 @@ fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
   )
 }
 
+fn till<'a, A, B, F, G>(f: F, g: G) -> impl Fn(&'a str) -> ParserResult<'a, ()>
+where
+  F: Fn(&'a str) -> ParserResult<'a, A>,
+  G: Fn(&'a str) -> ParserResult<'a, B>,
+{
+  move |mut i| loop {
+    if let Ok((i2, _)) = g(i) {
+      break Ok((i2, ()));
+    }
+
+    let (i2, _) = f(i)?;
+    i = i2;
+  }
+}
+
 /// Parse a single comment.
 pub fn comment(i: &str) -> ParserResult<&str> {
   preceded(
     char('/'),
     alt((
-      preceded(char('/'), terminated(take_until("\n"), newline)),
+      preceded(
+        char('/'),
+        recognize(till(uniline_comment_body, uniline_comment_eol)),
+      ),
       preceded(char('*'), terminated(take_until("*/"), tag("*/"))),
-    ))
+    )),
   )(i)
 }
 
-/// Parse a multiline annotation and ignore it.
-///
-/// A multiline annotation is a two-character sequence that consists in a backlash ('\') and a
-/// newline ('\n').
-pub fn multiline_annotation(i: &str) -> ParserResult<&str> {
-  preceded(tag("\\"), tag("\n"))(i).map(|(i, _)| (i, i))
+fn uniline_comment_body(i: &str) -> ParserResult<()> {
+  alt((value((), tag("\\\n")), value((), anychar)))(i)
+}
+
+fn uniline_comment_eol(i: &str) -> ParserResult<()> {
+  alt((eoi, uniline_comment_eol_multi))(i)
+}
+
+fn uniline_comment_eol_multi(i: &str) -> ParserResult<()> {
+  let (i, _) = not(char('\\'))(i)?;
+  value((), newline)(i)
 }
 
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
-  recognize(many0_count(terminated(alt((comment, multiline_annotation)), multispace0)))(i)
+  recognize(many0_count(terminated(comment, multispace0)))(i)
 }
 
 /// In-between token parser (spaces and comments).
@@ -1894,7 +1941,13 @@ mod tests {
 
   #[test]
   fn parse_uniline_comment() {
-    assert_eq!(comment("// lol\nfoo"), Ok(("foo", " lol")));
+    assert_eq!(comment("// lol"), Ok(("", " lol")));
+    assert_eq!(comment("// lol\nfoo"), Ok(("foo", " lol\n")));
+    assert_eq!(comment("// lol\\\nfoo"), Ok(("", " lol\\\nfoo")));
+    assert_eq!(
+      comment("// lol   \\\n   foo"),
+      Ok(("", " lol   \\\n   foo"))
+    );
   }
 
   #[test]
