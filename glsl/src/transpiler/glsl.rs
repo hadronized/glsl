@@ -1371,7 +1371,32 @@ pub fn show_preprocessor_define<F>(f: &mut F, pd: &syntax::PreprocessorDefine)
 where
   F: Write,
 {
-  let _ = write!(f, "#define {} {}\n", pd.ident, pd.value);
+  match *pd {
+    syntax::PreprocessorDefine::ObjectLike {
+      ref ident,
+      ref value,
+    } => {
+      let _ = write!(f, "#define {} {}\n", ident, value);
+    }
+
+    syntax::PreprocessorDefine::FunctionLike {
+      ref ident,
+      ref args,
+      ref value,
+    } => {
+      let _ = write!(f, "#define {}(", ident);
+
+      if !args.is_empty() {
+        let _ = write!(f, "{}", &args[0]);
+
+        for arg in &args[1..args.len()] {
+          let _ = write!(f, ", {}", arg);
+        }
+      }
+
+      let _ = write!(f, ") {}\n", value);
+    }
+  }
 }
 
 pub fn show_preprocessor_else<F>(f: &mut F)

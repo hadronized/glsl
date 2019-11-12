@@ -1733,15 +1733,54 @@ fn pp_space0(i: &str) -> ParserResult<&str> {
 
 /// Parse a #define.
 pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
-  map(
+  let (i, ident) = map(
     tuple((
       terminated(char('#'), pp_space0),
       terminated(keyword("define"), pp_space0),
-      terminated(identifier, pp_space0),
-      map(str_till_eol, String::from),
+      identifier,
     )),
-    |(_, _, ident, value)| syntax::PreprocessorDefine { ident, value },
-  )(i)
+    |(_, _, ident)| ident,
+  )(i)?;
+
+  alt((
+    pp_define_function_like(ident.clone()),
+    pp_define_object_like(ident),
+  ))(i)
+}
+
+// Parse an object-like #define content.
+fn pp_define_object_like<'a>(
+  ident: syntax::Identifier,
+) -> impl Fn(&'a str) -> ParserResult<'a, syntax::PreprocessorDefine> {
+  move |i| {
+    map(preceded(pp_space0, str_till_eol), |value| {
+      syntax::PreprocessorDefine::ObjectLike {
+        ident: ident.clone(),
+        value: value.to_owned(),
+      }
+    })(i)
+  }
+}
+
+// Parse a function-like #define content.
+fn pp_define_function_like<'a>(
+  ident: syntax::Identifier,
+) -> impl Fn(&'a str) -> ParserResult<'a, syntax::PreprocessorDefine> {
+  move |i| {
+    map(
+      tuple((
+        terminated(char('('), pp_space0),
+        separated_list(terminated(char(','), pp_space0), identifier),
+        terminated(char(')'), pp_space0),
+        map(str_till_eol, String::from),
+      )),
+      |(_, args, _, value)| syntax::PreprocessorDefine::FunctionLike {
+        ident: ident.clone(),
+        args,
+        value,
+      },
+    )(i)
+  }
 }
 
 /// Parse a #else.
@@ -4367,7 +4406,7 @@ mod tests {
     let expect = |v: &str| {
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
           ident: "test".into(),
           value: v.to_owned(),
         }),
@@ -4382,7 +4421,7 @@ mod tests {
       preprocessor("#define test123 .0f\n"),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
           ident: "test123".into(),
           value: ".0f".to_owned()
         })
@@ -4393,7 +4432,7 @@ mod tests {
       preprocessor("#define test 1\n"),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
           ident: "test".into(),
           value: "1".to_owned()
         })
@@ -4407,8 +4446,12 @@ mod tests {
       preprocessor("#define \\\n add(x, y) \\\n (x + y)"),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::FunctionLike {
           ident: "add".into(),
+          args: vec![
+            syntax::Identifier::new("x").unwrap(),
+            syntax::Identifier::new("y").unwrap()
+          ],
           value: "(x + y)".to_owned(),
         })
       ))
@@ -4424,7 +4467,7 @@ mod tests {
       ),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
           ident: "foo".into(),
           value: "32".to_owned(),
         })
