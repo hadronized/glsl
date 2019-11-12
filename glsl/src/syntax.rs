@@ -1170,9 +1170,17 @@ pub enum Preprocessor {
 ///
 /// Allows any expression but only Integer and Float literals make sense
 #[derive(Clone, Debug, PartialEq)]
-pub struct PreprocessorDefine {
-  pub ident: Identifier,
-  pub value: String,
+pub enum PreprocessorDefine {
+  ObjectLike {
+    ident: Identifier,
+    value: String,
+  },
+
+  FunctionLike {
+    ident: Identifier,
+    args: Vec<Identifier>,
+    value: String,
+  },
 }
 
 /// An #else preprocessor directive.

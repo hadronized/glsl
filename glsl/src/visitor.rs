@@ -467,7 +467,23 @@ impl Host for syntax::PreprocessorDefine {
     let visit = visitor.visit_preprocessor_define(self);
 
     if visit == Visit::Children {
-      self.ident.visit(visitor);
+      match *self {
+        syntax::PreprocessorDefine::ObjectLike { ref mut ident, .. } => {
+          ident.visit(visitor);
+        }
+
+        syntax::PreprocessorDefine::FunctionLike {
+          ref mut ident,
+          ref mut args,
+          ..
+        } => {
+          ident.visit(visitor);
+
+          for arg in args {
+            arg.visit(visitor);
+          }
+        }
+      }
     }
   }
 }

@@ -1193,13 +1193,38 @@ fn tokenize_preprocessor(pp: &syntax::Preprocessor) -> TokenStream {
 }
 
 fn tokenize_preprocessor_define(pd: &syntax::PreprocessorDefine) -> TokenStream {
-  let ident = tokenize_identifier(&pd.ident);
-  let value = pd.value.quote();
+  match *pd {
+    syntax::PreprocessorDefine::ObjectLike {
+      ref ident,
+      ref value,
+    } => {
+      let ident = tokenize_identifier(ident);
+      let value = value.quote();
 
-  quote! {
-    glsl::syntax::PreprocessorDefine {
-      ident: #ident,
-      value: #value
+      quote! {
+        glsl::syntax::PreprocessorDefine::ObjectLike {
+          ident: #ident,
+          value: #value
+        }
+      }
+    }
+
+    syntax::PreprocessorDefine::FunctionLike {
+      ref ident,
+      ref args,
+      ref value,
+    } => {
+      let ident = tokenize_identifier(ident);
+      let args = args.iter().map(|a| a.quote());
+      let value = value.quote();
+
+      quote! {
+        glsl::syntax::PreprocessorDefine::FunctionLike {
+          ident: #ident,
+          args: vec![#(#args),*],
+          value: #value
+        }
+      }
     }
   }
 }
