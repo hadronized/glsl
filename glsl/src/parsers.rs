@@ -7,7 +7,7 @@
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit1, multispace0, newline, space0, space1};
+use nom::character::complete::{anychar, char, digit1, multispace1, newline, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
@@ -116,14 +116,23 @@ pub fn comment(i: &str) -> ParserResult<&str> {
 
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
-  recognize(many0_(terminated(comment, multispace0)))(i)
+  recognize(many0_(terminated(comment, blank_space)))(i)
+}
+
+// Blank base parser.
+//
+// This parser succeeds with multispaces and multiline annotation.
+//
+// Taylor Swift loves it.
+fn blank_space(i: &str) -> ParserResult<&str> {
+  recognize(many0_(alt((multispace1, tag("\\\n")))))(i)
 }
 
 /// In-between token parser (spaces and comments).
 ///
 /// This parser also allows to break a line into two by finishing the line with a backslack ('\').
 fn blank(i: &str) -> ParserResult<()> {
-  value((), preceded(multispace0, comments))(i)
+  value((), preceded(blank_space, comments))(i)
 }
 
 #[inline]
@@ -2323,7 +2332,7 @@ mod tests {
     let c = syntax::TypeName("dmat43".to_owned());
     let types = vec![a, b, c];
     assert_eq!(
-      storage_qualifier("subroutine (vec3, float, dmat43)"),
+      storage_qualifier("subroutine (  vec3 , float \\\n, dmat43)"),
       Ok(("", syntax::StorageQualifier::Subroutine(types)))
     );
   }
