@@ -5,95 +5,22 @@
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
 
+mod nom_helpers;
+
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit1, multispace1, newline, space0, space1};
+use nom::character::complete::{anychar, char, digit1, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{fold_many0, many0, many1, separated_list};
+use nom::multi::{many0, many1, separated_list};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
-use nom::{Err as NomErr, IResult, ParseTo};
+use nom::{Err as NomErr, ParseTo};
 use std::num::ParseIntError;
 
+pub use self::nom_helpers::ParserResult;
+use self::nom_helpers::{blank_space, cnst, eol, many0_, str_till_eol};
 use crate::syntax;
-
-pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
-
-// A constant parser that just forwards the value it’s parametered with without reading anything
-// from the input. Especially useful as “fallback” in an alternative parser.
-fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T>
-where
-  T: 'a + Clone,
-{
-  move |i| Ok((i, t.clone()))
-}
-
-// End-of-input parser.
-//
-// Yields `()` if the parser is at the end of the input; an error otherwise.
-fn eoi(i: &str) -> ParserResult<()> {
-  if i.is_empty() {
-    Ok((i, ()))
-  } else {
-    Err(NomErr::Error(VerboseError {
-      errors: vec![(i, VerboseErrorKind::Nom(ErrorKind::Eof))],
-    }))
-  }
-}
-
-// A newline parser that accepts:
-//
-// - A newline.
-// - The end of input.
-fn eol(i: &str) -> ParserResult<()> {
-  alt((
-    eoi, // this one goes first because it’s very cheap
-    value((), newline),
-  ))(i)
-}
-
-// Apply the `f` parser until `g` succeeds. Both parsers consume the input.
-fn till<'a, A, B, F, G>(f: F, g: G) -> impl Fn(&'a str) -> ParserResult<'a, ()>
-where
-  F: Fn(&'a str) -> ParserResult<'a, A>,
-  G: Fn(&'a str) -> ParserResult<'a, B>,
-{
-  move |mut i| loop {
-    if let Ok((i2, _)) = g(i) {
-      break Ok((i2, ()));
-    }
-
-    let (i2, _) = f(i)?;
-    i = i2;
-  }
-}
-
-// A version of many0 that discards the result of the parser, preventing allocating.
-fn many0_<'a, A, F>(f: F) -> impl Fn(&'a str) -> ParserResult<'a, ()>
-where
-  F: Fn(&'a str) -> ParserResult<'a, A>,
-{
-  move |i| fold_many0(&f, (), |_, _| ())(i)
-}
-
-/// Parse a string until the end of line.
-///
-/// This parser accepts the multiline annotation (\) to break the string on several lines.
-///
-/// Discard any leading newline.
-fn str_till_eol(i: &str) -> ParserResult<&str> {
-  map(
-    recognize(till(alt((value((), tag("\\\n")), value((), anychar))), eol)),
-    |i| {
-      if i.as_bytes().last() == Some(&b'\n') {
-        &i[0..i.len() - 1]
-      } else {
-        i
-      }
-    },
-  )(i)
-}
 
 // Parse a keyword. A keyword is just a regular string that must be followed by punctuation.
 fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
@@ -117,15 +44,6 @@ pub fn comment(i: &str) -> ParserResult<&str> {
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
   recognize(many0_(terminated(comment, blank_space)))(i)
-}
-
-// Blank base parser.
-//
-// This parser succeeds with multispaces and multiline annotation.
-//
-// Taylor Swift loves it.
-fn blank_space(i: &str) -> ParserResult<&str> {
-  recognize(many0_(alt((multispace1, tag("\\\n")))))(i)
 }
 
 /// In-between token parser (spaces and comments).
