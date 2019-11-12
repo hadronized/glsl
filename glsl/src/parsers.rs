@@ -69,7 +69,7 @@ where
   }
 }
 
-// A version of many0 that discards the result of the parser, prevening allocating.
+// A version of many0 that discards the result of the parser, preventing allocating.
 fn many0_<'a, A, F>(f: F) -> impl Fn(&'a str) -> ParserResult<'a, ()>
 where
   F: Fn(&'a str) -> ParserResult<'a, A>,
