@@ -1,10 +1,10 @@
 # 3.0
 
-> Sun 27th Oct 2019
+> ???
 
 ## Major changes
 
-- Bump `glsl-3.0.0` version.
+- Adapt internals to support `glsl-3.0.0` version.
 
 # 2.0
 

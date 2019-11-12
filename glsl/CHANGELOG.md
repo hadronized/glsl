@@ -26,6 +26,10 @@
   you are correctly using `rustfmt` (either by running `cargo fmt` before submitting a PR or by
   configuring your editor to format the code for you). This is important, as not respecting the
   formatting would make your contribution impossible to merge due to a CI check.
+- Support for _multiline_ annotations (`\`). Multiline annotations are currently supported as
+  part of _spaces_ — i.e. you cannot use them to break an identifier on two lines for instance.
+  This choice makes it faster to parse without too much compromises (after all, `\` is mostly used
+  in CPP directives in GLSL).
 
 # 2.0.1
 
