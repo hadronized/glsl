@@ -2,7 +2,8 @@
 
 members = [
   "glsl",
-  "glsl-quasiquote"
+  "glsl-info",
+  "glsl-quasiquote",
 ]
 
 [patch.crates-io]
