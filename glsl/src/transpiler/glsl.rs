@@ -1371,9 +1371,32 @@ pub fn show_preprocessor_define<F>(f: &mut F, pd: &syntax::PreprocessorDefine)
 where
   F: Write,
 {
-  let _ = write!(f, "#define {} ", pd.name);
-  show_expr(f, &pd.value);
-  let _ = f.write_str("\n");
+  match *pd {
+    syntax::PreprocessorDefine::ObjectLike {
+      ref ident,
+      ref value,
+    } => {
+      let _ = write!(f, "#define {} {}\n", ident, value);
+    }
+
+    syntax::PreprocessorDefine::FunctionLike {
+      ref ident,
+      ref args,
+      ref value,
+    } => {
+      let _ = write!(f, "#define {}(", ident);
+
+      if !args.is_empty() {
+        let _ = write!(f, "{}", &args[0]);
+
+        for arg in &args[1..args.len()] {
+          let _ = write!(f, ", {}", arg);
+        }
+      }
+
+      let _ = write!(f, ") {}\n", value);
+    }
+  }
 }
 
 pub fn show_preprocessor_else<F>(f: &mut F)
@@ -1387,9 +1410,7 @@ pub fn show_preprocessor_elseif<F>(f: &mut F, pei: &syntax::PreprocessorElseIf)
 where
   F: Write,
 {
-  let _ = f.write_str("#elseif ");
-  show_expr(f, &pei.expr);
-  let _ = f.write_str("\n");
+  let _ = write!(f, "#elseif {}\n", pei.condition);
 }
 
 pub fn show_preprocessor_error<F>(f: &mut F, pe: &syntax::PreprocessorError)
@@ -1410,9 +1431,7 @@ pub fn show_preprocessor_if<F>(f: &mut F, pi: &syntax::PreprocessorIf)
 where
   F: Write,
 {
-  let _ = f.write_str("#if ");
-  show_expr(f, &pi.expr);
-  let _ = f.write_str("\n");
+  let _ = write!(f, "#if {}\n", pi.condition);
 }
 
 pub fn show_preprocessor_ifdef<F>(f: &mut F, pid: &syntax::PreprocessorIfDef)
@@ -1420,7 +1439,7 @@ where
   F: Write,
 {
   let _ = f.write_str("#ifdef ");
-  show_identifier(f, &pid.name);
+  show_identifier(f, &pid.ident);
   let _ = f.write_str("\n");
 }
 
@@ -1429,7 +1448,7 @@ where
   F: Write,
 {
   let _ = f.write_str("#ifndef ");
-  show_identifier(f, &pind.name);
+  show_identifier(f, &pind.ident);
   let _ = f.write_str("\n");
 }
 

@@ -1193,23 +1193,48 @@ fn tokenize_preprocessor(pp: &syntax::Preprocessor) -> TokenStream {
 }
 
 fn tokenize_preprocessor_define(pd: &syntax::PreprocessorDefine) -> TokenStream {
-  let name = tokenize_identifier(&pd.name);
-  let value = tokenize_expr(&pd.value);
+  match *pd {
+    syntax::PreprocessorDefine::ObjectLike {
+      ref ident,
+      ref value,
+    } => {
+      let ident = tokenize_identifier(ident);
+      let value = value.quote();
 
-  quote! {
-    glsl::syntax::PreprocessorDefine {
-      name: #name,
-      value: #value
+      quote! {
+        glsl::syntax::PreprocessorDefine::ObjectLike {
+          ident: #ident,
+          value: #value
+        }
+      }
+    }
+
+    syntax::PreprocessorDefine::FunctionLike {
+      ref ident,
+      ref args,
+      ref value,
+    } => {
+      let ident = tokenize_identifier(ident);
+      let args = args.iter().map(|a| a.quote());
+      let value = value.quote();
+
+      quote! {
+        glsl::syntax::PreprocessorDefine::FunctionLike {
+          ident: #ident,
+          args: vec![#(#args),*],
+          value: #value
+        }
+      }
     }
   }
 }
 
 fn tokenize_preprocessor_elseif(pei: &syntax::PreprocessorElseIf) -> TokenStream {
-  let expr = tokenize_expr(&pei.expr);
+  let condition = pei.condition.quote();
 
   quote! {
     glsl::syntax::PreprocessorElseIf {
-      expr: #expr
+      condition: #condition
     }
   }
 }
@@ -1225,31 +1250,31 @@ fn tokenize_preprocessor_error(pe: &syntax::PreprocessorError) -> TokenStream {
 }
 
 fn tokenize_preprocessor_if(pi: &syntax::PreprocessorIf) -> TokenStream {
-  let expr = tokenize_expr(&pi.expr);
+  let condition = pi.condition.quote();
 
   quote! {
     glsl::syntax::PreprocessorIf {
-      expr: #expr
+      condition: #condition
     }
   }
 }
 
 fn tokenize_preprocessor_ifdef(pid: &syntax::PreprocessorIfDef) -> TokenStream {
-  let name = tokenize_identifier(&pid.name);
+  let ident = tokenize_identifier(&pid.ident);
 
   quote! {
     glsl::syntax::PreprocessorIfDef {
-      name: #name
+      ident: #ident
     }
   }
 }
 
 fn tokenize_preprocessor_ifndef(pind: &syntax::PreprocessorIfNDef) -> TokenStream {
-  let name = tokenize_identifier(&pind.name);
+  let ident = tokenize_identifier(&pind.ident);
 
   quote! {
     glsl::syntax::PreprocessorIfNDef {
-      name: #name
+      ident: #ident
     }
   }
 }

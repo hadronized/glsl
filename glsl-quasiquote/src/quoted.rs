@@ -11,6 +11,12 @@ pub trait Quoted {
   fn quote(&self) -> TokenStream;
 }
 
+impl Quoted for String {
+  fn quote(&self) -> TokenStream {
+    quote! { #self.to_owned() }
+  }
+}
+
 impl<T> Quoted for Option<T>
 where
   T: ToTokens,

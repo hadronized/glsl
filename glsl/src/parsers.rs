@@ -1,5 +1,3 @@
-// TODO: switch to terminated instead of preceded for spaces to prevent non-necessary try-over
-
 //! GLSL parsers.
 //!
 //! The more general parser is `translation_unit`, that recognizes the most external form of a GLSL
@@ -7,29 +5,22 @@
 //!
 //! Other parsers are exported if you want more control on how you want to parse your source.
 
+mod nom_helpers;
+
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit1, multispace0, newline, space0};
+use nom::character::complete::{anychar, char, digit1, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
-use nom::combinator::{map, not, opt, peek, recognize, value, verify};
+use nom::combinator::{cut, map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{many0, many0_count, many1, separated_list};
+use nom::multi::{many0, many1, separated_list};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
-use nom::{Err as NomErr, IResult, ParseTo};
+use nom::{Err as NomErr, ParseTo};
 use std::num::ParseIntError;
 
+pub use self::nom_helpers::ParserResult;
+use self::nom_helpers::{blank_space, cnst, eol, many0_, str_till_eol};
 use crate::syntax;
-
-pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
-
-// A constant parser that just forwards the value it’s parametered with without reading anything
-// from the input. Especially useful as “fallback” in an alternative parser.
-fn cnst<'a, T>(t: T) -> impl Fn(&'a str) -> ParserResult<'a, T>
-where
-  T: 'a + Clone,
-{
-  move |i| Ok((i, t.clone()))
-}
 
 // Parse a keyword. A keyword is just a regular string that must be followed by punctuation.
 fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
@@ -41,20 +32,25 @@ fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
 
 /// Parse a single comment.
 pub fn comment(i: &str) -> ParserResult<&str> {
-  alt((
-    preceded(tag("//"), terminated(take_until("\n"), newline)),
-    preceded(tag("/*"), terminated(take_until("*/"), tag("*/"))),
-  ))(i)
+  preceded(
+    char('/'),
+    alt((
+      preceded(char('/'), cut(str_till_eol)),
+      preceded(char('*'), cut(terminated(take_until("*/"), tag("*/")))),
+    )),
+  )(i)
 }
 
 /// Parse several comments.
 pub fn comments(i: &str) -> ParserResult<&str> {
-  recognize(many0_count(terminated(comment, multispace0)))(i)
+  recognize(many0_(terminated(comment, blank_space)))(i)
 }
 
 /// In-between token parser (spaces and comments).
+///
+/// This parser also allows to break a line into two by finishing the line with a backslack ('\').
 fn blank(i: &str) -> ParserResult<()> {
-  value((), preceded(multispace0, comments))(i)
+  value((), preceded(blank_space, comments))(i)
 }
 
 #[inline]
@@ -277,10 +273,10 @@ fn alphanumeric_no_u(c: char) -> bool {
 /// Parse an hexadecimal literal.
 fn hexadecimal_lit(i: &str) -> ParserResult<Result<u32, ParseIntError>> {
   preceded(
-    preceded(char('0'), alt((char('x'), char('X')))), // 0x | 0X
-    map(verify(take_while1(alphanumeric_no_u), all_hexa), |i| {
+    preceded(char('0'), cut(alt((char('x'), char('X'))))), // 0x | 0X
+    cut(map(verify(take_while1(alphanumeric_no_u), all_hexa), |i| {
       u32::from_str_radix(i, 16)
-    }),
+    })),
   )(i)
 }
 
@@ -453,7 +449,7 @@ pub fn path_lit(i: &str) -> ParserResult<syntax::Path> {
 /// Parse a path literal with angle brackets.
 pub fn path_lit_absolute(i: &str) -> ParserResult<String> {
   map(
-    delimited(char('<'), take_until(">"), char('>')),
+    delimited(char('<'), cut(take_until(">")), cut(char('>'))),
     |s: &str| s.to_owned(),
   )(i)
 }
@@ -461,7 +457,7 @@ pub fn path_lit_absolute(i: &str) -> ParserResult<String> {
 /// Parse a path literal with double quotes.
 pub fn path_lit_relative(i: &str) -> ParserResult<String> {
   map(
-    delimited(char('"'), take_until("\""), char('\"')),
+    delimited(char('"'), cut(take_until("\"")), cut(char('"'))),
     |s: &str| s.to_owned(),
   )(i)
 }
@@ -491,11 +487,11 @@ pub fn struct_field_specifier(i: &str) -> ParserResult<syntax::StructFieldSpecif
   let (i, (qualifier, ty, identifiers, _)) = tuple((
     opt(terminated(type_qualifier, blank)),
     terminated(type_specifier, blank),
-    separated_list(
+    cut(separated_list(
       terminated(char(','), blank),
       terminated(arrayed_identifier, blank),
-    ),
-    char(';'),
+    )),
+    cut(char(';')),
   ))(i)?;
 
   let r = syntax::StructFieldSpecifier {
@@ -514,11 +510,11 @@ pub fn struct_specifier(i: &str) -> ParserResult<syntax::StructSpecifier> {
     map(
       pair(
         opt(terminated(type_name, blank)),
-        delimited(
+        cut(delimited(
           terminated(char('{'), blank),
           many1(terminated(struct_field_specifier, blank)),
           char('}'),
-        ),
+        )),
       ),
       |(name, fields)| syntax::StructSpecifier {
         name,
@@ -535,8 +531,8 @@ pub fn storage_qualifier_subroutine_list(i: &str) -> ParserResult<syntax::Storag
       terminated(keyword("subroutine"), blank),
       delimited(
         terminated(char('('), blank),
-        terminated(nonempty_type_names, blank),
-        char(')'),
+        cut(terminated(nonempty_type_names, blank)),
+        cut(char(')')),
       ),
     ),
     syntax::StorageQualifier::Subroutine,
@@ -582,8 +578,8 @@ pub fn layout_qualifier(i: &str) -> ParserResult<syntax::LayoutQualifier> {
     terminated(keyword("layout"), blank),
     delimited(
       terminated(char('('), blank),
-      layout_qualifier_inner,
-      char(')'),
+      cut(layout_qualifier_inner),
+      cut(char(')')),
     ),
   )(i)
 }
@@ -690,8 +686,8 @@ pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
     map(
       delimited(
         terminated(char('['), blank),
-        cond_expr,
-        preceded(blank, char(']')),
+        cut(cond_expr),
+        preceded(blank, cut(char(']'))),
       ),
       |e| syntax::ArraySpecifier::ExplicitlySized(Box::new(e)),
     ),
@@ -763,13 +759,13 @@ pub fn parens_expr(i: &str) -> ParserResult<syntax::Expr> {
   delimited(
     terminated(char('('), blank),
     expr,
-    preceded(blank, char(')')),
+    preceded(blank, cut(char(')'))),
   )(i)
 }
 
 /// Parse a dot field selection identifier.
 pub fn dot_field_selection(i: &str) -> ParserResult<syntax::Identifier> {
-  preceded(terminated(char('.'), blank), identifier)(i)
+  preceded(terminated(char('.'), blank), cut(identifier))(i)
 }
 
 /// Parse a declaration.
@@ -794,10 +790,10 @@ pub fn precision_declaration(i: &str) -> ParserResult<syntax::Declaration> {
   delimited(
     terminated(keyword("precision"), blank),
     map(
-      pair(
+      cut(pair(
         terminated(precision_qualifier, blank),
         terminated(type_specifier, blank),
-      ),
+      )),
       |(qual, ty)| syntax::Declaration::Precision(qual, ty),
     ),
     char(';'),
@@ -813,13 +809,13 @@ pub fn block_declaration(i: &str) -> ParserResult<syntax::Declaration> {
       delimited(
         terminated(char('{'), blank),
         many1(terminated(struct_field_specifier, blank)),
-        terminated(char('}'), blank),
+        cut(terminated(char('}'), blank)),
       ),
       alt((
         value(None, preceded(blank, char(';'))),
         terminated(
           opt(preceded(blank, arrayed_identifier)),
-          preceded(blank, char(';')),
+          preceded(blank, cut(char(';'))),
         ),
       )),
     )),
@@ -847,7 +843,7 @@ pub fn global_declaration(i: &str) -> ParserResult<syntax::Declaration> {
 
 /// Parse a function prototype.
 pub fn function_prototype(i: &str) -> ParserResult<syntax::FunctionPrototype> {
-  terminated(function_declarator, terminated(blank, char(')')))(i)
+  terminated(function_declarator, terminated(blank, cut(char(')'))))(i)
 }
 
 /// Parse an init declarator list.
@@ -857,7 +853,7 @@ pub fn init_declarator_list(i: &str) -> ParserResult<syntax::InitDeclaratorList>
       single_declaration,
       many0(map(
         tuple((
-          preceded(delimited(blank, char(','), blank), identifier),
+          preceded(delimited(blank, char(','), blank), cut(identifier)),
           opt(preceded(blank, array_specifier)),
           opt(preceded(delimited(blank, char('='), blank), initializer)),
         )),
@@ -881,7 +877,10 @@ pub fn single_declaration(i: &str) -> ParserResult<syntax::SingleDeclaration> {
       tuple((
         preceded(blank, identifier),
         opt(preceded(blank, array_specifier)),
-        opt(preceded(delimited(blank, char('='), blank), initializer)),
+        opt(preceded(
+          delimited(blank, char('='), blank),
+          cut(initializer),
+        )),
       )),
       move |(name, array_specifier, initializer)| syntax::SingleDeclaration {
         ty: ty_.clone(),
@@ -909,10 +908,10 @@ pub fn initializer(i: &str) -> ParserResult<syntax::Initializer> {
       delimited(
         terminated(char('{'), blank),
         terminated(
-          initializer_list,
+          cut(initializer_list),
           terminated(blank, opt(terminated(char(','), blank))),
         ),
-        char('}'),
+        cut(char('}')),
       ),
       |il| syntax::Initializer::List(syntax::NonEmpty(il)),
     ),
@@ -1029,9 +1028,9 @@ fn function_call_args(i: &str) -> ParserResult<Vec<syntax::Expr>> {
       terminated(
         separated_list(
           terminated(char(','), blank),
-          terminated(assignment_expr, blank),
+          cut(terminated(assignment_expr, blank)),
         ),
-        char(')'),
+        cut(char(')')),
       ),
     )),
   )(i)
@@ -1110,9 +1109,9 @@ pub fn cond_expr(i: &str) -> ParserResult<syntax::Expr> {
     map(
       tuple((
         delimited(blank, char('?'), blank),
-        terminated(expr, blank),
-        terminated(char(':'), blank),
-        assignment_expr,
+        cut(terminated(expr, blank)),
+        cut(terminated(char(':'), blank)),
+        cut(assignment_expr),
       )),
       move |(_, b, _, c)| syntax::Expr::Ternary(Box::new(a_.clone()), Box::new(b), Box::new(c)),
     ),
@@ -1350,10 +1349,10 @@ pub fn selection_statement(i: &str) -> ParserResult<syntax::SelectionStatement> 
   map(
     tuple((
       terminated(keyword("if"), blank),
-      terminated(char('('), blank),
-      terminated(expr, blank),
-      terminated(char(')'), blank),
-      selection_rest_statement,
+      cut(terminated(char('('), blank)),
+      cut(terminated(expr, blank)),
+      cut(terminated(char(')'), blank)),
+      cut(selection_rest_statement),
     )),
     |(_, _, cond_expr, _, rest)| syntax::SelectionStatement {
       cond: Box::new(cond_expr),
@@ -1368,7 +1367,7 @@ fn selection_rest_statement(i: &str) -> ParserResult<syntax::SelectionRestStatem
 
   alt((
     map(
-      preceded(delimited(blank, keyword("else"), blank), statement),
+      preceded(delimited(blank, keyword("else"), blank), cut(statement)),
       move |rest| syntax::SelectionRestStatement::Else(Box::new(st_.clone()), Box::new(rest)),
     ),
     cnst(syntax::SelectionRestStatement::Statement(Box::new(st))),
@@ -1380,12 +1379,12 @@ pub fn switch_statement(i: &str) -> ParserResult<syntax::SwitchStatement> {
   map(
     tuple((
       terminated(keyword("switch"), blank),
-      terminated(char('('), blank),
-      terminated(expr, blank),
-      terminated(char(')'), blank),
-      terminated(char('{'), blank),
-      many0(terminated(statement, blank)),
-      char('}'),
+      cut(terminated(char('('), blank)),
+      cut(terminated(expr, blank)),
+      cut(terminated(char(')'), blank)),
+      cut(terminated(char('{'), blank)),
+      cut(many0(terminated(statement, blank))),
+      cut(char('}')),
     )),
     |(_, _, head, _, _, body, _)| syntax::SwitchStatement {
       head: Box::new(head),
@@ -1400,8 +1399,8 @@ pub fn case_label(i: &str) -> ParserResult<syntax::CaseLabel> {
     map(
       delimited(
         terminated(keyword("case"), blank),
-        terminated(expr, blank),
-        char(':'),
+        cut(terminated(expr, blank)),
+        cut(char(':')),
       ),
       |e| syntax::CaseLabel::Case(Box::new(e)),
     ),
@@ -1426,10 +1425,10 @@ pub fn iteration_statement_while(i: &str) -> ParserResult<syntax::IterationState
   map(
     tuple((
       terminated(keyword("while"), blank),
-      terminated(char('('), blank),
-      terminated(condition, blank),
-      terminated(char(')'), blank),
-      statement,
+      cut(terminated(char('('), blank)),
+      cut(terminated(condition, blank)),
+      cut(terminated(char(')'), blank)),
+      cut(statement),
     )),
     |(_, _, cond, _, st)| syntax::IterationStatement::While(cond, Box::new(st)),
   )(i)
@@ -1440,12 +1439,12 @@ pub fn iteration_statement_do_while(i: &str) -> ParserResult<syntax::IterationSt
   map(
     tuple((
       terminated(keyword("do"), blank),
-      terminated(statement, blank),
-      terminated(keyword("while"), blank),
-      terminated(char('('), blank),
-      terminated(expr, blank),
-      terminated(char(')'), blank),
-      char(';'),
+      cut(terminated(statement, blank)),
+      cut(terminated(keyword("while"), blank)),
+      cut(terminated(char('('), blank)),
+      cut(terminated(expr, blank)),
+      cut(terminated(char(')'), blank)),
+      cut(char(';')),
     )),
     |(_, st, _, _, e, _, _)| syntax::IterationStatement::DoWhile(Box::new(st), Box::new(e)),
   )(i)
@@ -1456,11 +1455,11 @@ pub fn iteration_statement_for(i: &str) -> ParserResult<syntax::IterationStateme
   map(
     tuple((
       terminated(keyword("for"), blank),
-      terminated(char('('), blank),
-      terminated(iteration_statement_for_init_statement, blank),
-      terminated(iteration_statement_for_rest_statement, blank),
-      terminated(char(')'), blank),
-      statement,
+      cut(terminated(char('('), blank)),
+      cut(terminated(iteration_statement_for_init_statement, blank)),
+      cut(terminated(iteration_statement_for_rest_statement, blank)),
+      cut(terminated(char(')'), blank)),
+      cut(statement),
     )),
     |(_, _, head, rest, _, body)| syntax::IterationStatement::For(head, rest, Box::new(body)),
   )(i)
@@ -1503,7 +1502,7 @@ pub fn jump_statement(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Continue,
-    terminated(keyword("continue"), terminated(blank, char(';'))),
+    terminated(keyword("continue"), cut(terminated(blank, char(';')))),
   )(i)
 }
 
@@ -1511,7 +1510,7 @@ pub fn jump_statement_continue(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Break,
-    terminated(keyword("break"), terminated(blank, char(';'))),
+    terminated(keyword("break"), cut(terminated(blank, char(';')))),
   )(i)
 }
 
@@ -1519,7 +1518,7 @@ pub fn jump_statement_break(i: &str) -> ParserResult<syntax::JumpStatement> {
 pub fn jump_statement_discard(i: &str) -> ParserResult<syntax::JumpStatement> {
   value(
     syntax::JumpStatement::Discard,
-    terminated(keyword("discard"), terminated(blank, char(';'))),
+    terminated(keyword("discard"), cut(terminated(blank, char(';')))),
   )(i)
 }
 
@@ -1529,7 +1528,7 @@ pub fn jump_statement_return(i: &str) -> ParserResult<syntax::JumpStatement> {
     delimited(
       terminated(keyword("return"), blank),
       opt(terminated(expr, blank)),
-      char(';'),
+      cut(char(';')),
     ),
     |e| syntax::JumpStatement::Return(e.map(|e| Box::new(e))),
   )(i)
@@ -1549,7 +1548,7 @@ fn condition_assignment(i: &str) -> ParserResult<syntax::Condition> {
       terminated(fully_specified_type, blank),
       terminated(identifier, blank),
       terminated(char('='), blank),
-      initializer,
+      cut(initializer),
     )),
     |(ty, id, _, ini)| syntax::Condition::Assignment(ty, id, ini),
   )(i)
@@ -1571,7 +1570,7 @@ pub fn compound_statement(i: &str) -> ParserResult<syntax::CompoundStatement> {
     delimited(
       terminated(char('{'), blank),
       many0(terminated(statement, blank)),
-      char('}'),
+      cut(char('}')),
     ),
     |statement_list| syntax::CompoundStatement { statement_list },
   )(i)
@@ -1597,7 +1596,10 @@ pub fn external_declaration(i: &str) -> ParserResult<syntax::ExternalDeclaration
       syntax::ExternalDeclaration::FunctionDefinition,
     ),
     map(declaration, syntax::ExternalDeclaration::Declaration),
-    preceded(delimited(blank, char(';'), blank), external_declaration),
+    preceded(
+      delimited(blank, char(';'), blank),
+      cut(external_declaration),
+    ),
   ))(i)
 }
 
@@ -1611,31 +1613,34 @@ pub fn translation_unit(i: &str) -> ParserResult<syntax::TranslationUnit> {
 
 /// Parse a preprocessor directive.
 pub fn preprocessor(i: &str) -> ParserResult<syntax::Preprocessor> {
-  alt((
-    map(pp_define, syntax::Preprocessor::Define),
-    value(syntax::Preprocessor::Else, pp_else),
-    map(pp_elseif, syntax::Preprocessor::ElseIf),
-    value(syntax::Preprocessor::EndIf, pp_endif),
-    map(pp_error, syntax::Preprocessor::Error),
-    map(pp_if, syntax::Preprocessor::If),
-    map(pp_ifdef, syntax::Preprocessor::IfDef),
-    map(pp_ifndef, syntax::Preprocessor::IfNDef),
-    map(pp_include, syntax::Preprocessor::Include),
-    map(pp_line, syntax::Preprocessor::Line),
-    map(pp_pragma, syntax::Preprocessor::Pragma),
-    map(pp_undef, syntax::Preprocessor::Undef),
-    map(pp_version, syntax::Preprocessor::Version),
-    map(pp_extension, syntax::Preprocessor::Extension),
-  ))(i)
+  preceded(
+    terminated(char('#'), pp_space0),
+    cut(alt((
+      map(pp_define, syntax::Preprocessor::Define),
+      value(syntax::Preprocessor::Else, pp_else),
+      map(pp_elseif, syntax::Preprocessor::ElseIf),
+      value(syntax::Preprocessor::EndIf, pp_endif),
+      map(pp_error, syntax::Preprocessor::Error),
+      map(pp_if, syntax::Preprocessor::If),
+      map(pp_ifdef, syntax::Preprocessor::IfDef),
+      map(pp_ifndef, syntax::Preprocessor::IfNDef),
+      map(pp_include, syntax::Preprocessor::Include),
+      map(pp_line, syntax::Preprocessor::Line),
+      map(pp_pragma, syntax::Preprocessor::Pragma),
+      map(pp_undef, syntax::Preprocessor::Undef),
+      map(pp_version, syntax::Preprocessor::Version),
+      map(pp_extension, syntax::Preprocessor::Extension),
+    ))),
+  )(i)
 }
 
-/// Parse a #version number.
-pub fn pp_version_number(i: &str) -> ParserResult<u16> {
+/// Parse a preprocessor version number.
+pub(crate) fn pp_version_number(i: &str) -> ParserResult<u16> {
   map(digit1, |x: &str| x.parse_to().unwrap())(i)
 }
 
-/// Parse a #version profile.
-pub fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionProfile> {
+/// Parse a preprocessor version profile.
+pub(crate) fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionProfile> {
   alt((
     value(syntax::PreprocessorVersionProfile::Core, keyword("core")),
     value(
@@ -1646,193 +1651,208 @@ pub fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVersionPr
   ))(i)
 }
 
-/// Parse a #define.
-pub fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
-  map(
-    tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("define"), space0),
-      terminated(identifier, space0),
-      terminated(primary_expr, space0),
-      newline,
-    )),
-    |(_, _, name, value, _)| syntax::PreprocessorDefine { name, value },
+/// The space parser in preprocessor directives.
+///
+/// This parser is needed to authorize breaking a line with the multiline annotation (\).
+pub(crate) fn pp_space0(i: &str) -> ParserResult<&str> {
+  recognize(many0_(alt((space1, tag("\\\n")))))(i)
+}
+
+/// Parse a preprocessor define.
+pub(crate) fn pp_define(i: &str) -> ParserResult<syntax::PreprocessorDefine> {
+  let (i, ident) = map(
+    tuple((terminated(keyword("define"), pp_space0), cut(identifier))),
+    |(_, ident)| ident,
+  )(i)?;
+
+  alt((
+    pp_define_function_like(ident.clone()),
+    pp_define_object_like(ident),
+  ))(i)
+}
+
+// Parse an object-like #define content.
+pub(crate) fn pp_define_object_like<'a>(
+  ident: syntax::Identifier,
+) -> impl Fn(&'a str) -> ParserResult<'a, syntax::PreprocessorDefine> {
+  move |i| {
+    map(preceded(pp_space0, cut(str_till_eol)), |value| {
+      syntax::PreprocessorDefine::ObjectLike {
+        ident: ident.clone(),
+        value: value.to_owned(),
+      }
+    })(i)
+  }
+}
+
+// Parse a function-like #define content.
+pub(crate) fn pp_define_function_like<'a>(
+  ident: syntax::Identifier,
+) -> impl Fn(&'a str) -> ParserResult<'a, syntax::PreprocessorDefine> {
+  move |i| {
+    map(
+      tuple((
+        terminated(char('('), pp_space0),
+        separated_list(terminated(char(','), pp_space0), cut(identifier)),
+        cut(terminated(char(')'), pp_space0)),
+        cut(map(str_till_eol, String::from)),
+      )),
+      |(_, args, _, value)| syntax::PreprocessorDefine::FunctionLike {
+        ident: ident.clone(),
+        args,
+        value,
+      },
+    )(i)
+  }
+}
+
+/// Parse a preprocessor else.
+pub(crate) fn pp_else(i: &str) -> ParserResult<syntax::Preprocessor> {
+  value(
+    syntax::Preprocessor::Else,
+    tuple((terminated(keyword("else"), pp_space0), cut(eol))),
   )(i)
 }
 
-/// Parse a #else.
-pub fn pp_else(i: &str) -> ParserResult<syntax::Preprocessor> {
+/// Parse a preprocessor elseif.
+pub(crate) fn pp_elseif(i: &str) -> ParserResult<syntax::PreprocessorElseIf> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("else"), space0),
-      newline,
+      terminated(keyword("elseif"), pp_space0),
+      cut(map(str_till_eol, String::from)),
     )),
-    |(_, _, _)| syntax::Preprocessor::Else,
+    |(_, condition)| syntax::PreprocessorElseIf { condition },
   )(i)
 }
 
-/// Parse a #elseif.
-pub fn pp_elseif(i: &str) -> ParserResult<syntax::PreprocessorElseIf> {
+/// Parse a preprocessor endif.
+pub(crate) fn pp_endif(i: &str) -> ParserResult<syntax::Preprocessor> {
   map(
-    tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("elseif"), space0),
-      terminated(primary_expr, space0),
-      newline,
-    )),
-    |(_, _, expr, _)| syntax::PreprocessorElseIf { expr },
+    tuple((terminated(keyword("endif"), space0), cut(eol))),
+    |(_, _)| syntax::Preprocessor::EndIf,
   )(i)
 }
 
-/// Parse a #endif.
-pub fn pp_endif(i: &str) -> ParserResult<syntax::Preprocessor> {
+/// Parse a preprocessor error.
+pub(crate) fn pp_error(i: &str) -> ParserResult<syntax::PreprocessorError> {
   map(
-    tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("endif"), space0),
-      newline,
-    )),
-    |(_, _, _)| syntax::Preprocessor::EndIf,
-  )(i)
-}
-
-/// Parse a #error.
-pub fn pp_error(i: &str) -> ParserResult<syntax::PreprocessorError> {
-  map(
-    tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("error"), space0),
-      take_until("\n"),
-      newline,
-    )),
-    |(_, _, message, _)| syntax::PreprocessorError {
+    tuple((terminated(keyword("error"), pp_space0), cut(str_till_eol))),
+    |(_, message)| syntax::PreprocessorError {
       message: message.to_owned(),
     },
   )(i)
 }
 
-/// Parse a #if.
-pub fn pp_if(i: &str) -> ParserResult<syntax::PreprocessorIf> {
+/// Parse a preprocessor if.
+pub(crate) fn pp_if(i: &str) -> ParserResult<syntax::PreprocessorIf> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("if"), space0),
-      terminated(primary_expr, space0),
-      newline,
+      terminated(keyword("if"), pp_space0),
+      cut(map(str_till_eol, String::from)),
     )),
-    |(_, _, expr, _)| syntax::PreprocessorIf { expr },
+    |(_, condition)| syntax::PreprocessorIf { condition },
   )(i)
 }
 
-/// Parse a #ifdef.
-pub fn pp_ifdef(i: &str) -> ParserResult<syntax::PreprocessorIfDef> {
+/// Parse a preprocessor ifdef.
+pub(crate) fn pp_ifdef(i: &str) -> ParserResult<syntax::PreprocessorIfDef> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("ifdef"), space0),
-      terminated(identifier, space0),
-      newline,
+      terminated(keyword("ifdef"), pp_space0),
+      cut(terminated(identifier, pp_space0)),
+      eol,
     )),
-    |(_, _, name, _)| syntax::PreprocessorIfDef { name },
+    |(_, ident, _)| syntax::PreprocessorIfDef { ident },
   )(i)
 }
 
-/// Parse a #ifndef.
-pub fn pp_ifndef(i: &str) -> ParserResult<syntax::PreprocessorIfNDef> {
+/// Parse a preprocessor ifndef.
+pub(crate) fn pp_ifndef(i: &str) -> ParserResult<syntax::PreprocessorIfNDef> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("ifndef"), space0),
-      terminated(identifier, space0),
-      newline,
+      terminated(keyword("ifndef"), pp_space0),
+      cut(terminated(identifier, pp_space0)),
+      eol,
     )),
-    |(_, _, name, _)| syntax::PreprocessorIfNDef { name },
+    |(_, ident, _)| syntax::PreprocessorIfNDef { ident },
   )(i)
 }
 
-/// Parse a #include.
-pub fn pp_include(i: &str) -> ParserResult<syntax::PreprocessorInclude> {
+/// Parse a preprocessor include.
+pub(crate) fn pp_include(i: &str) -> ParserResult<syntax::PreprocessorInclude> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("include"), space0),
-      terminated(path_lit, space0),
-      newline,
+      terminated(keyword("include"), pp_space0),
+      cut(terminated(path_lit, pp_space0)),
+      cut(eol),
     )),
-    |(_, _, path, _)| syntax::PreprocessorInclude { path },
+    |(_, path, _)| syntax::PreprocessorInclude { path },
   )(i)
 }
 
-/// Parse a #line.
-pub fn pp_line(i: &str) -> ParserResult<syntax::PreprocessorLine> {
+/// Parse a preprocessor line.
+pub(crate) fn pp_line(i: &str) -> ParserResult<syntax::PreprocessorLine> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("line"), space0),
-      terminated(integral_lit, space0),
-      opt(terminated(integral_lit, space0)),
-      newline,
+      terminated(keyword("line"), pp_space0),
+      cut(terminated(integral_lit, pp_space0)),
+      opt(terminated(integral_lit, pp_space0)),
+      cut(eol),
     )),
-    |(_, _, line, source_string_number, _)| syntax::PreprocessorLine {
-      line,
-      source_string_number,
+    |(_, line, source_string_number, _)| syntax::PreprocessorLine {
+      line: line as u32,
+      source_string_number: source_string_number.map(|n| n as u32),
     },
   )(i)
 }
 
-/// Parse a #pragma.
-pub fn pp_pragma(i: &str) -> ParserResult<syntax::PreprocessorPragma> {
+/// Parse a preprocessor pragma.
+pub(crate) fn pp_pragma(i: &str) -> ParserResult<syntax::PreprocessorPragma> {
   map(
-    tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("pragma"), space0),
-      take_until("\n"),
-      newline,
-    )),
-    |(_, _, command, _)| syntax::PreprocessorPragma {
+    tuple((terminated(keyword("pragma"), pp_space0), cut(str_till_eol))),
+    |(_, command)| syntax::PreprocessorPragma {
       command: command.to_owned(),
     },
   )(i)
 }
 
-/// Parse a #undef.
-pub fn pp_undef(i: &str) -> ParserResult<syntax::PreprocessorUndef> {
+/// Parse a preprocessor undef.
+pub(crate) fn pp_undef(i: &str) -> ParserResult<syntax::PreprocessorUndef> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("undef"), space0),
-      terminated(identifier, space0),
-      newline,
+      terminated(keyword("undef"), pp_space0),
+      cut(terminated(identifier, pp_space0)),
+      eol,
     )),
-    |(_, _, name, _)| syntax::PreprocessorUndef { name },
+    |(_, name, _)| syntax::PreprocessorUndef { name },
   )(i)
 }
 
-/// Parse a #version.
-pub fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
+/// Parse a preprocessor version.
+pub(crate) fn pp_version(i: &str) -> ParserResult<syntax::PreprocessorVersion> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("version"), space0),
-      terminated(pp_version_number, space0),
-      opt(terminated(pp_version_profile, space0)),
-      newline,
+      terminated(keyword("version"), pp_space0),
+      cut(terminated(pp_version_number, pp_space0)),
+      opt(terminated(pp_version_profile, pp_space0)),
+      cut(eol),
     )),
-    |(_, _, version, profile, _)| syntax::PreprocessorVersion { version, profile },
+    |(_, version, profile, _)| syntax::PreprocessorVersion { version, profile },
   )(i)
 }
 
-/// Parse an #extension name.
-pub fn pp_extension_name(i: &str) -> ParserResult<syntax::PreprocessorExtensionName> {
+/// Parse a preprocessor extension name.
+pub(crate) fn pp_extension_name(i: &str) -> ParserResult<syntax::PreprocessorExtensionName> {
   alt((
     value(syntax::PreprocessorExtensionName::All, keyword("all")),
     map(string, syntax::PreprocessorExtensionName::Specific),
   ))(i)
 }
 
-/// Parse an #extension behavior.
-pub fn pp_extension_behavior(i: &str) -> ParserResult<syntax::PreprocessorExtensionBehavior> {
+/// Parse a preprocessor extension behavior.
+pub(crate) fn pp_extension_behavior(
+  i: &str,
+) -> ParserResult<syntax::PreprocessorExtensionBehavior> {
   alt((
     value(
       syntax::PreprocessorExtensionBehavior::Require,
@@ -1850,20 +1870,19 @@ pub fn pp_extension_behavior(i: &str) -> ParserResult<syntax::PreprocessorExtens
   ))(i)
 }
 
-/// Parse an #extension.
-pub fn pp_extension(i: &str) -> ParserResult<syntax::PreprocessorExtension> {
+/// Parse a preprocessor extension.
+pub(crate) fn pp_extension(i: &str) -> ParserResult<syntax::PreprocessorExtension> {
   map(
     tuple((
-      terminated(char('#'), space0),
-      terminated(keyword("extension"), space0),
-      terminated(pp_extension_name, space0),
+      terminated(keyword("extension"), pp_space0),
+      cut(terminated(pp_extension_name, pp_space0)),
       opt(preceded(
-        terminated(char(':'), space0),
-        terminated(pp_extension_behavior, space0),
+        terminated(char(':'), pp_space0),
+        cut(terminated(pp_extension_behavior, pp_space0)),
       )),
-      newline,
+      cut(eol),
     )),
-    |(_, _, name, behavior, _)| syntax::PreprocessorExtension { name, behavior },
+    |(_, name, behavior, _)| syntax::PreprocessorExtension { name, behavior },
   )(i)
 }
 
@@ -1873,7 +1892,13 @@ mod tests {
 
   #[test]
   fn parse_uniline_comment() {
+    assert_eq!(comment("// lol"), Ok(("", " lol")));
     assert_eq!(comment("// lol\nfoo"), Ok(("foo", " lol")));
+    assert_eq!(comment("// lol\\\nfoo"), Ok(("", " lol\\\nfoo")));
+    assert_eq!(
+      comment("// lol   \\\n   foo\n"),
+      Ok(("", " lol   \\\n   foo"))
+    );
   }
 
   #[test]
@@ -2246,7 +2271,7 @@ mod tests {
     let c = syntax::TypeName("dmat43".to_owned());
     let types = vec![a, b, c];
     assert_eq!(
-      storage_qualifier("subroutine (vec3, float, dmat43)"),
+      storage_qualifier("subroutine (  vec3 , float \\\n, dmat43)"),
       Ok(("", syntax::StorageQualifier::Subroutine(types)))
     );
   }
@@ -4200,6 +4225,12 @@ mod tests {
   }
 
   #[test]
+  fn parse_pp_space0() {
+    assert_eq!(pp_space0("   \\\n  "), Ok(("", "   \\\n  ")));
+    assert_eq!(pp_space0(""), Ok(("", "")));
+  }
+
+  #[test]
   fn parse_pp_version_number() {
     assert_eq!(pp_version_number("450"), Ok(("", 450)));
   }
@@ -4223,24 +4254,24 @@ mod tests {
   #[test]
   fn parse_pp_version() {
     assert_eq!(
-      pp_version("#version 450\n"),
+      preprocessor("#version 450\n"),
       Ok((
         "",
-        syntax::PreprocessorVersion {
+        syntax::Preprocessor::Version(syntax::PreprocessorVersion {
           version: 450,
           profile: None,
-        }
+        })
       ))
     );
 
     assert_eq!(
-      pp_version("#version 450 core\n"),
+      preprocessor("#version 450 core\n"),
       Ok((
         "",
-        syntax::PreprocessorVersion {
+        syntax::Preprocessor::Version(syntax::PreprocessorVersion {
           version: 450,
           profile: Some(syntax::PreprocessorVersionProfile::Core)
-        }
+        })
       ))
     );
   }
@@ -4272,24 +4303,27 @@ mod tests {
 
   #[test]
   fn parse_pp_define() {
-    assert_eq!(
-      preprocessor("#define test 1.0\n"),
+    let expect = |v: &str| {
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-          name: "test".into(),
-          value: syntax::Expr::DoubleConst(1.0)
-        })
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
+          ident: "test".into(),
+          value: v.to_owned(),
+        }),
       ))
-    );
+    };
+
+    assert_eq!(preprocessor("#define test 1.0"), expect("1.0"));
+    assert_eq!(preprocessor("#define test \\\n   1.0"), expect("1.0"));
+    assert_eq!(preprocessor("#define test 1.0\n"), expect("1.0"));
 
     assert_eq!(
       preprocessor("#define test123 .0f\n"),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-          name: "test123".into(),
-          value: syntax::Expr::FloatConst(0.0)
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
+          ident: "test123".into(),
+          value: ".0f".to_owned()
         })
       ))
     );
@@ -4298,9 +4332,44 @@ mod tests {
       preprocessor("#define test 1\n"),
       Ok((
         "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine {
-          name: "test".into(),
-          value: syntax::Expr::IntConst(1)
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
+          ident: "test".into(),
+          value: "1".to_owned()
+        })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_define_with_args() {
+    assert_eq!(
+      preprocessor("#define \\\n add(x, y) \\\n (x + y)"),
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::FunctionLike {
+          ident: "add".into(),
+          args: vec![
+            syntax::Identifier::new("x").unwrap(),
+            syntax::Identifier::new("y").unwrap()
+          ],
+          value: "(x + y)".to_owned(),
+        })
+      ))
+    );
+  }
+
+  #[test]
+  fn parse_pp_define_multiline() {
+    assert_eq!(
+      preprocessor(
+        r#"#define foo \
+         32"#
+      ),
+      Ok((
+        "",
+        syntax::Preprocessor::Define(syntax::PreprocessorDefine::ObjectLike {
+          ident: "foo".into(),
+          value: "32".to_owned(),
         })
       ))
     );
@@ -4309,7 +4378,7 @@ mod tests {
   #[test]
   fn parse_pp_else() {
     assert_eq!(
-      preprocessor("#else\n"),
+      preprocessor("#    else\n"),
       Ok(("", syntax::Preprocessor::Else))
     );
   }
@@ -4317,11 +4386,11 @@ mod tests {
   #[test]
   fn parse_pp_elseif() {
     assert_eq!(
-      preprocessor("#elseif 42\n"),
+      preprocessor("#   elseif \\\n42\n"),
       Ok((
         "",
         syntax::Preprocessor::ElseIf(syntax::PreprocessorElseIf {
-          expr: syntax::Expr::IntConst(42)
+          condition: "42".to_owned()
         })
       ))
     );
@@ -4330,7 +4399,7 @@ mod tests {
   #[test]
   fn parse_pp_endif() {
     assert_eq!(
-      preprocessor("#endif\n"),
+      preprocessor("#\\\nendif"),
       Ok(("", syntax::Preprocessor::EndIf))
     );
   }
@@ -4338,7 +4407,7 @@ mod tests {
   #[test]
   fn parse_pp_error() {
     assert_eq!(
-      preprocessor("#error some message\n"),
+      preprocessor("#error \\\n     some message"),
       Ok((
         "",
         syntax::Preprocessor::Error(syntax::PreprocessorError {
@@ -4351,11 +4420,11 @@ mod tests {
   #[test]
   fn parse_pp_if() {
     assert_eq!(
-      preprocessor("#if 42\n"),
+      preprocessor("# \\\nif 42"),
       Ok((
         "",
         syntax::Preprocessor::If(syntax::PreprocessorIf {
-          expr: syntax::Expr::IntConst(42)
+          condition: "42".to_owned()
         })
       ))
     );
@@ -4364,11 +4433,11 @@ mod tests {
   #[test]
   fn parse_pp_ifdef() {
     assert_eq!(
-      preprocessor("#ifdef FOO\n"),
+      preprocessor("#ifdef       FOO\n"),
       Ok((
         "",
         syntax::Preprocessor::IfDef(syntax::PreprocessorIfDef {
-          name: syntax::Identifier("FOO".to_owned())
+          ident: syntax::Identifier("FOO".to_owned())
         })
       ))
     );
@@ -4377,11 +4446,11 @@ mod tests {
   #[test]
   fn parse_pp_ifndef() {
     assert_eq!(
-      preprocessor("#ifndef FOO\n"),
+      preprocessor("#\\\nifndef \\\n   FOO\n"),
       Ok((
         "",
         syntax::Preprocessor::IfNDef(syntax::PreprocessorIfNDef {
-          name: syntax::Identifier("FOO".to_owned())
+          ident: syntax::Identifier("FOO".to_owned())
         })
       ))
     );
@@ -4400,7 +4469,7 @@ mod tests {
     );
 
     assert_eq!(
-      preprocessor("#include \"filename\"\n"),
+      preprocessor("#include \\\n\"filename\"\n"),
       Ok((
         "",
         syntax::Preprocessor::Include(syntax::PreprocessorInclude {
@@ -4413,7 +4482,7 @@ mod tests {
   #[test]
   fn parse_pp_line() {
     assert_eq!(
-      preprocessor("#line 2\n"),
+      preprocessor("#   line \\\n2\n"),
       Ok((
         "",
         syntax::Preprocessor::Line(syntax::PreprocessorLine {
@@ -4424,7 +4493,7 @@ mod tests {
     );
 
     assert_eq!(
-      preprocessor("#line 2 4\n"),
+      preprocessor("#line 2 \\\n 4\n"),
       Ok((
         "",
         syntax::Preprocessor::Line(syntax::PreprocessorLine {
@@ -4438,11 +4507,11 @@ mod tests {
   #[test]
   fn parse_pp_pragma() {
     assert_eq!(
-      preprocessor("#pragma some flag\n"),
+      preprocessor("#\\\npragma  some   flag"),
       Ok((
         "",
         syntax::Preprocessor::Pragma(syntax::PreprocessorPragma {
-          command: "some flag".to_owned()
+          command: "some   flag".to_owned()
         })
       ))
     );
@@ -4451,7 +4520,7 @@ mod tests {
   #[test]
   fn parse_pp_undef() {
     assert_eq!(
-      preprocessor("#undef FOO\n"),
+      preprocessor("# undef \\\n FOO"),
       Ok((
         "",
         syntax::Preprocessor::Undef(syntax::PreprocessorUndef {
@@ -4499,13 +4568,13 @@ mod tests {
   #[test]
   fn parse_pp_extension() {
     assert_eq!(
-      pp_extension("#extension all: require\n"),
+      preprocessor("#extension all: require\n"),
       Ok((
         "",
-        syntax::PreprocessorExtension {
+        syntax::Preprocessor::Extension(syntax::PreprocessorExtension {
           name: syntax::PreprocessorExtensionName::All,
           behavior: Some(syntax::PreprocessorExtensionBehavior::Require)
-        }
+        })
       ))
     );
   }
