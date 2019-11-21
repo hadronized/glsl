@@ -478,6 +478,8 @@ pub enum StorageQualifier {
   Patch,
   Sample,
   Uniform,
+  Attribute,
+  Varying,
   Buffer,
   Shared,
   Coherent,

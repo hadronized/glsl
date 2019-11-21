@@ -543,6 +543,8 @@ fn tokenize_storage_qualifier(q: &syntax::StorageQualifier) -> TokenStream {
     syntax::StorageQualifier::Patch => quote! { glsl::syntax::StorageQualifier::Patch },
     syntax::StorageQualifier::Sample => quote! { glsl::syntax::StorageQualifier::Sample },
     syntax::StorageQualifier::Uniform => quote! { glsl::syntax::StorageQualifier::Uniform },
+    syntax::StorageQualifier::Attribute => quote! { glsl::syntax::StorageQualifier::Attribute },
+    syntax::StorageQualifier::Varying => quote! { glsl::syntax::StorageQualifier::Varying },
     syntax::StorageQualifier::Buffer => quote! { glsl::syntax::StorageQualifier::Buffer },
     syntax::StorageQualifier::Shared => quote! { glsl::syntax::StorageQualifier::Shared },
     syntax::StorageQualifier::Coherent => quote! { glsl::syntax::StorageQualifier::Coherent },
