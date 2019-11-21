@@ -561,6 +561,8 @@ pub fn storage_qualifier(i: &str) -> ParserResult<syntax::StorageQualifier> {
     value(syntax::StorageQualifier::Patch, keyword("patch")),
     value(syntax::StorageQualifier::Sample, keyword("sample")),
     value(syntax::StorageQualifier::Uniform, keyword("uniform")),
+    value(syntax::StorageQualifier::Attribute, keyword("attribute")),
+    value(syntax::StorageQualifier::Varying, keyword("varying")),
     value(syntax::StorageQualifier::Buffer, keyword("buffer")),
     value(syntax::StorageQualifier::Shared, keyword("shared")),
     value(syntax::StorageQualifier::Coherent, keyword("coherent")),
@@ -2232,6 +2234,14 @@ mod tests {
     assert_eq!(
       storage_qualifier("uniform "),
       Ok((" ", syntax::StorageQualifier::Uniform))
+    );
+    assert_eq!(
+      storage_qualifier("attribute "),
+      Ok((" ", syntax::StorageQualifier::Attribute))
+    );
+    assert_eq!(
+      storage_qualifier("varying "),
+      Ok((" ", syntax::StorageQualifier::Varying))
     );
     assert_eq!(
       storage_qualifier("buffer "),

@@ -564,6 +564,12 @@ where
     syntax::StorageQualifier::Uniform => {
       let _ = f.write_str("uniform");
     }
+    syntax::StorageQualifier::Attribute => {
+      let _ = f.write_str("attribute");
+    }
+    syntax::StorageQualifier::Varying => {
+      let _ = f.write_str("varying");
+    }
     syntax::StorageQualifier::Buffer => {
       let _ = f.write_str("buffer");
     }
