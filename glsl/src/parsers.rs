@@ -13,7 +13,7 @@ use nom::character::complete::{anychar, char, digit1, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{cut, map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{many0, many1, separated_list};
+use nom::multi::{many0, many1, separated_list, fold_many0};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{Err as NomErr, ParseTo};
 use std::num::ParseIntError;
@@ -1284,32 +1284,28 @@ pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = multiplicative_expr(i)?;
   let a_ = a.clone();
 
-  alt((
-    map(
-      pair(
-        delimited(
-          blank,
-          alt((
-            value(syntax::BinaryOp::Add, char('+')),
-            value(syntax::BinaryOp::Sub, char('-')),
-          )),
-          blank,
-        ),
-        additive_expr,
+  fold_many0(
+    pair(
+      delimited(
+        blank,
+        alt((
+          value(syntax::BinaryOp::Add, char('+')),
+          value(syntax::BinaryOp::Sub, char('-')),
+        )),
+        blank,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
+      multiplicative_expr,
     ),
-    cnst(a),
-  ))(i)
+    a_,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
+  )(i)
 }
 
 /// Parse a multiplicative expression.
 pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = unary_expr(i)?;
   let a_ = a.clone();
-
-  alt((
-    map(
+  fold_many0(
       pair(
         delimited(
           blank,
@@ -1320,12 +1316,11 @@ pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
           )),
           blank,
         ),
-        multiplicative_expr,
+        unary_expr,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+      a_,
+      move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
+  )(i)
 }
 
 /// Parse a simple statement.
@@ -3336,14 +3331,14 @@ mod tests {
     let three = Box::new(syntax::Expr::UIntConst(3));
     let expected = syntax::Expr::Binary(
       syntax::BinaryOp::Add,
-      one,
-      Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, two, three)),
+      Box::new(syntax::Expr::Binary(syntax::BinaryOp::Add, one, two)),
+      three,
     );
 
     assert_eq!(expr("1u + 2u + 3u"), Ok(("", expected.clone())));
     assert_eq!(expr("1u + 2u + 3u   "), Ok(("   ", expected.clone())));
     assert_eq!(expr("1u+2u+3u"), Ok(("", expected.clone())));
-    assert_eq!(expr("(1u + (2u + 3u))"), Ok(("", expected)));
+    assert_eq!(expr("((1u + 2u) + 3u)"), Ok(("", expected)));
   }
 
   #[test]
