@@ -13,7 +13,7 @@ use nom::character::complete::{anychar, char, digit1, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{cut, map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{many0, many1, separated_list, fold_many0};
+use nom::multi::{fold_many0, many0, many1, separated_list};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{Err as NomErr, ParseTo};
 use std::num::ParseIntError;
@@ -1306,20 +1306,20 @@ pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = unary_expr(i)?;
   let a_ = a.clone();
   fold_many0(
-      pair(
-        delimited(
-          blank,
-          alt((
-            value(syntax::BinaryOp::Mult, char('*')),
-            value(syntax::BinaryOp::Div, char('/')),
-            value(syntax::BinaryOp::Mod, char('%')),
-          )),
-          blank,
-        ),
-        unary_expr,
+    pair(
+      delimited(
+        blank,
+        alt((
+          value(syntax::BinaryOp::Mult, char('*')),
+          value(syntax::BinaryOp::Div, char('/')),
+          value(syntax::BinaryOp::Mod, char('%')),
+        )),
+        blank,
       ),
-      a_,
-      move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
+      unary_expr,
+    ),
+    a_,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
   )(i)
 }
 
