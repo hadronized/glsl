@@ -1105,184 +1105,153 @@ pub fn assignment_op(i: &str) -> ParserResult<syntax::AssignmentOp> {
 /// Parse a conditional expression.
 pub fn cond_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = logical_or_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      tuple((
-        delimited(blank, char('?'), blank),
-        cut(terminated(expr, blank)),
-        cut(terminated(char(':'), blank)),
-        cut(assignment_expr),
-      )),
-      move |(_, b, _, c)| syntax::Expr::Ternary(Box::new(a_.clone()), Box::new(b), Box::new(c)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    tuple((
+      delimited(blank, char('?'), blank),
+      cut(terminated(expr, blank)),
+      cut(terminated(char(':'), blank)),
+      cut(assignment_expr),
+    )),
+    a,
+    move |acc, (_, b, _, c)| syntax::Expr::Ternary(Box::new(acc), Box::new(b), Box::new(c)),
+  )(i)
 }
 
 /// Parse a logical OR expression.
 pub fn logical_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = logical_xor_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, tag("||"), blank), logical_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, tag("||"), blank), logical_or_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::Or, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a logical XOR expression.
 pub fn logical_xor_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = logical_and_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, tag("^^"), blank), logical_xor_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, tag("^^"), blank), logical_xor_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::Xor, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a logical AND expression.
 pub fn logical_and_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = inclusive_or_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, tag("&&"), blank), logical_and_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, tag("&&"), blank), logical_and_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::And, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a bitwise OR expression.
 pub fn inclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = exclusive_or_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, char('|'), blank), inclusive_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, char('|'), blank), inclusive_or_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::BitOr, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a bitwise XOR expression.
 pub fn exclusive_or_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = and_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, char('^'), blank), exclusive_or_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, char('^'), blank), exclusive_or_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::BitXor, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a bitwise AND expression.
 pub fn and_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = equality_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      preceded(delimited(blank, char('&'), blank), and_expr),
-      move |b| syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(a_.clone()), Box::new(b)),
-    ),
-    cnst(a),
-  ))(i)
+  fold_many0(
+    preceded(delimited(blank, char('&'), blank), and_expr),
+    a,
+    move |acc, b| syntax::Expr::Binary(syntax::BinaryOp::BitAnd, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse an equality expression.
 pub fn equality_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = rel_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      pair(
-        delimited(
-          blank,
-          alt((
-            value(syntax::BinaryOp::Equal, tag("==")),
-            value(syntax::BinaryOp::NonEqual, tag("!=")),
-          )),
-          blank,
-        ),
-        equality_expr,
+  fold_many0(
+    pair(
+      delimited(
+        blank,
+        alt((
+          value(syntax::BinaryOp::Equal, tag("==")),
+          value(syntax::BinaryOp::NonEqual, tag("!=")),
+        )),
+        blank,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
+      rel_expr,
     ),
-    cnst(a),
-  ))(i)
+    a,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a relational expression.
 pub fn rel_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = shift_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      pair(
-        delimited(
-          blank,
-          alt((
-            value(syntax::BinaryOp::LTE, tag("<=")),
-            value(syntax::BinaryOp::GTE, tag(">=")),
-            value(syntax::BinaryOp::LT, char('<')),
-            value(syntax::BinaryOp::GT, char('>')),
-          )),
-          blank,
-        ),
-        rel_expr,
+  fold_many0(
+    pair(
+      delimited(
+        blank,
+        alt((
+          value(syntax::BinaryOp::LTE, tag("<=")),
+          value(syntax::BinaryOp::GTE, tag(">=")),
+          value(syntax::BinaryOp::LT, char('<')),
+          value(syntax::BinaryOp::GT, char('>')),
+        )),
+        blank,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
+      shift_expr,
     ),
-    cnst(a),
-  ))(i)
+    a,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse a shift expression.
 pub fn shift_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = additive_expr(i)?;
-  let a_ = a.clone();
 
-  alt((
-    map(
-      pair(
-        delimited(
-          blank,
-          alt((
-            value(syntax::BinaryOp::LShift, tag("<<")),
-            value(syntax::BinaryOp::RShift, tag(">>")),
-          )),
-          blank,
-        ),
-        shift_expr,
+  fold_many0(
+    pair(
+      delimited(
+        blank,
+        alt((
+          value(syntax::BinaryOp::LShift, tag("<<")),
+          value(syntax::BinaryOp::RShift, tag(">>")),
+        )),
+        blank,
       ),
-      move |(op, b)| syntax::Expr::Binary(op, Box::new(a_.clone()), Box::new(b)),
+      additive_expr,
     ),
-    cnst(a),
-  ))(i)
+    a,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc), Box::new(b)),
+  )(i)
 }
 
 /// Parse an additive expression.
 pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = multiplicative_expr(i)?;
-  let a_ = a.clone();
 
   fold_many0(
     pair(
@@ -1296,15 +1265,15 @@ pub fn additive_expr(i: &str) -> ParserResult<syntax::Expr> {
       ),
       multiplicative_expr,
     ),
-    a_,
-    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
+    a,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc), Box::new(b)),
   )(i)
 }
 
 /// Parse a multiplicative expression.
 pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
   let (i, a) = unary_expr(i)?;
-  let a_ = a.clone();
+
   fold_many0(
     pair(
       delimited(
@@ -1318,8 +1287,8 @@ pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
       ),
       unary_expr,
     ),
-    a_,
-    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc.clone()), Box::new(b)),
+    a,
+    move |acc, (op, b)| syntax::Expr::Binary(op, Box::new(acc), Box::new(b)),
   )(i)
 }
 
