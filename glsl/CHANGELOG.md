@@ -1,3 +1,13 @@
+# 4.0
+
+> Mon 6th Jan 2020
+
+## Major changes
+
+- Add support for `attribute` and `varying` keyword as a backward-compatible parser.
+- Fix binary operator associativity. They were (_erroneously_) right-associative. They’re now
+  parsed as left-associative.
+
 # 3.0
 
 > Wed 14th Nov 2019
