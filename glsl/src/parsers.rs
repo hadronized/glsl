@@ -4316,19 +4316,23 @@ mod tests {
 
   #[test]
   fn parse_pp_define_with_args() {
+    let expected = syntax::Preprocessor::Define(syntax::PreprocessorDefine::FunctionLike {
+      ident: "add".into(),
+      args: vec![
+        syntax::Identifier::new("x").unwrap(),
+        syntax::Identifier::new("y").unwrap(),
+      ],
+      value: "(x + y)".to_owned(),
+    });
+
     assert_eq!(
       preprocessor("#define \\\n add(x, y) \\\n (x + y)"),
-      Ok((
-        "",
-        syntax::Preprocessor::Define(syntax::PreprocessorDefine::FunctionLike {
-          ident: "add".into(),
-          args: vec![
-            syntax::Identifier::new("x").unwrap(),
-            syntax::Identifier::new("y").unwrap()
-          ],
-          value: "(x + y)".to_owned(),
-        })
-      ))
+      Ok(("", expected.clone()))
+    );
+
+    assert_eq!(
+      preprocessor("#define \\\n add(  x, y  ) \\\n (x + y)"),
+      Ok(("", expected))
     );
   }
 
