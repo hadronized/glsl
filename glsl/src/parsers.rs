@@ -1659,7 +1659,10 @@ pub(crate) fn pp_define_function_like<'a>(
     map(
       tuple((
         terminated(char('('), pp_space0),
-        separated_list(terminated(char(','), pp_space0), cut(identifier)),
+        separated_list(
+          terminated(char(','), pp_space0),
+          cut(terminated(identifier, pp_space0)),
+        ),
         cut(terminated(char(')'), pp_space0)),
         cut(map(str_till_eol, String::from)),
       )),
