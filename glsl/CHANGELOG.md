@@ -1,3 +1,10 @@
+# 4.0.1
+
+> Tue 21st Jan 2020
+
+- Fix a bug occurring in the function-like `#define` parser (i.e. `#define foo(x) (y)`) that
+  would prevent the use of whitespaces in the argument list.
+
 # 4.0
 
 > Mon 6th Jan 2020
