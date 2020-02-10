@@ -1,3 +1,10 @@
+# 4.0.2
+
+> Mon 10th Feb 2020
+
+- Remove the `lexical` feature from `nom`. It’s useful only when using functions such as the
+  `float` combinator, which we don’t use.
+
 # 4.0.1
 
 > Tue 21st Jan 2020
