@@ -116,6 +116,8 @@
 //! [`Expr`]: crate::syntax::Expr
 //! [`Visitor`]: crate::visitor::Visitor
 
+#[cfg(test)]
+mod parse_tests;
 pub mod parser;
 mod parsers;
 pub mod syntax;
