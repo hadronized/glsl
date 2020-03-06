@@ -1,3 +1,10 @@
+# 4.0.3
+
+> Fri Mar 6th 2020
+
+- Move all the unit tests code into their ow module to prevent rustc from parsing them if we
+  don’t build with tests.
+
 # 4.0.2
 
 > Mon 10th Feb 2020
