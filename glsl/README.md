@@ -106,7 +106,7 @@ assert!(stage.is_ok());
 The crate is also getting more and more combinators and functions to transform the AST or create
 nodes with regular Rust. The [`Visitor`] trait will be a great friend of yours when you will
 want to cope with deep mutation, filtering and validation. Have a look at the
-[`visitor`](visitor) module for a tutorial on how to use visitors.
+[`visitor`](https://github.com/phaazon/glsl/blob/master/glsl/src/visitor.rs) module for a tutorial on how to use visitors.
 
 # About the GLSL versions…
 
