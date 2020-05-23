@@ -22,6 +22,13 @@ use std::fmt;
 use std::iter::{once, FromIterator};
 use std::ops::{Deref, DerefMut};
 
+/// Represents the notational associativity of an operator
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Associativity {
+  LeftToRight,
+  RightToLeft,
+}
+
 /// A non-empty [`Vec`]. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
@@ -713,6 +720,22 @@ pub enum Expr {
   Comma(Box<Expr>, Box<Expr>),
 }
 
+impl Expr {
+  pub fn precedence(&self) -> u32 {
+    match self {
+      // 0 isn't a valid precedence, but we use this to represent atomic expressions
+      Self::Variable(_) | Self::IntConst(_) | Self::UIntConst(_) | Self::BoolConst(_) | Self::FloatConst(_) | Self::DoubleConst(_) => 0,
+      // Precedence operator expression is precedence of operator
+      Self::Unary(op, _) => op.precedence(),
+      Self::Binary(op, _, _) => op.precedence(),
+      Self::Ternary(_, _, _) => 15,
+      Self::Assignment(_, op, _) => op.precedence(),
+      Self::Bracket(_, _) | Self::FunCall(_, _) | Self::Dot(_, _) | Self::PostInc(_) | Self::PostDec(_) => 2,
+      Self::Comma(_, _) => 17,
+    }
+  }
+}
+
 impl From<i32> for Expr {
   fn from(x: i32) -> Expr {
     Expr::IntConst(x)
@@ -754,6 +777,16 @@ pub enum UnaryOp {
   Complement,
 }
 
+impl UnaryOp {
+  pub fn associativity(&self) -> Associativity {
+    Associativity::RightToLeft
+  }
+
+  pub fn precedence(&self) -> u32 {
+    3
+  }
+}
+
 /// All binary operators that exist in GLSL.
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinaryOp {
@@ -778,6 +811,28 @@ pub enum BinaryOp {
   Mod,
 }
 
+impl BinaryOp {
+  pub fn associativity(&self) -> Associativity {
+    Associativity::LeftToRight
+  }
+
+  pub fn precedence(&self) -> u32 {
+    match self {
+      Self::Mult | Self::Div | Self::Mod => 4,
+      Self::Add | Self::Sub => 5,
+      Self::LShift | Self::RShift => 6,
+      Self::LT | Self::GT | Self::LTE | Self::GTE => 7,
+      Self::Equal | Self::NonEqual => 8,
+      Self::BitAnd => 9,
+      Self::BitXor => 10,
+      Self::BitOr => 11,
+      Self::And => 12,
+      Self::Xor => 13,
+      Self::Or => 14,
+    }
+  }
+}
+
 /// All possible operators for assigning expressions.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AssignmentOp {
@@ -792,6 +847,16 @@ pub enum AssignmentOp {
   And,
   Xor,
   Or,
+}
+
+impl AssignmentOp {
+  pub fn associavitiy(&self) -> Associativity {
+    Associativity::RightToLeft
+  }
+
+  pub fn precedence(&self) -> u32 {
+    16
+  }
 }
 
 /// Starting rule.

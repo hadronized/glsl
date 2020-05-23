@@ -727,18 +727,32 @@ where
     syntax::Expr::DoubleConst(ref x) => show_double(f, *x),
     syntax::Expr::Unary(ref op, ref e) => {
       show_unary_op(f, &op);
-      let _ = f.write_str("(");
-      show_expr(f, &e);
-      let _ = f.write_str(")");
+      if e.precedence() > op.precedence() {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      } else {
+        show_expr(f, &e);
+      }
     }
     syntax::Expr::Binary(ref op, ref l, ref r) => {
-      let _ = f.write_str("(");
-      show_expr(f, &l);
-      let _ = f.write_str(")");
+      if l.precedence() < op.precedence() ||
+         l.precedence() == op.precedence() && op.associativity() == syntax::Associativity::LeftToRight {
+        show_expr(f, &l);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &l);
+        let _ = f.write_str(")");
+      }
       show_binary_op(f, &op);
-      let _ = f.write_str("(");
-      show_expr(f, &r);
-      let _ = f.write_str(")");
+      if r.precedence() < op.precedence() ||
+         r.precedence() == op.precedence() && op.associativity() == syntax::Associativity::RightToLeft {
+        show_expr(f, &r);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &r);
+        let _ = f.write_str(")");
+      }
     }
     syntax::Expr::Ternary(ref c, ref s, ref e) => {
       show_expr(f, &c);
@@ -776,9 +790,13 @@ where
       let _ = f.write_str(")");
     }
     syntax::Expr::Dot(ref e, ref i) => {
-      let _ = f.write_str("(");
-      show_expr(f, &e);
-      let _ = f.write_str(")");
+      if e.precedence() > expr.precedence() {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      } else {
+        show_expr(f, &e);
+      }
       let _ = f.write_str(".");
       show_identifier(f, &i);
     }
@@ -1575,11 +1593,85 @@ where
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::parsers::expr;
+
+  fn to_string(e: &syntax::Expr) -> String {
+    let mut s = String::new();
+    show_expr(&mut s, e);
+    s
+  }
+
+  #[test]
+  fn unary_parentheses() {
+    assert_eq!(to_string(&expr("-a").unwrap().1), "-a");
+    assert_eq!(to_string(&expr("-(a + b)").unwrap().1), "-(a+b)");
+    assert_eq!(to_string(&expr("-a.x").unwrap().1), "-a.x");
+  }
+
+  #[test]
+  fn binary_parentheses() {
+    assert_eq!(to_string(&expr("a + b").unwrap().1), "a+b");
+    assert_eq!(to_string(&expr("(a + b) * c").unwrap().1), "(a+b)*c");
+    assert_eq!(to_string(&expr("a * (b + c)").unwrap().1), "a*(b+c)");
+    assert_eq!(to_string(&expr("(a * b) * c").unwrap().1), "a*b*c");
+    assert_eq!(to_string(&expr("a * (b * c)").unwrap().1), "a*(b*c)");
+    assert_eq!(to_string(&expr("a&&b&&c").unwrap().1), "a&&b&&c");
+    assert_eq!(to_string(&expr("n - p > 0. && u.y < n && u.y > p").unwrap().1), "n-p>0.&&u.y<n&&u.y>p");
+  }
+
+  #[test]
+  fn ternary_parentheses() {
+    assert_eq!(
+      to_string(&expr("a ? b = c : d = e").unwrap().1),
+      "a ? b = c : d = e"
+    );
+    assert_eq!(
+      to_string(&expr("x = a ? b = c : d = e").unwrap().1),
+      "x = a ? b = c : d = e"
+    );
+  }
+
+  #[test]
+  fn dot_parentheses() {
+    assert_eq!(to_string(&expr("a.x").unwrap().1), "a.x");
+    assert_eq!(to_string(&expr("(a + b).x").unwrap().1), "(a+b).x");
+  }
+
+  #[test]
+  fn test_parentheses() {
+    use crate::parsers::function_definition;
+
+    const SRC: &'static str = r#"vec2 main() {
+float n = 0.;
+float p = 0.;
+float u = vec2(0., 0.);
+if (n-p>0.&&u.y<n&&u.y>p) {
+}
+return u;
+}
+"#;
+
+    // Ideally we would use SRC as the expected, but there's a bug in block braces generation
+    const DST: &'static str = r#"vec2 main() {
+float n = 0.;
+float p = 0.;
+float u = vec2(0., 0.);
+if (n-p>0.&&u.y<n&&u.y>p) {
+{
+}
+}
+return u;
+}
+"#;
+
+    let mut s = String::new();
+    show_function_definition(&mut s, &function_definition(SRC).unwrap().1);
+
+    assert_eq!(s, DST);
+  }
 
   #[test]
   fn roundtrip_glsl_complex_expr() {
-    use crate::parsers::expr;
-
     let zero = syntax::Expr::DoubleConst(0.);
     let ray = syntax::Expr::Variable("ray".into());
     let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
