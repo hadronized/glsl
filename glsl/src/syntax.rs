@@ -717,13 +717,22 @@ impl Expr {
   pub fn precedence(&self) -> u32 {
     match self {
       // 0 isn't a valid precedence, but we use this to represent atomic expressions
-      Self::Variable(_) | Self::IntConst(_) | Self::UIntConst(_) | Self::BoolConst(_) | Self::FloatConst(_) | Self::DoubleConst(_) => 0,
+      Self::Variable(_)
+      | Self::IntConst(_)
+      | Self::UIntConst(_)
+      | Self::BoolConst(_)
+      | Self::FloatConst(_)
+      | Self::DoubleConst(_) => 0,
       // Precedence operator expression is precedence of operator
       Self::Unary(op, _) => op.precedence(),
       Self::Binary(op, _, _) => op.precedence(),
       Self::Ternary(_, _, _) => 15,
       Self::Assignment(_, op, _) => op.precedence(),
-      Self::Bracket(_, _) | Self::FunCall(_, _) | Self::Dot(_, _) | Self::PostInc(_) | Self::PostDec(_) => 2,
+      Self::Bracket(_, _)
+      | Self::FunCall(_, _)
+      | Self::Dot(_, _)
+      | Self::PostInc(_)
+      | Self::PostDec(_) => 2,
       Self::Comma(_, _) => 17,
     }
   }
