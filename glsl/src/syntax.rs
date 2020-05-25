@@ -22,13 +22,6 @@ use std::fmt;
 use std::iter::{once, FromIterator};
 use std::ops::{Deref, DerefMut};
 
-/// Represents the notational associativity of an operator
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Associativity {
-  LeftToRight,
-  RightToLeft,
-}
-
 /// A non-empty [`Vec`]. It has at least one element.
 #[derive(Clone, Debug, PartialEq)]
 pub struct NonEmpty<T>(pub Vec<T>);
@@ -778,10 +771,6 @@ pub enum UnaryOp {
 }
 
 impl UnaryOp {
-  pub fn associativity(&self) -> Associativity {
-    Associativity::RightToLeft
-  }
-
   pub fn precedence(&self) -> u32 {
     3
   }
@@ -812,10 +801,6 @@ pub enum BinaryOp {
 }
 
 impl BinaryOp {
-  pub fn associativity(&self) -> Associativity {
-    Associativity::LeftToRight
-  }
-
   pub fn precedence(&self) -> u32 {
     match self {
       Self::Mult | Self::Div | Self::Mod => 4,
@@ -850,10 +835,6 @@ pub enum AssignmentOp {
 }
 
 impl AssignmentOp {
-  pub fn associavitiy(&self) -> Associativity {
-    Associativity::RightToLeft
-  }
-
   pub fn precedence(&self) -> u32 {
     16
   }

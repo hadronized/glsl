@@ -726,27 +726,40 @@ where
     syntax::Expr::FloatConst(ref x) => show_float(f, *x),
     syntax::Expr::DoubleConst(ref x) => show_double(f, *x),
     syntax::Expr::Unary(ref op, ref e) => {
+      // Note: all unary ops are right-to-left associative
       show_unary_op(f, &op);
+
       if e.precedence() > op.precedence() {
         let _ = f.write_str("(");
         show_expr(f, &e);
         let _ = f.write_str(")");
+      } else if let syntax::Expr::Unary(eop, _) = &**e {
+        // Prevent double-unary plus/minus turning into inc/dec
+        if eop == op && (*eop == syntax::UnaryOp::Add || *eop == syntax::UnaryOp::Minus) {
+          let _ = f.write_str("(");
+          show_expr(f, &e);
+          let _ = f.write_str(")");
+        } else {
+          show_expr(f, &e);
+        }
       } else {
         show_expr(f, &e);
       }
     }
     syntax::Expr::Binary(ref op, ref l, ref r) => {
-      if l.precedence() < op.precedence() ||
-         l.precedence() == op.precedence() && op.associativity() == syntax::Associativity::LeftToRight {
+      // Note: all binary ops are left-to-right associative (<= for left part)
+
+      if l.precedence() <= op.precedence() {
         show_expr(f, &l);
       } else {
         let _ = f.write_str("(");
         show_expr(f, &l);
         let _ = f.write_str(")");
       }
+
       show_binary_op(f, &op);
-      if r.precedence() < op.precedence() ||
-         r.precedence() == op.precedence() && op.associativity() == syntax::Associativity::RightToLeft {
+
+      if r.precedence() < op.precedence() {
         show_expr(f, &r);
       } else {
         let _ = f.write_str("(");
@@ -755,21 +768,60 @@ where
       }
     }
     syntax::Expr::Ternary(ref c, ref s, ref e) => {
-      show_expr(f, &c);
+      // Note: ternary is right-to-left associative (<= for right part)
+
+      if c.precedence() < expr.precedence() {
+        show_expr(f, &c);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &c);
+        let _ = f.write_str(")");
+      }
       let _ = f.write_str(" ? ");
       show_expr(f, &s);
       let _ = f.write_str(" : ");
-      show_expr(f, &e);
+      if e.precedence() <= expr.precedence() {
+        show_expr(f, &e);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      }
     }
     syntax::Expr::Assignment(ref v, ref op, ref e) => {
-      show_expr(f, &v);
+      // Note: all assignment ops are right-to-left associative
+
+      if v.precedence() < op.precedence() {
+        show_expr(f, &v);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &v);
+        let _ = f.write_str(")");
+      }
+
       let _ = f.write_str(" ");
       show_assignment_op(f, &op);
       let _ = f.write_str(" ");
-      show_expr(f, &e);
+
+      if e.precedence() <= op.precedence() {
+        show_expr(f, &e);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      }
     }
     syntax::Expr::Bracket(ref e, ref a) => {
-      show_expr(f, &e);
+      // Note: bracket is left-to-right associative
+
+      if e.precedence() <= expr.precedence() {
+        show_expr(f, &e);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      }
+
       show_array_spec(f, &a);
     }
     syntax::Expr::FunCall(ref fun, ref args) => {
@@ -790,28 +842,64 @@ where
       let _ = f.write_str(")");
     }
     syntax::Expr::Dot(ref e, ref i) => {
-      if e.precedence() > expr.precedence() {
+      // Note: dot is left-to-right associative
+
+      if e.precedence() <= expr.precedence() {
+        show_expr(f, &e);
+      } else {
         let _ = f.write_str("(");
         show_expr(f, &e);
         let _ = f.write_str(")");
-      } else {
-        show_expr(f, &e);
       }
       let _ = f.write_str(".");
       show_identifier(f, &i);
     }
     syntax::Expr::PostInc(ref e) => {
-      show_expr(f, &e);
+      // Note: post-increment is right-to-left associative
+
+      if e.precedence() < expr.precedence() {
+        show_expr(f, &e);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      }
+
       let _ = f.write_str("++");
     }
     syntax::Expr::PostDec(ref e) => {
-      show_expr(f, &e);
+      // Note: post-decrement is right-to-left associative
+
+      if e.precedence() < expr.precedence() {
+        show_expr(f, &e);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &e);
+        let _ = f.write_str(")");
+      }
+
       let _ = f.write_str("--");
     }
     syntax::Expr::Comma(ref a, ref b) => {
-      show_expr(f, &a);
+      // Note: comma is left-to-right associative
+
+      if a.precedence() <= expr.precedence() {
+        show_expr(f, &a);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &a);
+        let _ = f.write_str(")");
+      }
+
       let _ = f.write_str(", ");
-      show_expr(f, &b);
+
+      if b.precedence() < expr.precedence() {
+        show_expr(f, &b);
+      } else {
+        let _ = f.write_str("(");
+        show_expr(f, &b);
+        let _ = f.write_str(")");
+      }
     }
   }
 }
@@ -1606,6 +1694,13 @@ mod tests {
     assert_eq!(to_string(&expr("-a").unwrap().1), "-a");
     assert_eq!(to_string(&expr("-(a + b)").unwrap().1), "-(a+b)");
     assert_eq!(to_string(&expr("-a.x").unwrap().1), "-a.x");
+
+    assert_eq!(to_string(&expr("-(-a)").unwrap().1), "-(-a)");
+    assert_eq!(to_string(&expr("+(+a)").unwrap().1), "+(+a)");
+    assert_eq!(to_string(&expr("~~a").unwrap().1), "~~a");
+    assert_eq!(to_string(&expr("--a").unwrap().1), "--a");
+    assert_eq!(to_string(&expr("++a").unwrap().1), "++a");
+    assert_eq!(to_string(&expr("+-a").unwrap().1), "+-a");
   }
 
   #[test]
@@ -1616,19 +1711,22 @@ mod tests {
     assert_eq!(to_string(&expr("(a * b) * c").unwrap().1), "a*b*c");
     assert_eq!(to_string(&expr("a * (b * c)").unwrap().1), "a*(b*c)");
     assert_eq!(to_string(&expr("a&&b&&c").unwrap().1), "a&&b&&c");
-    assert_eq!(to_string(&expr("n - p > 0. && u.y < n && u.y > p").unwrap().1), "n-p>0.&&u.y<n&&u.y>p");
+    assert_eq!(
+      to_string(&expr("n - p > 0. && u.y < n && u.y > p").unwrap().1),
+      "n-p>0.&&u.y<n&&u.y>p"
+    );
   }
 
   #[test]
   fn ternary_parentheses() {
-    assert_eq!(
-      to_string(&expr("a ? b = c : d = e").unwrap().1),
-      "a ? b = c : d = e"
-    );
-    assert_eq!(
-      to_string(&expr("x = a ? b = c : d = e").unwrap().1),
-      "x = a ? b = c : d = e"
-    );
+    assert_eq!(to_string(&expr("a ? b : c ? d : e").unwrap().1), "a ? b : c ? d : e");
+    assert_eq!(to_string(&expr("(a ? b : c) ? d : e").unwrap().1), "(a ? b : c) ? d : e");
+  }
+
+  #[test]
+  fn assignment_parentheses() {
+    assert_eq!(to_string(&expr("a = b = c").unwrap().1), "a = b = c");
+    assert_eq!(to_string(&expr("(a = b) = c").unwrap().1), "(a = b) = c");
   }
 
   #[test]
