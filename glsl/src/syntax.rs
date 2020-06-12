@@ -116,6 +116,8 @@ pub enum IdentifierError {
   ContainsNonASCIIAlphaNum,
 }
 
+impl std::error::Error for IdentifierError {}
+
 impl fmt::Display for IdentifierError {
   fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
     match *self {
