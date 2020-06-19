@@ -1,3 +1,9 @@
+# 4.1
+
+> Fri Jun 19th 2020
+
+- Implement `std::error::Error` for error types.
+
 # 4.0.3
 
 > Fri Mar 6th 2020
