@@ -11,7 +11,7 @@
 This crate exports a procedural macro: `glsl!`. It enables quasiquoting by allowing you to
 embed GLSL source code directly into rust via the syntax:
 
-```
+```rust
 #![feature(proc_macro_hygiene)]
 
 use glsl::syntax::TranslationUnit;
@@ -42,7 +42,7 @@ glsl-quasiquote = "1"
 
 Then, you currently need to have a nightly compiler and the following feature enabled:
 
-```
+```rust
 #![feature(proc_macro_hygiene)]
 ```
 
@@ -50,14 +50,14 @@ Then, depending on which you’re using the 2018 edition or not:
 
 > *Non-2018 edition*
 
-```
+```rust
 extern crate glsl;
 #[macro_use] extern crate glsl_quasiquote;
 ```
 
 > *2018 edition*
 
-```
+```rust
 use glsl_quasiquote::glsl;
 ```
 
