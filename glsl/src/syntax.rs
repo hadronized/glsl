@@ -147,7 +147,12 @@ impl Identifier {
   {
     let name = name.into();
 
-    if name.chars().next().map(|c| c.is_ascii_alphabetic()) == Some(false) {
+    if name
+      .chars()
+      .next()
+      .map(|c| c.is_ascii_alphabetic() || c == '_')
+      == Some(false)
+    {
       // check the first letter is not a digit
       Err(IdentifierError::StartsWithDigit)
     } else if name.contains(|c: char| !(c.is_ascii_alphanumeric() || c == '_')) {
@@ -1292,7 +1297,7 @@ mod tests {
     assert!(Identifier::new("foo_bar").is_ok());
     assert!(Identifier::new("3foo_bar").is_err());
     assert!(Identifier::new("FooBar").is_ok());
-    assert!(Identifier::new("_FooBar").is_err());
+    assert!(Identifier::new("_FooBar").is_ok());
     assert!(Identifier::new("foo3").is_ok());
     assert!(Identifier::new("foo3_").is_ok());
     assert!(Identifier::new("fδo3_").is_err());
@@ -1305,7 +1310,7 @@ mod tests {
     assert!(TypeName::new("foo3").is_ok());
     assert!(TypeName::new("foo3_").is_ok());
 
-    assert!(TypeName::new("_FooBar").is_err());
+    assert!(TypeName::new("_FooBar").is_ok());
     assert!(TypeName::new("3foo_bar").is_err());
     assert!(TypeName::new("fδo3_").is_err());
   }
