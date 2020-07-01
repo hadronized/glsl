@@ -1706,7 +1706,9 @@ mod tests {
   #[test]
   fn binary_parentheses() {
     assert_eq!(to_string(&expr("a + b").unwrap().1), "a+b");
+    assert_eq!(to_string(&expr("a * b + c").unwrap().1), "a*b+c");
     assert_eq!(to_string(&expr("(a + b) * c").unwrap().1), "(a+b)*c");
+    assert_eq!(to_string(&expr("a + b * c").unwrap().1), "a+(b*c)");
     assert_eq!(to_string(&expr("a * (b + c)").unwrap().1), "a*(b+c)");
     assert_eq!(to_string(&expr("(a * b) * c").unwrap().1), "a*b*c");
     assert_eq!(to_string(&expr("a * (b * c)").unwrap().1), "a*(b*c)");
