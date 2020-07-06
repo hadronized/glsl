@@ -1,0 +1,19 @@
+[package]
+name = "glsl-piglit"
+version = "4.1.1"
+license = "BSD-3-Clause"
+authors = ["Vincent Tavernier <vince.tavernier@gmail.com>"]
+description = "Piglit test suite for the glsl crate"
+
+edition = "2018"
+
+[dependencies]
+glsl = "*"
+
+anyhow = "1.0"
+serde = "1.0"
+serde_derive = "1.0"
+serde_yaml = "0.8"
+strum = "0.18"
+strum_macros = "0.18"
+termcolor = "1.1"
