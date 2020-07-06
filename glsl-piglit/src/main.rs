@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
   let mut tests = 0;
 
   // Check all shaders from the piglit test suite
-  for test_dir in &["tests/glslparsertest/shaders"] {
+  for test_dir in &["tests/glslparsertest/shaders", "tests/glslparsertest/glsl2"] {
     let full_path = piglit_path.join(test_dir);
 
     for entry in fs::read_dir(full_path)? {
@@ -97,7 +97,25 @@ fn main() -> anyhow::Result<()> {
         }
 
         // Parse the config
-        let config: TestConfig = serde_yaml::from_str(&config_src)?;
+        let config: Result<TestConfig, _> = serde_yaml::from_str(&config_src);
+
+        let config = match config {
+          Ok(config) => config,
+          Err(e) => {
+            stdout.set_color(ColorSpec::new().set_fg(Some(Color::Blue)))?;
+            failures += 1;
+            tests += 1;
+
+            writeln!(
+              &mut stdout,
+              "failed to parse config {}: {}\n",
+              relative_path.display(),
+              e,
+            )?;
+
+            continue;
+          }
+        };
 
         // Parse the source
         let result = TranslationUnit::parse(file_src);
