@@ -42,7 +42,7 @@ where
 impl Quoted for Identifier {
   fn quote(&self) -> TokenStream {
     let s = &self.0;
-    quote! { glsl::syntax::Identifier(#s.to_owned()) }
+    quote! { glsl::syntax::IdentifierData(#s.to_owned()) }
   }
 }
 

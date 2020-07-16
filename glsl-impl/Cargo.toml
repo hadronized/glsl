@@ -1,0 +1,14 @@
+[package]
+name = "glsl-impl"
+version = "6.0.0"
+license = "BSD-3-Clause"
+authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>", "Vincent Tavernier <vince.tavernier@gmail.com>"]
+
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1.0"
+quote = "1.0"

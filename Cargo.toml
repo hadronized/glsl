@@ -2,9 +2,11 @@
 
 members = [
   "glsl",
-  "glsl-tree",
-  "glsl-quasiquote"
+  "glsl-impl",
+  "glsl-quasiquote",
+  "glsl-tree"
 ]
 
 [patch.crates-io]
 glsl = { path = "./glsl" }
+glsl-impl = { path = "./glsl-impl" }
