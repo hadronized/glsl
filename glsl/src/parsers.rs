@@ -678,7 +678,7 @@ pub fn fully_specified_type(i: &str) -> ParserResult<syntax::FullySpecifiedType>
   )(i)
 }
 
-/// Parse an array specifier with no size information.
+/// Parse an array specifier.
 pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
   alt((
     value(
