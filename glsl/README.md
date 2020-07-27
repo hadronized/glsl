@@ -52,7 +52,7 @@ true for a [`TranslationUnit`] as it’s exceptionnally more permissive).
 Let’s try to parse an expression.
 
 ```rust
-use glsl::parser::Parse;
+use glsl::parser::Parse as _;
 use glsl::syntax::Expr;
 
 let glsl = "(vec3(r, g, b) * cos(t * PI * .5)).xxz";
@@ -81,7 +81,7 @@ shaders can be parsed the same way by using one of the `TranslationUnit` or `Sha
 Here, a simple vertex shader being parsed.
 
 ```rust
-use glsl::parser::Parse;
+use glsl::parser::Parse as _;
 use glsl::syntax::ShaderStage;
 
 let glsl = "
