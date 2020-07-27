@@ -1,3 +1,18 @@
+# 5.0.0
+
+> Jul 27th, 2020
+
+- Fix array specifiers by splitting the `ArraySpecifier` type into two types:
+  - `ArraySpecifier`, which holds a non-empty list of `ArraySpecifierDimension`.
+  - `ArraySpecifierDimension`, which is the “old” `ArraySpecifier`.
+  This change allows for multidimensional array specifiers.
+
+## Migration guide
+
+- If you were using array specifiers, you need to wrap them inside an `ArraySpecifierDimension`
+  and wrap it in a `ArraySpecifier { dimensions: NonEmpty(vec![here]) }` expression, where `here`
+  is your specifier.
+
 # 4.1.1
 
 > Wed Jul 1st 2020
