@@ -256,6 +256,10 @@ pub trait Visitor {
     Visit::Children
   }
 
+  fn visit_array_specifier_dimension(&mut self, _: &mut syntax::ArraySpecifierDimension) -> Visit {
+    Visit::Children
+  }
+
   fn visit_assignment_op(&mut self, _: &mut syntax::AssignmentOp) -> Visit {
     Visit::Children
   }
@@ -1085,7 +1089,22 @@ impl Host for syntax::ArraySpecifier {
     let visit = visitor.visit_array_specifier(self);
 
     if visit == Visit::Children {
-      if let syntax::ArraySpecifier::ExplicitlySized(ref mut e) = *self {
+      for dimension in &mut self.dimensions {
+        dimension.visit(visitor);
+      }
+    }
+  }
+}
+
+impl Host for syntax::ArraySpecifierDimension {
+  fn visit<V>(&mut self, visitor: &mut V)
+  where
+    V: Visitor,
+  {
+    let visit = visitor.visit_array_specifier_dimension(self);
+
+    if visit == Visit::Children {
+      if let syntax::ArraySpecifierDimension::ExplicitlySized(ref mut e) = *self {
         e.visit(visitor);
       }
     }

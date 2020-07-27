@@ -551,9 +551,16 @@ impl From<TypeSpecifierNonArray> for FullySpecifiedType {
   }
 }
 
-/// Dimensionality of an arary.
+/// Dimensionality of an array.
 #[derive(Clone, Debug, PartialEq)]
-pub enum ArraySpecifier {
+pub struct ArraySpecifier {
+  /// List of all the dimensions – possibly unsized or explicitly-sized.
+  pub dimensions: NonEmpty<ArraySpecifierDimension>,
+}
+
+/// One array specifier dimension.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ArraySpecifierDimension {
   Unsized,
   ExplicitlySized(Box<Expr>),
 }

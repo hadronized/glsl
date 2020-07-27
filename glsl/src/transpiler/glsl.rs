@@ -479,14 +479,16 @@ pub fn show_array_spec<F>(f: &mut F, a: &syntax::ArraySpecifier)
 where
   F: Write,
 {
-  match *a {
-    syntax::ArraySpecifier::Unsized => {
-      let _ = f.write_str("[]");
-    }
-    syntax::ArraySpecifier::ExplicitlySized(ref e) => {
-      let _ = f.write_str("[");
-      show_expr(f, &e);
-      let _ = f.write_str("]");
+  for dimension in &a.dimensions {
+    match *dimension {
+      syntax::ArraySpecifierDimension::Unsized => {
+        let _ = f.write_str("[]");
+      }
+      syntax::ArraySpecifierDimension::ExplicitlySized(ref e) => {
+        let _ = f.write_str("[");
+        show_expr(f, &e);
+        let _ = f.write_str("]");
+      }
     }
   }
 }

@@ -473,11 +473,21 @@ fn tokenize_struct_field(field: &syntax::StructFieldSpecifier) -> TokenStream {
 }
 
 fn tokenize_array_spec(a: &syntax::ArraySpecifier) -> TokenStream {
+  let dimensions = a.dimensions.0.iter().map(tokenize_array_spec_dim);
+
+  quote! {
+    glsl::syntax::ArraySpecifier { dimensions: glsl::syntax::NonEmpty(vec![#(#dimensions),*]) }
+  }
+}
+
+fn tokenize_array_spec_dim(a: &syntax::ArraySpecifierDimension) -> TokenStream {
   match *a {
-    syntax::ArraySpecifier::Unsized => quote! { glsl::syntax::ArraySpecifier::Unsized },
-    syntax::ArraySpecifier::ExplicitlySized(ref e) => {
+    syntax::ArraySpecifierDimension::Unsized => {
+      quote! { glsl::syntax::ArraySpecifierDimension::Unsized }
+    }
+    syntax::ArraySpecifierDimension::ExplicitlySized(ref e) => {
       let expr = Box::new(tokenize_expr(&e)).quote();
-      quote! { glsl::syntax::ArraySpecifier::ExplicitlySized(#expr) }
+      quote! { glsl::syntax::ArraySpecifierDimension::ExplicitlySized(#expr) }
     }
   }
 }

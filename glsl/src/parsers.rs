@@ -678,11 +678,21 @@ pub fn fully_specified_type(i: &str) -> ParserResult<syntax::FullySpecifiedType>
   )(i)
 }
 
-/// Parse an array specifier.
+/// Parse an array specifier
 pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
+  map(
+    many1(delimited(blank, array_specifier_dimension, blank)),
+    |dimensions| syntax::ArraySpecifier {
+      dimensions: syntax::NonEmpty(dimensions),
+    },
+  )(i)
+}
+
+/// Parse an array specifier dimension.
+pub fn array_specifier_dimension(i: &str) -> ParserResult<syntax::ArraySpecifierDimension> {
   alt((
     value(
-      syntax::ArraySpecifier::Unsized,
+      syntax::ArraySpecifierDimension::Unsized,
       delimited(char('['), blank, char(']')),
     ),
     map(
@@ -691,7 +701,7 @@ pub fn array_specifier(i: &str) -> ParserResult<syntax::ArraySpecifier> {
         cut(cond_expr),
         preceded(blank, cut(char(']'))),
       ),
-      |e| syntax::ArraySpecifier::ExplicitlySized(Box::new(e)),
+      |e| syntax::ArraySpecifierDimension::ExplicitlySized(Box::new(e)),
     ),
   ))(i)
 }
