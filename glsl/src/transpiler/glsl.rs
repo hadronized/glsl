@@ -704,9 +704,9 @@ where
   F: Write,
 {
   if x.fract() == 0. {
-    let _ = write!(f, "{}.", x);
+    let _ = write!(f, "{}.lf", x);
   } else {
-    let _ = write!(f, "{}", x);
+    let _ = write!(f, "{}lf", x);
   }
 }
 

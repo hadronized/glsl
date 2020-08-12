@@ -1287,14 +1287,8 @@ fn parse_primary_expr_floatconst() {
 
 #[test]
 fn parse_primary_expr_doubleconst() {
-  assert_eq!(
-    primary_expr("0. "),
-    Ok((" ", syntax::Expr::DoubleConst(0.)))
-  );
-  assert_eq!(
-    primary_expr("1. "),
-    Ok((" ", syntax::Expr::DoubleConst(1.)))
-  );
+  assert_eq!(primary_expr("0. "), Ok((" ", syntax::Expr::FloatConst(0.))));
+  assert_eq!(primary_expr("1. "), Ok((" ", syntax::Expr::FloatConst(1.))));
   assert_eq!(
     primary_expr("0.lf "),
     Ok((" ", syntax::Expr::DoubleConst(0.)))
@@ -1331,11 +1325,11 @@ fn parse_primary_expr_parens() {
   assert_eq!(primary_expr("(  0 )"), Ok(("", syntax::Expr::IntConst(0))));
   assert_eq!(
     primary_expr("(  .0 )"),
-    Ok(("", syntax::Expr::DoubleConst(0.)))
+    Ok(("", syntax::Expr::FloatConst(0.)))
   );
   assert_eq!(
     primary_expr("(  (.0) )"),
-    Ok(("", syntax::Expr::DoubleConst(0.)))
+    Ok(("", syntax::Expr::FloatConst(0.)))
   );
   assert_eq!(
     primary_expr("(true) "),
@@ -1484,8 +1478,9 @@ fn parse_unary_dec() {
 
 #[test]
 fn parse_expr_float() {
-  assert_eq!(expr("314.;"), Ok((";", syntax::Expr::DoubleConst(314.))));
+  assert_eq!(expr("314.;"), Ok((";", syntax::Expr::FloatConst(314.))));
   assert_eq!(expr("314.f;"), Ok((";", syntax::Expr::FloatConst(314.))));
+  assert_eq!(expr("314.LF;"), Ok((";", syntax::Expr::DoubleConst(314.))));
 }
 
 #[test]
@@ -1562,7 +1557,7 @@ fn parse_expr_add_sub_mult_div() {
 #[test]
 fn parse_complex_expr() {
   let input = "normalize((inverse(view) * vec4(ray.dir, 0.)).xyz);";
-  let zero = syntax::Expr::DoubleConst(0.);
+  let zero = syntax::Expr::FloatConst(0.);
   let ray = syntax::Expr::Variable("ray".into());
   let raydir = syntax::Expr::Dot(Box::new(ray), "dir".into());
   let vec4 = syntax::Expr::FunCall(
@@ -2800,7 +2795,7 @@ fn parse_dot_field_expr_statement() {
     ),
     syntax::Expr::FunCall(
       syntax::FunIdentifier::Identifier("vec3".into()),
-      vec![syntax::Expr::DoubleConst(0.)],
+      vec![syntax::Expr::FloatConst(0.)],
     ),
     syntax::Expr::Variable("v_barycenter".into()),
   ];

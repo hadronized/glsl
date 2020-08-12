@@ -394,7 +394,7 @@ fn floating_middle(i: &str) -> ParserResult<&str> {
 pub fn float_lit(i: &str) -> ParserResult<f32> {
   let (i, (sign, f)) = tuple((
     opt(char('-')),
-    terminated(floating_middle, opt(float_suffix)),
+    terminated(floating_middle, pair(opt(float_suffix), not(double_suffix))),
   ))(i)?;
 
   // if the parsed data is in the accepted form ".394634…", we parse it as if it was < 0
@@ -710,8 +710,8 @@ pub fn array_specifier_dimension(i: &str) -> ParserResult<syntax::ArraySpecifier
 pub fn primary_expr(i: &str) -> ParserResult<syntax::Expr> {
   alt((
     parens_expr,
-    map(double_lit, syntax::Expr::DoubleConst),
     map(float_lit, syntax::Expr::FloatConst),
+    map(double_lit, syntax::Expr::DoubleConst),
     map(unsigned_lit, syntax::Expr::UIntConst),
     map(integral_lit, syntax::Expr::IntConst),
     map(bool_lit, syntax::Expr::BoolConst),
