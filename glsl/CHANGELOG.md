@@ -2,6 +2,7 @@
 
 <!-- vim-markdown-toc GFM -->
 
+* [5.0.2](#502)
 * [5.0.1](#501)
 * [5.0.0](#500)
   * [Migration guide](#migration-guide)
@@ -63,6 +64,12 @@
 * [0.1](#01)
 
 <!-- vim-markdown-toc -->
+
+## 5.0.2
+
+> Nov 1st, 2020
+
+- Bump `nom-6.0`.
 
 ## 5.0.1
 

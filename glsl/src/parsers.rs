@@ -13,7 +13,7 @@ use nom::character::complete::{anychar, char, digit1, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{cut, map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
-use nom::multi::{fold_many0, many0, many1, separated_list};
+use nom::multi::{fold_many0, many0, many1, separated_list0};
 use nom::sequence::{delimited, pair, preceded, separated_pair, terminated, tuple};
 use nom::{Err as NomErr, ParseTo};
 use std::num::ParseIntError;
@@ -23,7 +23,7 @@ use self::nom_helpers::{blank_space, cnst, eol, many0_, str_till_eol};
 use crate::syntax;
 
 // Parse a keyword. A keyword is just a regular string that must be followed by punctuation.
-fn keyword<'a>(kwd: &'a str) -> impl Fn(&'a str) -> ParserResult<'a, &'a str> {
+fn keyword<'a>(kwd: &'a str) -> impl FnMut(&'a str) -> ParserResult<'a, &'a str> {
   terminated(
     tag(kwd),
     not(verify(peek(anychar), |&c| identifier_pred(c))),
@@ -85,7 +85,7 @@ pub fn type_name(i: &str) -> ParserResult<syntax::TypeName> {
 
 /// Parse a non-empty list of type names, delimited by comma (,).
 fn nonempty_type_names(i: &str) -> ParserResult<Vec<syntax::TypeName>> {
-  separated_list(terminated(char(','), blank), terminated(type_name, blank))(i)
+  separated_list0(terminated(char(','), blank), terminated(type_name, blank))(i)
 }
 
 /// Parse a type specifier non struct.
@@ -487,7 +487,7 @@ pub fn struct_field_specifier(i: &str) -> ParserResult<syntax::StructFieldSpecif
   let (i, (qualifier, ty, identifiers, _)) = tuple((
     opt(terminated(type_qualifier, blank)),
     terminated(type_specifier, blank),
-    cut(separated_list(
+    cut(separated_list0(
       terminated(char(','), blank),
       terminated(arrayed_identifier, blank),
     )),
@@ -588,7 +588,7 @@ pub fn layout_qualifier(i: &str) -> ParserResult<syntax::LayoutQualifier> {
 
 fn layout_qualifier_inner(i: &str) -> ParserResult<syntax::LayoutQualifier> {
   map(
-    separated_list(
+    separated_list0(
       terminated(char(','), blank),
       terminated(layout_qualifier_spec, blank),
     ),
@@ -932,7 +932,7 @@ pub fn initializer(i: &str) -> ParserResult<syntax::Initializer> {
 
 /// Parse an initializer list.
 pub fn initializer_list(i: &str) -> ParserResult<Vec<syntax::Initializer>> {
-  separated_list(delimited(blank, char(','), blank), initializer)(i)
+  separated_list0(delimited(blank, char(','), blank), initializer)(i)
 }
 
 fn function_declarator(i: &str) -> ParserResult<syntax::FunctionPrototype> {
@@ -957,7 +957,7 @@ fn function_header_with_parameters(i: &str) -> ParserResult<syntax::FunctionProt
   map(
     pair(
       function_header,
-      separated_list(
+      separated_list0(
         preceded(blank, char(',')),
         preceded(blank, function_parameter_declaration),
       ),
@@ -1038,7 +1038,7 @@ fn function_call_args(i: &str) -> ParserResult<Vec<syntax::Expr>> {
         |_| vec![],
       ),
       terminated(
-        separated_list(
+        separated_list0(
           terminated(char(','), blank),
           cut(terminated(assignment_expr, blank)),
         ),
@@ -1669,7 +1669,7 @@ pub(crate) fn pp_define_function_like<'a>(
     map(
       tuple((
         terminated(char('('), pp_space0),
-        separated_list(
+        separated_list0(
           terminated(char(','), pp_space0),
           cut(terminated(identifier, pp_space0)),
         ),
