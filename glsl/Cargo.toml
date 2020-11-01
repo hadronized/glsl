@@ -1,6 +1,6 @@
 [package]
 name = "glsl"
-version = "5.0.1"
+version = "5.0.2"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "A GLSL450/GLSL460 parser."
@@ -17,5 +17,5 @@ edition = "2018"
 spirv = ["shaderc"]
 
 [dependencies]
-nom = { version = "5", default-features = false, features = ["std"] }
+nom = { version = "6", default-features = false, features = ["std"] }
 shaderc = { version = "0.6", optional = true }

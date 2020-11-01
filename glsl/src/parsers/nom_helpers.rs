@@ -12,7 +12,7 @@ pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
 
 // A constant parser that just forwards the value it’s parametered with without reading anything
 // from the input. Especially useful as “fallback” in an alternative parser.
-pub fn cnst<'a, T, E>(t: T) -> impl Fn(&'a str) -> Result<(&'a str, T), E>
+pub fn cnst<'a, T, E>(t: T) -> impl FnMut(&'a str) -> Result<(&'a str, T), E>
 where
   T: 'a + Clone,
 {
@@ -44,10 +44,10 @@ pub fn eol(i: &str) -> ParserResult<()> {
 }
 
 // Apply the `f` parser until `g` succeeds. Both parsers consume the input.
-pub fn till<'a, A, B, F, G>(f: F, g: G) -> impl Fn(&'a str) -> ParserResult<'a, ()>
+pub fn till<'a, A, B, F, G>(mut f: F, mut g: G) -> impl FnMut(&'a str) -> ParserResult<'a, ()>
 where
-  F: Fn(&'a str) -> ParserResult<'a, A>,
-  G: Fn(&'a str) -> ParserResult<'a, B>,
+  F: FnMut(&'a str) -> ParserResult<'a, A>,
+  G: FnMut(&'a str) -> ParserResult<'a, B>,
 {
   move |mut i| loop {
     if let Ok((i2, _)) = g(i) {
@@ -60,11 +60,11 @@ where
 }
 
 // A version of many0 that discards the result of the parser, preventing allocating.
-pub fn many0_<'a, A, F>(f: F) -> impl Fn(&'a str) -> ParserResult<'a, ()>
+pub fn many0_<'a, A, F>(mut f: F) -> impl FnMut(&'a str) -> ParserResult<'a, ()>
 where
-  F: Fn(&'a str) -> ParserResult<'a, A>,
+  F: FnMut(&'a str) -> ParserResult<'a, A>,
 {
-  move |i| fold_many0(&f, (), |_, _| ())(i)
+  move |i| fold_many0(&mut f, (), |_, _| ())(i)
 }
 
 /// Parse a string until the end of line.
