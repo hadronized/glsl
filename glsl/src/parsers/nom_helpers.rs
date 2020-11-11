@@ -6,6 +6,7 @@ use nom::character::complete::{anychar, line_ending, multispace1};
 use nom::combinator::{map, recognize, value};
 use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
 use nom::multi::fold_many0;
+use nom::sequence::preceded;
 use nom::{Err as NomErr, IResult};
 
 pub type ParserResult<'a, O> = IResult<&'a str, O, VerboseError<&'a str>>;
@@ -74,7 +75,13 @@ where
 /// Discard any leading newline.
 pub fn str_till_eol(i: &str) -> ParserResult<&str> {
   map(
-    recognize(till(alt((value((), tag("\\\n")), value((), anychar))), eol)),
+    recognize(till(
+      alt((
+        value((), preceded(tag("\\"), line_ending)),
+        value((), anychar),
+      )),
+      eol,
+    )),
     |i| {
       if i.as_bytes().last() == Some(&b'\n') {
         &i[0..i.len() - 1]
@@ -91,5 +98,5 @@ pub fn str_till_eol(i: &str) -> ParserResult<&str> {
 //
 // Taylor Swift loves it.
 pub fn blank_space(i: &str) -> ParserResult<&str> {
-  recognize(many0_(alt((multispace1, tag("\\\n")))))(i)
+  recognize(many0_(alt((multispace1, preceded(tag("\\"), line_ending)))))(i)
 }
