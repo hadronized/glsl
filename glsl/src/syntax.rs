@@ -13,10 +13,10 @@
 //! The types are commented so feel free to inspect each of theme. As a starter, you should read
 //! the documentation of [`Expr`], [`FunctionDefinition`], [`Statement`] and [`TranslationUnit`].
 //!
-//! [`Statement`]: syntax::Statement
-//! [`TranslationUnit`]: syntax::TranslationUnit
-//! [`Expr`]: syntax::Expr
-//! [`FunctionDefinition`]: syntax::FunctionDefinition
+//! [`Statement`]: crate::syntax::Statement
+//! [`TranslationUnit`]: crate::syntax::TranslationUnit
+//! [`Expr`]: crate::syntax::Expr
+//! [`FunctionDefinition`]: crate::syntax::FunctionDefinition
 
 use std::fmt;
 use std::iter::{once, FromIterator};
