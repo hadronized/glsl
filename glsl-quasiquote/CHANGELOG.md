@@ -1,3 +1,9 @@
+# 6.0
+
+> Dec 7th, 2020
+
+- Support for `glsl-6.0`.
+
 # 5.0
 
 > Jul 27th, 2020
