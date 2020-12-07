@@ -2,6 +2,7 @@
 
 <!-- vim-markdown-toc GFM -->
 
+* [6.0](#60)
 * [5.0.2](#502)
 * [5.0.1](#501)
 * [5.0.0](#500)
@@ -64,6 +65,16 @@
 * [0.1](#01)
 
 <!-- vim-markdown-toc -->
+
+## 6.0
+
+> Dec 7th, 2020
+
+- Change the meaning of `Visitor` and `Host`. They now take the AST nodes by simple references (`&`) and not via
+  mutable references (`&mut`) anymore. This will allow people to use visitors in much more contexts.
+- Add `VisitorMut` and `HostMut` to visit AST nodes mutably. These correspond to the previous (version `<6.0`) `Visitor`
+  and `Host` traits. If you were using them and require mutability, feel free to simply switch to `VisitorMut` and
+  `HostMut`.
 
 ## 5.0.2
 
