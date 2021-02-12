@@ -1,4 +1,3 @@
-[![Talk on IRC!](https://img.shields.io/badge/chat-%23glsl--rs%40irc.freenode.net-blueviolet)](https://webchat.freenode.net)
 [![Build Status](https://travis-ci.org/phaazon/glsl-quasiquote.svg?branch=master)](https://travis-ci.org/phaazon/glsl-quasiquote)
 [![crates.io](https://img.shields.io/crates/v/glsl-quasiquote.svg)](https://crates.io/crates/glsl-quasiquote)
 [![docs.rs](https://docs.rs/glsl-quasiquote/badge.svg)](https://docs.rs/glsl-quasiquote)
