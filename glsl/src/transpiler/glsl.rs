@@ -187,22 +187,22 @@ where
       let _ = f.write_str("mat4");
     }
     syntax::TypeSpecifierNonArray::Mat23 => {
-      let _ = f.write_str("mat23");
+      let _ = f.write_str("mat2x3");
     }
     syntax::TypeSpecifierNonArray::Mat24 => {
-      let _ = f.write_str("mat24");
+      let _ = f.write_str("mat2x4");
     }
     syntax::TypeSpecifierNonArray::Mat32 => {
-      let _ = f.write_str("mat32");
+      let _ = f.write_str("mat3x2");
     }
     syntax::TypeSpecifierNonArray::Mat34 => {
-      let _ = f.write_str("mat34");
+      let _ = f.write_str("mat3x4");
     }
     syntax::TypeSpecifierNonArray::Mat42 => {
-      let _ = f.write_str("mat42");
+      let _ = f.write_str("mat4x2");
     }
     syntax::TypeSpecifierNonArray::Mat43 => {
-      let _ = f.write_str("mat43");
+      let _ = f.write_str("mat4x3");
     }
     syntax::TypeSpecifierNonArray::DMat2 => {
       let _ = f.write_str("dmat2");
@@ -214,22 +214,22 @@ where
       let _ = f.write_str("dmat4");
     }
     syntax::TypeSpecifierNonArray::DMat23 => {
-      let _ = f.write_str("dmat23");
+      let _ = f.write_str("dmat2x3");
     }
     syntax::TypeSpecifierNonArray::DMat24 => {
-      let _ = f.write_str("dmat24");
+      let _ = f.write_str("dmat2x4");
     }
     syntax::TypeSpecifierNonArray::DMat32 => {
-      let _ = f.write_str("dmat32");
+      let _ = f.write_str("dmat3x2");
     }
     syntax::TypeSpecifierNonArray::DMat34 => {
-      let _ = f.write_str("dmat34");
+      let _ = f.write_str("dmat3x4");
     }
     syntax::TypeSpecifierNonArray::DMat42 => {
-      let _ = f.write_str("dmat42");
+      let _ = f.write_str("dmat4x2");
     }
     syntax::TypeSpecifierNonArray::DMat43 => {
-      let _ = f.write_str("dmat43");
+      let _ = f.write_str("dmat4x3");
     }
     syntax::TypeSpecifierNonArray::Sampler1D => {
       let _ = f.write_str("sampler1D");
