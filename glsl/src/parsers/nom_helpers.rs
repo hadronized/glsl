@@ -2,7 +2,7 @@
 
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{anychar, multispace1, newline};
+use nom::character::complete::{anychar, line_ending, multispace1};
 use nom::combinator::{map, recognize, value};
 use nom::error::{ErrorKind, VerboseError, VerboseErrorKind};
 use nom::multi::fold_many0;
@@ -39,7 +39,7 @@ pub fn eoi(i: &str) -> ParserResult<()> {
 pub fn eol(i: &str) -> ParserResult<()> {
   alt((
     eoi, // this one goes first because it’s very cheap
-    value((), newline),
+    value((), line_ending),
   ))(i)
 }
 
