@@ -62,7 +62,7 @@ assert!(expr.is_ok());
 Here, `expr` is an AST which type is `Result<Expr, ParseError>` that represents the GLSL
 expression  `(vec3(r, g, b) * cos(t * PI * .5)).xxz`, which is an outer (scalar) multiplication
 of an RGB color by a cosine of a time, the whole thing being
-[swizzled](https://en.wikipedia.org/wiki/Swizzling_(computer_graphics)) with XXZ. It is your
+[swizzled](https://en.wikipedia.org/wiki/Swizzling_\(computer_graphics\)) with XXZ. It is your
 responsibility to check if the parsing process has succeeded.
 
 In the previous example, the GLSL string is a constant and hardcoded. It could come from a file,
