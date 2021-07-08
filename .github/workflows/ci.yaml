@@ -118,4 +118,4 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - name: Ensure code is correctly formatted
-        run: cargo fmt -q -- --check
+        run: cargo fmt -- --check
