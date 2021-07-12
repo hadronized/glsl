@@ -1011,6 +1011,7 @@ impl Statement {
 /// Simple statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum SimpleStatement {
+  Preprocessor(Preprocessor),
   Declaration(Declaration),
   Expression(ExprStatement),
   Selection(SelectionStatement),

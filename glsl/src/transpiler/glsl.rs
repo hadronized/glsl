@@ -1343,6 +1343,7 @@ where
   F: Write,
 {
   match *sst {
+    syntax::SimpleStatement::Preprocessor(ref pp) => show_preprocessor(f, pp),
     syntax::SimpleStatement::Declaration(ref d) => show_declaration(f, d),
     syntax::SimpleStatement::Expression(ref e) => show_expression_statement(f, e),
     syntax::SimpleStatement::Selection(ref s) => show_selection_statement(f, s),

@@ -1305,6 +1305,7 @@ pub fn multiplicative_expr(i: &str) -> ParserResult<syntax::Expr> {
 /// Parse a simple statement.
 pub fn simple_statement(i: &str) -> ParserResult<syntax::SimpleStatement> {
   alt((
+    map(preprocessor, syntax::SimpleStatement::Preprocessor),
     map(jump_statement, syntax::SimpleStatement::Jump),
     map(iteration_statement, syntax::SimpleStatement::Iteration),
     map(case_label, syntax::SimpleStatement::CaseLabel),

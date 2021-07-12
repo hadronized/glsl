@@ -1199,6 +1199,7 @@ macro_rules! make_host_trait {
 
         if visit == Visit::Children {
           match self {
+            syntax::SimpleStatement::Preprocessor(p) => p.$mthd_name(visitor),
             syntax::SimpleStatement::Declaration(d) => d.$mthd_name(visitor),
             syntax::SimpleStatement::Expression(e) => e.$mthd_name(visitor),
             syntax::SimpleStatement::Selection(s) => s.$mthd_name(visitor),

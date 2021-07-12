@@ -955,6 +955,11 @@ fn tokenize_statement(st: &syntax::Statement) -> TokenStream {
 
 fn tokenize_simple_statement(sst: &syntax::SimpleStatement) -> TokenStream {
   match *sst {
+    syntax::SimpleStatement::Preprocessor(ref pp) => {
+      let pp = tokenize_preprocessor(pp);
+      quote! { glsl::syntax::SimpleStatement::Preprocessor(#pp) }
+    }
+
     syntax::SimpleStatement::Declaration(ref d) => {
       let d = tokenize_declaration(d);
       quote! { glsl::syntax::SimpleStatement::Declaration(#d) }
