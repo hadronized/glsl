@@ -1631,7 +1631,7 @@ pub(crate) fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVe
 ///
 /// This parser is needed to authorize breaking a line with the multiline annotation (\).
 pub(crate) fn pp_space0(i: &str) -> ParserResult<&str> {
-  recognize(many0_(alt((space1, tag("\\\n")))))(i)
+  recognize(many0_(alt((space1, tag("\\\n"), tag("\\\r\n")))))(i)
 }
 
 /// Parse a preprocessor define.

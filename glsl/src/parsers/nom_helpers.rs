@@ -74,10 +74,22 @@ where
 /// Discard any leading newline.
 pub fn str_till_eol(i: &str) -> ParserResult<&str> {
   map(
-    recognize(till(alt((value((), tag("\\\n")), value((), anychar))), eol)),
+    recognize(till(
+      alt((
+        value((), tag("\\\n")),
+        value((), tag("\\\r\n")),
+        value((), anychar),
+      )),
+      eol,
+    )),
     |i| {
-      if i.as_bytes().last() == Some(&b'\n') {
-        &i[0..i.len() - 1]
+      let bytes = i.as_bytes();
+      if bytes.last() == Some(&b'\n') {
+        if bytes.get(i.len() - 2) == Some(&b'\r') {
+          &i[0..i.len() - 2]
+        } else {
+          &i[0..i.len() - 1]
+        }
       } else {
         i
       }
@@ -91,5 +103,5 @@ pub fn str_till_eol(i: &str) -> ParserResult<&str> {
 //
 // Taylor Swift loves it.
 pub fn blank_space(i: &str) -> ParserResult<&str> {
-  recognize(many0_(alt((multispace1, tag("\\\n")))))(i)
+  recognize(many0_(alt((multispace1, tag("\\\n"), tag("\\\r\n")))))(i)
 }
