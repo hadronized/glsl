@@ -33,7 +33,7 @@ fn understands_pp_define_undef() {
 fn understands_pp_tests() {
   let _ = glsl! {
     #else
-    #elseif 0
+    #elif 0
     #endif
     #if 0
     #ifdef foo

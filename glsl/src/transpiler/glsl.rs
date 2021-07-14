@@ -1526,7 +1526,7 @@ where
   match *pp {
     syntax::Preprocessor::Define(ref pd) => show_preprocessor_define(f, pd),
     syntax::Preprocessor::Else => show_preprocessor_else(f),
-    syntax::Preprocessor::ElseIf(ref pei) => show_preprocessor_elseif(f, pei),
+    syntax::Preprocessor::ElIf(ref pei) => show_preprocessor_elif(f, pei),
     syntax::Preprocessor::EndIf => show_preprocessor_endif(f),
     syntax::Preprocessor::Error(ref pe) => show_preprocessor_error(f, pe),
     syntax::Preprocessor::If(ref pi) => show_preprocessor_if(f, pi),
@@ -1580,11 +1580,11 @@ where
   let _ = f.write_str("#else\n");
 }
 
-pub fn show_preprocessor_elseif<F>(f: &mut F, pei: &syntax::PreprocessorElseIf)
+pub fn show_preprocessor_elif<F>(f: &mut F, pei: &syntax::PreprocessorElIf)
 where
   F: Write,
 {
-  let _ = write!(f, "#elseif {}\n", pei.condition);
+  let _ = write!(f, "#elif {}\n", pei.condition);
 }
 
 pub fn show_preprocessor_error<F>(f: &mut F, pe: &syntax::PreprocessorError)

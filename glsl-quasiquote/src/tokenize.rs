@@ -97,7 +97,7 @@ impl_tokenize!(syntax::ExternalDeclaration, tokenize_external_declaration);
 impl_tokenize!(syntax::TranslationUnit, tokenize_translation_unit);
 impl_tokenize!(syntax::Preprocessor, tokenize_preprocessor);
 impl_tokenize!(syntax::PreprocessorDefine, tokenize_preprocessor_define);
-impl_tokenize!(syntax::PreprocessorElseIf, tokenize_preprocessor_elseif);
+impl_tokenize!(syntax::PreprocessorElIf, tokenize_preprocessor_elif);
 impl_tokenize!(syntax::PreprocessorError, tokenize_preprocessor_error);
 impl_tokenize!(syntax::PreprocessorIf, tokenize_preprocessor_if);
 impl_tokenize!(syntax::PreprocessorIfDef, tokenize_preprocessor_ifdef);
@@ -1143,9 +1143,9 @@ fn tokenize_preprocessor(pp: &syntax::Preprocessor) -> TokenStream {
       quote! { glsl::syntax::Preprocessor::Else }
     }
 
-    syntax::Preprocessor::ElseIf(ref pei) => {
-      let pei = tokenize_preprocessor_elseif(pei);
-      quote! { glsl::syntax::Preprocessor::ElseIf(#pei) }
+    syntax::Preprocessor::ElIf(ref pei) => {
+      let pei = tokenize_preprocessor_elif(pei);
+      quote! { glsl::syntax::Preprocessor::ElIf(#pei) }
     }
 
     syntax::Preprocessor::EndIf => {
@@ -1241,11 +1241,11 @@ fn tokenize_preprocessor_define(pd: &syntax::PreprocessorDefine) -> TokenStream 
   }
 }
 
-fn tokenize_preprocessor_elseif(pei: &syntax::PreprocessorElseIf) -> TokenStream {
+fn tokenize_preprocessor_elif(pei: &syntax::PreprocessorElIf) -> TokenStream {
   let condition = pei.condition.quote();
 
   quote! {
-    glsl::syntax::PreprocessorElseIf {
+    glsl::syntax::PreprocessorElIf {
       condition: #condition
     }
   }

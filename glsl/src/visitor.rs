@@ -152,7 +152,7 @@ macro_rules! make_visitor_trait {
         Visit::Children
       }
 
-      fn visit_preprocessor_elseif(&mut self, _: $($ref)* syntax::PreprocessorElseIf) -> Visit {
+      fn visit_preprocessor_elif(&mut self, _: $($ref)* syntax::PreprocessorElIf) -> Visit {
         Visit::Children
       }
 
@@ -458,7 +458,7 @@ macro_rules! make_host_trait {
           match self {
             syntax::Preprocessor::Define(pd) => pd.$mthd_name(visitor),
             syntax::Preprocessor::Else => (),
-            syntax::Preprocessor::ElseIf(pei) => pei.$mthd_name(visitor),
+            syntax::Preprocessor::ElIf(pei) => pei.$mthd_name(visitor),
             syntax::Preprocessor::EndIf => (),
             syntax::Preprocessor::Error(pe) => pe.$mthd_name(visitor),
             syntax::Preprocessor::If(pi) => pi.$mthd_name(visitor),
@@ -504,12 +504,12 @@ macro_rules! make_host_trait {
       }
     }
 
-    impl $host_ty for syntax::PreprocessorElseIf {
+    impl $host_ty for syntax::PreprocessorElIf {
       fn $mthd_name<V>($($ref)* self, visitor: &mut V)
       where
           V: $visitor_ty,
       {
-        let _ = visitor.visit_preprocessor_elseif(self);
+        let _ = visitor.visit_preprocessor_elif(self);
       }
     }
 

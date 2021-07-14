@@ -2571,12 +2571,12 @@ fn parse_pp_else() {
 }
 
 #[test]
-fn parse_pp_elseif() {
+fn parse_pp_elif() {
   assert_eq!(
-    preprocessor("#   elseif \\\n42\n"),
+    preprocessor("#   elif \\\n42\n"),
     Ok((
       "",
-      syntax::Preprocessor::ElseIf(syntax::PreprocessorElseIf {
+      syntax::Preprocessor::ElIf(syntax::PreprocessorElIf {
         condition: "42".to_owned()
       })
     ))
