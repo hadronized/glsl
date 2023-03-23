@@ -1,6 +1,6 @@
 [package]
 name = "glsl-tree"
-version = "0.2.0"
+version = "0.2.1"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "Print a GLSL AST to stdout"
@@ -14,4 +14,4 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-glsl = "5"
+glsl = "6"
