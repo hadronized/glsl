@@ -1,16 +1,15 @@
 # Changelog
 
-<!-- vim-markdown-toc GFM -->
+## 0.2.1
 
-* [0.2](#02)
-* [0.1](#01)
+> Mar 23rd, 2023
 
-<!-- vim-markdown-toc -->
+- [glsl-6.0](https://crates.io/crates/glsl/6.0.0) support.
 
 ## 0.2
 
 > Aug 12th, 2020
->
+
 - [glsl-5.0](https://crates.io/crates/glsl/5.0.0) support.
 
 ## 0.1
