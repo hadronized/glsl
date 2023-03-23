@@ -17,5 +17,5 @@ edition = "2018"
 spirv = ["shaderc"]
 
 [dependencies]
-nom = { version = "6", default-features = false, features = ["std"] }
+nom = { version = "7", default-features = false, features = ["std"] }
 shaderc = { version = "0.6", optional = true }
