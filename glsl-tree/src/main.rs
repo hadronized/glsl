@@ -7,7 +7,7 @@ fn main() {
   let mut content = String::new();
 
   match io::stdin().read_line(&mut content) {
-    Ok(_) => match ShaderStage::parse(content) {
+    Ok(_) => match ShaderStage::parse(&content) {
       Ok(ast) => println!("{:#?}", ast),
 
       Err(err) => {

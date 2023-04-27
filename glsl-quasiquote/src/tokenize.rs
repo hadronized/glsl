@@ -125,8 +125,9 @@ impl_tokenize!(
 );
 
 fn tokenize_identifier(i: &syntax::Identifier) -> TokenStream {
+  let span = tokenize_span(&i.span);
   let i = i.quote();
-  quote! { #i }
+  quote! { glsl::syntax::Identifier::new(#i, #span) }
 }
 
 fn tokenize_path(p: &syntax::Path) -> TokenStream {
@@ -493,7 +494,7 @@ fn tokenize_array_spec_dim(a: &syntax::ArraySpecifierDimension) -> TokenStream {
 }
 
 fn tokenize_arrayed_identifier(identifier: &syntax::ArrayedIdentifier) -> TokenStream {
-  let ident = identifier.ident.quote();
+  let ident = tokenize_identifier(&identifier.ident);
   let array_spec = identifier
     .array_spec
     .as_ref()
@@ -586,7 +587,7 @@ fn tokenize_layout_qualifier(l: &syntax::LayoutQualifier) -> TokenStream {
 fn tokenize_layout_qualifier_spec(l: &syntax::LayoutQualifierSpec) -> TokenStream {
   match *l {
     syntax::LayoutQualifierSpec::Identifier(ref i, ref e) => {
-      let i = i.quote();
+      let i = tokenize_identifier(i);
       let expr = e
         .as_ref()
         .map(|e| Box::new(tokenize_expr(&e)).quote())
@@ -621,7 +622,7 @@ fn tokenize_interpolation_qualifier(i: &syntax::InterpolationQualifier) -> Token
 fn tokenize_expr(expr: &syntax::Expr) -> TokenStream {
   match *expr {
     syntax::Expr::Variable(ref i) => {
-      let i = i.quote();
+      let i = tokenize_identifier(i);
       quote! { glsl::syntax::Expr::Variable(#i) }
     }
 
@@ -676,7 +677,7 @@ fn tokenize_expr(expr: &syntax::Expr) -> TokenStream {
 
     syntax::Expr::Dot(ref e, ref i) => {
       let e = Box::new(tokenize_expr(e)).quote();
-      let i = i.quote();
+      let i = tokenize_identifier(i);
 
       quote! { glsl::syntax::Expr::Dot(#e, #i) }
     }
@@ -765,70 +766,80 @@ fn tokenize_function_identifier(i: &syntax::FunIdentifier) -> TokenStream {
 }
 
 fn tokenize_declaration(d: &syntax::Declaration) -> TokenStream {
-  match *d {
-    syntax::Declaration::FunctionPrototype(ref proto) => {
+  let decl = match **d {
+    syntax::DeclarationData::FunctionPrototype(ref proto) => {
       let p = tokenize_function_prototype(proto);
-      quote! { glsl::syntax::Declaration::FunctionPrototype(#p) }
+      quote! { glsl::syntax::DeclarationData::FunctionPrototype(#p) }
     }
 
-    syntax::Declaration::InitDeclaratorList(ref list) => {
+    syntax::DeclarationData::InitDeclaratorList(ref list) => {
       let l = tokenize_init_declarator_list(list);
-      quote! { glsl::syntax::Declaration::InitDeclaratorList(#l) }
+      quote! { glsl::syntax::DeclarationData::InitDeclaratorList(#l) }
     }
 
-    syntax::Declaration::Precision(ref qual, ref ty) => {
+    syntax::DeclarationData::Precision(ref qual, ref ty) => {
       let qual = tokenize_precision_qualifier(qual);
       let ty = tokenize_type_specifier(ty);
-      quote! { glsl::syntax::Declaration::Precision(#qual, #ty) }
+      quote! { glsl::syntax::DeclarationData::Precision(#qual, #ty) }
     }
 
-    syntax::Declaration::Block(ref block) => {
+    syntax::DeclarationData::Block(ref block) => {
       let block = tokenize_block(block);
-      quote! { glsl::syntax::Declaration::Block(#block) }
+      quote! { glsl::syntax::DeclarationData::Block(#block) }
     }
 
-    syntax::Declaration::Global(ref qual, ref identifiers) => {
+    syntax::DeclarationData::Global(ref qual, ref identifiers) => {
       let qual = tokenize_type_qualifier(qual);
-      let identifiers = identifiers.iter().map(|i| i.quote());
+      let identifiers = identifiers.iter().map(|i| tokenize_identifier(i));
 
-      quote! { glsl::syntax::Declaration::Global(#qual, vec![#(#identifiers),*]) }
+      quote! { glsl::syntax::DeclarationData::Global(#qual, vec![#(#identifiers),*]) }
     }
-  }
+  };
+
+  let span = tokenize_span(&d.span);
+  quote! { glsl::syntax::Declaration::new(#decl, #span) }
 }
 
 fn tokenize_function_prototype(fp: &syntax::FunctionPrototype) -> TokenStream {
   let ty = tokenize_fully_specified_type(&fp.ty);
-  let name = fp.name.quote();
+  let name = tokenize_identifier(&fp.name);
   let params = fp
     .parameters
     .iter()
     .map(tokenize_function_parameter_declaration);
 
+  let span = tokenize_span(&fp.span);
   quote! {
-    glsl::syntax::FunctionPrototype {
-      ty: #ty,
-      name: #name,
-      parameters: vec![#(#params),*]
-    }
+    glsl::syntax::FunctionPrototype::new(
+      glsl::syntax::FunctionPrototypeData {
+        ty: #ty,
+        name: #name,
+        parameters: vec![#(#params),*]
+      },
+      #span
+    )
   }
 }
 
 fn tokenize_function_parameter_declaration(
   p: &syntax::FunctionParameterDeclaration,
 ) -> TokenStream {
-  match *p {
-    syntax::FunctionParameterDeclaration::Named(ref qual, ref fpd) => {
+  let decl = match **p {
+    syntax::FunctionParameterDeclarationData::Named(ref qual, ref fpd) => {
       let qual = qual.as_ref().map(tokenize_type_qualifier).quote();
       let fpd = tokenize_function_parameter_declarator(fpd);
-      quote! { glsl::syntax::FunctionParameterDeclaration::Named(#qual, #fpd) }
+      quote! { glsl::syntax::FunctionParameterDeclarationData::Named(#qual, #fpd) }
     }
 
-    syntax::FunctionParameterDeclaration::Unnamed(ref qual, ref ty) => {
+    syntax::FunctionParameterDeclarationData::Unnamed(ref qual, ref ty) => {
       let qual = qual.as_ref().map(tokenize_type_qualifier).quote();
       let ty = tokenize_type_specifier(ty);
-      quote! { glsl::syntax::FunctionParameterDeclaration::Unnamed(#qual, #ty) }
+      quote! { glsl::syntax::FunctionParameterDeclarationData::Unnamed(#qual, #ty) }
     }
-  }
+  };
+
+  let span = tokenize_span(&p.span);
+  quote! { glsl::syntax::FunctionParameterDeclaration::new(#decl, #span) }
 }
 
 fn tokenize_function_parameter_declarator(p: &syntax::FunctionParameterDeclarator) -> TokenStream {
@@ -857,7 +868,7 @@ fn tokenize_init_declarator_list(i: &syntax::InitDeclaratorList) -> TokenStream 
 
 fn tokenize_single_declaration(d: &syntax::SingleDeclaration) -> TokenStream {
   let ty = tokenize_fully_specified_type(&d.ty);
-  let name = d.name.as_ref().map(|i| i.quote()).quote();
+  let name = d.name.as_ref().map(|i| tokenize_identifier(i)).quote();
   let array_specifier = d.array_specifier.as_ref().map(tokenize_array_spec).quote();
   let initializer = d.initializer.as_ref().map(tokenize_initializer).quote();
 
@@ -921,21 +932,29 @@ fn tokenize_function_definition(fd: &syntax::FunctionDefinition) -> TokenStream 
   let p = tokenize_function_prototype(&fd.prototype);
   let s = tokenize_compound_statement(&fd.statement);
 
+  let span = tokenize_span(&fd.span);
   quote! {
-    glsl::syntax::FunctionDefinition {
-      prototype: #p,
-      statement: #s
-    }
+    glsl::syntax::FunctionDefinition::new(
+      glsl::syntax::FunctionDefinitionData {
+        prototype: #p,
+        statement: #s
+      },
+      #span
+    )
   }
 }
 
 fn tokenize_compound_statement(cst: &syntax::CompoundStatement) -> TokenStream {
   let s = cst.statement_list.iter().map(tokenize_statement);
 
+  let span = tokenize_span(&cst.span);
   quote! {
-    glsl::syntax::CompoundStatement {
-      statement_list: vec![#(#s),*]
-    }
+    glsl::syntax::CompoundStatement::new(
+      glsl::syntax::CompoundStatementData {
+        statement_list: vec![#(#s),*]
+      },
+      #span
+    )
   }
 }
 
@@ -1133,75 +1152,78 @@ fn tokenize_jump_statement(j: &syntax::JumpStatement) -> TokenStream {
 }
 
 fn tokenize_preprocessor(pp: &syntax::Preprocessor) -> TokenStream {
-  match *pp {
-    syntax::Preprocessor::Define(ref pd) => {
+  let decl = match **pp {
+    syntax::PreprocessorData::Define(ref pd) => {
       let pd = tokenize_preprocessor_define(pd);
-      quote! { glsl::syntax::Preprocessor::Define(#pd) }
+      quote! { glsl::syntax::PreprocessorData::Define(#pd) }
     }
 
-    syntax::Preprocessor::Else => {
-      quote! { glsl::syntax::Preprocessor::Else }
+    syntax::PreprocessorData::Else => {
+      quote! { glsl::syntax::PreprocessorData::Else }
     }
 
-    syntax::Preprocessor::ElseIf(ref pei) => {
+    syntax::PreprocessorData::ElseIf(ref pei) => {
       let pei = tokenize_preprocessor_elseif(pei);
-      quote! { glsl::syntax::Preprocessor::ElseIf(#pei) }
+      quote! { glsl::syntax::PreprocessorData::ElseIf(#pei) }
     }
 
-    syntax::Preprocessor::EndIf => {
-      quote! { glsl::syntax::Preprocessor::EndIf }
+    syntax::PreprocessorData::EndIf => {
+      quote! { glsl::syntax::PreprocessorData::EndIf }
     }
 
-    syntax::Preprocessor::Error(ref pe) => {
+    syntax::PreprocessorData::Error(ref pe) => {
       let pe = tokenize_preprocessor_error(pe);
-      quote! { glsl::syntax::Preprocessor::Error(#pe) }
+      quote! { glsl::syntax::PreprocessorData::Error(#pe) }
     }
 
-    syntax::Preprocessor::If(ref pi) => {
+    syntax::PreprocessorData::If(ref pi) => {
       let pi = tokenize_preprocessor_if(pi);
-      quote! { glsl::syntax::Preprocessor::If(#pi) }
+      quote! { glsl::syntax::PreprocessorData::If(#pi) }
     }
 
-    syntax::Preprocessor::IfDef(ref pid) => {
+    syntax::PreprocessorData::IfDef(ref pid) => {
       let pid = tokenize_preprocessor_ifdef(pid);
-      quote! { glsl::syntax::Preprocessor::IfDef(#pid) }
+      quote! { glsl::syntax::PreprocessorData::IfDef(#pid) }
     }
 
-    syntax::Preprocessor::IfNDef(ref pind) => {
+    syntax::PreprocessorData::IfNDef(ref pind) => {
       let pind = tokenize_preprocessor_ifndef(pind);
-      quote! { glsl::syntax::Preprocessor::IfNDef(#pind) }
+      quote! { glsl::syntax::PreprocessorData::IfNDef(#pind) }
     }
 
-    syntax::Preprocessor::Include(ref pi) => {
+    syntax::PreprocessorData::Include(ref pi) => {
       let pi = tokenize_preprocessor_include(pi);
-      quote! { glsl::syntax::Preprocessor::Include(#pi) }
+      quote! { glsl::syntax::PreprocessorData::Include(#pi) }
     }
 
-    syntax::Preprocessor::Line(ref pl) => {
+    syntax::PreprocessorData::Line(ref pl) => {
       let pl = tokenize_preprocessor_line(pl);
-      quote! { glsl::syntax::Preprocessor::Line(#pl) }
+      quote! { glsl::syntax::PreprocessorData::Line(#pl) }
     }
 
-    syntax::Preprocessor::Pragma(ref pp) => {
+    syntax::PreprocessorData::Pragma(ref pp) => {
       let pp = tokenize_preprocessor_pragma(pp);
-      quote! { glsl::syntax::Preprocessor::Pragma(#pp) }
+      quote! { glsl::syntax::PreprocessorData::Pragma(#pp) }
     }
 
-    syntax::Preprocessor::Undef(ref pu) => {
+    syntax::PreprocessorData::Undef(ref pu) => {
       let pu = tokenize_preprocessor_undef(pu);
-      quote! { glsl::syntax::Preprocessor::Undef(#pu) }
+      quote! { glsl::syntax::PreprocessorData::Undef(#pu) }
     }
 
-    syntax::Preprocessor::Version(ref pv) => {
+    syntax::PreprocessorData::Version(ref pv) => {
       let pv = tokenize_preprocessor_version(pv);
-      quote! { glsl::syntax::Preprocessor::Version(#pv) }
+      quote! { glsl::syntax::PreprocessorData::Version(#pv) }
     }
 
-    syntax::Preprocessor::Extension(ref pe) => {
+    syntax::PreprocessorData::Extension(ref pe) => {
       let pe = tokenize_preprocessor_extension(pe);
-      quote! { glsl::syntax::Preprocessor::Extension(#pe) }
+      quote! { glsl::syntax::PreprocessorData::Extension(#pe) }
     }
-  }
+  };
+
+  let span = tokenize_span(&pp.span);
+  quote! { glsl::syntax::Preprocessor::new(#decl, #span) }
 }
 
 fn tokenize_preprocessor_define(pd: &syntax::PreprocessorDefine) -> TokenStream {
@@ -1411,26 +1433,45 @@ fn tokenize_preprocessor_extension_behavior(
   }
 }
 
-fn tokenize_external_declaration(ed: &syntax::ExternalDeclaration) -> TokenStream {
-  match *ed {
-    syntax::ExternalDeclaration::Preprocessor(ref pp) => {
-      let pp = tokenize_preprocessor(pp);
-      quote! { glsl::syntax::ExternalDeclaration::Preprocessor(#pp) }
-    }
+fn tokenize_span(s: &Option<syntax::NodeSpan>) -> TokenStream {
+  if let Some(s) = s {
+    let syntax::NodeSpan {
+      source_id,
+      offset,
+      line,
+      column,
+      length,
+    } = s;
 
-    syntax::ExternalDeclaration::FunctionDefinition(ref fd) => {
-      let fd = tokenize_function_definition(fd);
-      quote! { glsl::syntax::ExternalDeclaration::FunctionDefinition(#fd) }
-    }
-
-    syntax::ExternalDeclaration::Declaration(ref d) => {
-      let d = tokenize_declaration(d);
-      quote! { glsl::syntax::ExternalDeclaration::Declaration(#d) }
-    }
+    quote! { Some(glsl::syntax::NodeSpan { source_id: #source_id, offset: #offset, line: #line, column: #column, length: #length }) }
+  } else {
+    quote! { None }
   }
 }
 
+fn tokenize_external_declaration(ed: &syntax::ExternalDeclaration) -> TokenStream {
+  let contents = match ed.contents {
+    syntax::ExternalDeclarationData::Preprocessor(ref pp) => {
+      let pp = tokenize_preprocessor(pp);
+      quote! { glsl::syntax::ExternalDeclarationData::Preprocessor(#pp) }
+    }
+
+    syntax::ExternalDeclarationData::FunctionDefinition(ref fd) => {
+      let fd = tokenize_function_definition(fd);
+      quote! { glsl::syntax::ExternalDeclarationData::FunctionDefinition(#fd) }
+    }
+
+    syntax::ExternalDeclarationData::Declaration(ref d) => {
+      let d = tokenize_declaration(d);
+      quote! { glsl::syntax::ExternalDeclarationData::Declaration(#d) }
+    }
+  };
+
+  let span = tokenize_span(&ed.span);
+  quote! { glsl::syntax::Node::new(#contents, #span) }
+}
+
 fn tokenize_translation_unit(tu: &syntax::TranslationUnit) -> TokenStream {
-  let tu = (tu.0).0.iter().map(tokenize_external_declaration);
+  let tu = (tu.0).0.iter().map(|d| tokenize_external_declaration(&d));
   quote! { glsl::syntax::TranslationUnit(glsl::syntax::NonEmpty(vec![#(#tu),*])) }
 }

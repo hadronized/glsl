@@ -32,9 +32,12 @@ impl fmt::Display for ParseError {
 }
 
 /// Run a parser `P` on a given `[&str`] input.
-pub(crate) fn run_parser<P, T>(source: &str, parser: P) -> Result<T, ParseError>
+pub(crate) fn run_parser<'c, 'd, 'e, P, T>(
+  source: ParseInput<'c, 'd, 'e>,
+  parser: P,
+) -> Result<T, ParseError>
 where
-  P: FnOnce(&str) -> ParserResult<T>,
+  P: FnOnce(ParseInput<'c, 'd, 'e>) -> ParserResult<'c, 'd, 'e, T>,
 {
   match parser(source) {
     Ok((_, x)) => Ok(x),
@@ -45,12 +48,24 @@ where
       }),
 
       NomErr::Error(err) | NomErr::Failure(err) => {
-        let info = convert_error(source, err);
+        let info = convert_error(
+          *source.fragment(),
+          nom::error::VerboseError {
+            errors: err
+              .errors
+              .into_iter()
+              .map(|(i, k)| (*i.fragment(), k))
+              .collect(),
+          },
+        );
         Err(ParseError { info })
       }
     },
   }
 }
+
+pub use super::parsers::ParseContextData;
+use super::parsers::{ParseContext, ParseInput};
 
 /// Class of types that can be parsed.
 ///
@@ -59,20 +74,30 @@ where
 /// The methods from this trait are the standard way to parse data into GLSL ASTs.
 pub trait Parse: Sized {
   /// Parse from a string slice.
-  fn parse<B>(source: B) -> Result<Self, ParseError>
-  where
-    B: AsRef<str>;
+  fn parse<'b>(source: &'b str) -> Result<Self, ParseError> {
+    let mut data = ParseContextData::new();
+    <Self as Parse>::parse_with_context(source, &mut data)
+  }
+
+  /// Parse from a string slice and track syntax details using a context
+  fn parse_with_context<'d, 'b: 'd>(
+    source: &'b str,
+    ctx: &'d mut ParseContextData<'b>,
+  ) -> Result<Self, ParseError>;
 }
 
 /// Macro to implement Parse for a given type.
 macro_rules! impl_parse {
   ($type_name:ty, $parser_name:ident) => {
     impl Parse for $type_name {
-      fn parse<B>(source: B) -> Result<Self, ParseError>
-      where
-        B: AsRef<str>,
-      {
-        run_parser(source.as_ref(), $crate::parsers::$parser_name)
+      fn parse_with_context<'d, 'b: 'd>(
+        source: &'b str,
+        ctx: &'d mut ParseContextData<'b>,
+      ) -> Result<Self, ParseError> {
+        let mut ctx = ParseContext::new(ctx);
+        ctx.parse(source.as_ref(), |input| {
+          run_parser(input, $crate::parsers::$parser_name)
+        })
       }
     }
   };

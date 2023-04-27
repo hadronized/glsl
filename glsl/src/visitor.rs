@@ -13,7 +13,7 @@
 //! For instance, we can imagine visiting an AST to count how many variables are declared:
 //!
 //! ```
-//! use glsl::syntax::{CompoundStatement, Expr, SingleDeclaration, Statement, TypeSpecifierNonArray};
+//! use glsl::syntax::{CompoundStatement, CompoundStatementData, Expr, SingleDeclaration, Statement, TypeSpecifierNonArray};
 //! use glsl::visitor::{Host, Visit, Visitor};
 //! use std::iter::FromIterator;
 //!
@@ -38,7 +38,7 @@
 //!   None
 //! );
 //!
-//! let compound = CompoundStatement::from_iter(vec![decl0, decl1, decl2]);
+//! let compound: CompoundStatement = CompoundStatementData::from_iter(vec![decl0, decl1, decl2]).into();
 //!
 //! // our visitor that will count the number of variables it saw
 //! struct Counter {
@@ -415,6 +415,18 @@ macro_rules! make_host_trait {
         }
       }
 
+    impl<T> $host_ty for syntax::Node<T>
+      where
+          T: syntax::NodeContents + $host_ty,
+      {
+        fn $mthd_name<V>($($ref)* self, visitor: &mut V)
+        where
+            V: $visitor_ty,
+        {
+          self.contents.$mthd_name(visitor);
+        }
+      }
+
     impl $host_ty for syntax::TranslationUnit {
       fn $mthd_name<V>($($ref)* self, visitor: &mut V)
       where
@@ -438,10 +450,10 @@ macro_rules! make_host_trait {
         let visit = visitor.visit_external_declaration(self);
 
         if visit == Visit::Children {
-          match self {
-            syntax::ExternalDeclaration::Preprocessor(p) => p.$mthd_name(visitor),
-            syntax::ExternalDeclaration::FunctionDefinition(fd) => fd.$mthd_name(visitor),
-            syntax::ExternalDeclaration::Declaration(d) => d.$mthd_name(visitor),
+          match $($ref)* self.contents {
+            syntax::ExternalDeclarationData::Preprocessor(p) => p.$mthd_name(visitor),
+            syntax::ExternalDeclarationData::FunctionDefinition(fd) => fd.$mthd_name(visitor),
+            syntax::ExternalDeclarationData::Declaration(d) => d.$mthd_name(visitor),
           }
         }
       }
@@ -455,21 +467,21 @@ macro_rules! make_host_trait {
         let visit = visitor.visit_preprocessor(self);
 
         if visit == Visit::Children {
-          match self {
-            syntax::Preprocessor::Define(pd) => pd.$mthd_name(visitor),
-            syntax::Preprocessor::Else => (),
-            syntax::Preprocessor::ElseIf(pei) => pei.$mthd_name(visitor),
-            syntax::Preprocessor::EndIf => (),
-            syntax::Preprocessor::Error(pe) => pe.$mthd_name(visitor),
-            syntax::Preprocessor::If(pi) => pi.$mthd_name(visitor),
-            syntax::Preprocessor::IfDef(pid) => pid.$mthd_name(visitor),
-            syntax::Preprocessor::IfNDef(pind) => pind.$mthd_name(visitor),
-            syntax::Preprocessor::Include(pi) => pi.$mthd_name(visitor),
-            syntax::Preprocessor::Line(pl) => pl.$mthd_name(visitor),
-            syntax::Preprocessor::Pragma(pp) => pp.$mthd_name(visitor),
-            syntax::Preprocessor::Undef(pu) => pu.$mthd_name(visitor),
-            syntax::Preprocessor::Version(pv) => pv.$mthd_name(visitor),
-            syntax::Preprocessor::Extension(ext) => ext.$mthd_name(visitor),
+          match $($ref)* self.contents {
+            syntax::PreprocessorData::Define(pd) => pd.$mthd_name(visitor),
+            syntax::PreprocessorData::Else => (),
+            syntax::PreprocessorData::ElseIf(pei) => pei.$mthd_name(visitor),
+            syntax::PreprocessorData::EndIf => (),
+            syntax::PreprocessorData::Error(pe) => pe.$mthd_name(visitor),
+            syntax::PreprocessorData::If(pi) => pi.$mthd_name(visitor),
+            syntax::PreprocessorData::IfDef(pid) => pid.$mthd_name(visitor),
+            syntax::PreprocessorData::IfNDef(pind) => pind.$mthd_name(visitor),
+            syntax::PreprocessorData::Include(pi) => pi.$mthd_name(visitor),
+            syntax::PreprocessorData::Line(pl) => pl.$mthd_name(visitor),
+            syntax::PreprocessorData::Pragma(pp) => pp.$mthd_name(visitor),
+            syntax::PreprocessorData::Undef(pu) => pu.$mthd_name(visitor),
+            syntax::PreprocessorData::Version(pv) => pv.$mthd_name(visitor),
+            syntax::PreprocessorData::Extension(ext) => ext.$mthd_name(visitor),
           }
         }
       }
@@ -677,13 +689,13 @@ macro_rules! make_host_trait {
         let visit = visitor.visit_function_parameter_declaration(self);
 
         if visit == Visit::Children {
-          match self {
-            syntax::FunctionParameterDeclaration::Named(tq, fpd) => {
+          match $($ref)* self.contents {
+            syntax::FunctionParameterDeclarationData::Named(tq, fpd) => {
               tq.$mthd_name(visitor);
               fpd.$mthd_name(visitor);
             }
 
-            syntax::FunctionParameterDeclaration::Unnamed(tq, ty) => {
+            syntax::FunctionParameterDeclarationData::Unnamed(tq, ty) => {
               tq.$mthd_name(visitor);
               ty.$mthd_name(visitor);
             }
@@ -728,19 +740,19 @@ macro_rules! make_host_trait {
         let visit = visitor.visit_declaration(self);
 
         if visit == Visit::Children {
-          match self {
-            syntax::Declaration::FunctionPrototype(fp) => fp.$mthd_name(visitor),
+          match $($ref)* self.contents {
+            syntax::DeclarationData::FunctionPrototype(fp) => fp.$mthd_name(visitor),
 
-            syntax::Declaration::InitDeclaratorList(idl) => idl.$mthd_name(visitor),
+            syntax::DeclarationData::InitDeclaratorList(idl) => idl.$mthd_name(visitor),
 
-            syntax::Declaration::Precision(pq, ty) => {
+            syntax::DeclarationData::Precision(pq, ty) => {
               pq.$mthd_name(visitor);
               ty.$mthd_name(visitor);
             }
 
-            syntax::Declaration::Block(block) => block.$mthd_name(visitor),
+            syntax::DeclarationData::Block(block) => block.$mthd_name(visitor),
 
-            syntax::Declaration::Global(tq, idents) => {
+            syntax::DeclarationData::Global(tq, idents) => {
               tq.$mthd_name(visitor);
 
               for ident in idents {
@@ -1439,7 +1451,8 @@ mod tests {
     let decl2 =
       syntax::Statement::declare_var(syntax::TypeSpecifierNonArray::Vec4, "z", None, None);
 
-    let compound = syntax::CompoundStatement::from_iter(vec![decl0, decl1, decl2]);
+    let compound: syntax::Node<_> =
+      syntax::CompoundStatementData::from_iter(vec![decl0, decl1, decl2]).into();
 
     // our visitor that will count the number of variables it saw
     struct Counter {
