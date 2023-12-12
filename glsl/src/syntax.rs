@@ -1168,7 +1168,7 @@ pub enum JumpStatement {
 pub enum Preprocessor {
   Define(PreprocessorDefine),
   Else,
-  ElseIf(PreprocessorElseIf),
+  ElIf(PreprocessorElIf),
   EndIf,
   Error(PreprocessorError),
   If(PreprocessorIf),
@@ -1199,9 +1199,9 @@ pub enum PreprocessorDefine {
   },
 }
 
-/// An #else preprocessor directive.
+/// An #elif preprocessor directive.
 #[derive(Clone, Debug, PartialEq)]
-pub struct PreprocessorElseIf {
+pub struct PreprocessorElIf {
   pub condition: String,
 }
 

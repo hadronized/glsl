@@ -1594,7 +1594,7 @@ pub fn preprocessor(i: &str) -> ParserResult<syntax::Preprocessor> {
     cut(alt((
       map(pp_define, syntax::Preprocessor::Define),
       value(syntax::Preprocessor::Else, pp_else),
-      map(pp_elseif, syntax::Preprocessor::ElseIf),
+      map(pp_elif, syntax::Preprocessor::ElIf),
       value(syntax::Preprocessor::EndIf, pp_endif),
       map(pp_error, syntax::Preprocessor::Error),
       map(pp_if, syntax::Preprocessor::If),
@@ -1693,14 +1693,14 @@ pub(crate) fn pp_else(i: &str) -> ParserResult<syntax::Preprocessor> {
   )(i)
 }
 
-/// Parse a preprocessor elseif.
-pub(crate) fn pp_elseif(i: &str) -> ParserResult<syntax::PreprocessorElseIf> {
+/// Parse a preprocessor elif.
+pub(crate) fn pp_elif(i: &str) -> ParserResult<syntax::PreprocessorElIf> {
   map(
     tuple((
-      terminated(keyword("elseif"), pp_space0),
+      terminated(keyword("elif"), pp_space0),
       cut(map(str_till_eol, String::from)),
     )),
-    |(_, condition)| syntax::PreprocessorElseIf { condition },
+    |(_, condition)| syntax::PreprocessorElIf { condition },
   )(i)
 }
 
