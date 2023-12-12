@@ -1438,7 +1438,7 @@ where
       show_statement(f, body);
       let _ = f.write_str(" while (");
       show_expr(f, cond);
-      let _ = f.write_str(")\n");
+      let _ = f.write_str(");\n");
     }
     syntax::IterationStatement::For(ref init, ref rest, ref body) => {
       let _ = f.write_str("for (");
@@ -1475,6 +1475,7 @@ where
       if let Some(ref e) = *expr {
         show_expr(f, e);
       }
+      let _ = f.write_str("; ");
     }
     syntax::ForInitStatement::Declaration(ref d) => show_declaration(f, d),
   }
@@ -1866,5 +1867,52 @@ return u;
     let back = expr(&output);
 
     assert_eq!(back, Ok((";", input)), "intermediate source '{}'", output);
+  }
+
+  #[test]
+  fn test_do_while() {
+    use crate::parsers::iteration_statement;
+
+    const SRC: &'static str = r#"do {
+a();
+}
+ while (true);
+"#;
+
+    let mut s = String::new();
+    show_iteration_statement(&mut s, &iteration_statement(SRC).unwrap().1);
+
+    assert_eq!(s, SRC);
+  }
+
+  #[test]
+  fn test_for_declaration() {
+    use crate::parsers::iteration_statement;
+
+    const SRC: &'static str = r#"for (int i = 0;
+i<10; i++) {
+a();
+}
+"#;
+
+    let mut s = String::new();
+    show_iteration_statement(&mut s, &iteration_statement(SRC).unwrap().1);
+
+    assert_eq!(s, SRC);
+  }
+
+  #[test]
+  fn test_for_expr() {
+    use crate::parsers::iteration_statement;
+
+    const SRC: &'static str = r#"for (i = 0; i<10; i++) {
+a();
+}
+"#;
+
+    let mut s = String::new();
+    show_iteration_statement(&mut s, &iteration_statement(SRC).unwrap().1);
+
+    assert_eq!(s, SRC);
   }
 }
