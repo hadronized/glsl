@@ -16,6 +16,11 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/glsl
           cargo test --verbose
+      - name: Test glsl (piglit)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-piglit
+          ./fetch-piglit.sh
+          cargo run --verbose -- piglit
       - name: Build glsl-tree
         run: |
           cd $GITHUB_WORKSPACE/glsl-tree
@@ -51,6 +56,11 @@ jobs:
           source ~/.cargo/env
           cd $GITHUB_WORKSPACE/glsl
           cargo test --verbose
+      - name: Test glsl (piglit)
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-piglit
+          ./fetch-piglit.sh
+          cargo run --verbose -- piglit
       - name: Build glsl-tree
         run: |
           source ~/.cargo/env
@@ -85,6 +95,11 @@ jobs:
         run: |
           cd glsl
           cargo test --verbose
+      - name: Test glsl (piglit)
+        run: |
+          cd glsl-piglit
+          ./fetch-piglit.ps1
+          cargo run --verbose -- piglit
       - name: Build glsl-tree
         run: |
           cd glsl-tree

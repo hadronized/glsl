@@ -3,6 +3,7 @@
 members = [
   "glsl",
   "glsl-tree",
+  "glsl-piglit",
   "glsl-quasiquote"
 ]
 
