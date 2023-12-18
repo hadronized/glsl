@@ -1,4 +1,12 @@
-# Changelog
+# 6.0.3
+
+> Dec 18, 2023
+
+- Fix missing `do-while` and `for` init expressions semicolons (7abee68).
+- Replace now-standard `#elseif` preprocessor directivy by `#elif` (2791414).
+- Some fixes for the GLSL transpiler:
+  - `low -> lowp`
+  - A missing whitespace between precision qualifiers and the type of the variable.
 
 # 6.0.2
 
