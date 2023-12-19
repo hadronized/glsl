@@ -1,6 +1,6 @@
 # 6.0.3
 
-> Dec 18, 2023
+> Dec 19, 2023
 
 - Fix missing `do-while` and `for` init expressions semicolons (7abee68).
 - Replace now-standard `#elseif` preprocessor directivy by `#elif` (2791414).

@@ -1,3 +1,9 @@
+# 6.0.1
+
+> Dec 19th, 2023
+
+- Support `proc-macro-faithful-display-0.2`.
+
 # 6.0
 
 > Dec 7th, 2020

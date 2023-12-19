@@ -1,6 +1,6 @@
 [package]
 name = "glsl-quasiquote"
-version = "6.0.0"
+version = "6.0.1"
 license = "BSD-3-Clause"
 authors = ["Dimitri Sabadie <dimitri.sabadie@gmail.com>"]
 description = "The glsl! procedural macro, providing quasiquoting of the glsl crate."
