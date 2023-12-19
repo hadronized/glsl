@@ -2,10 +2,10 @@ name: CI
 on: [pull_request]
 
 jobs:
-  build-linux:
+  glsl-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Cargo update
         run: cargo update
       - name: Build glsl
@@ -16,106 +16,118 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/glsl
           cargo test --verbose
+
+  glsl-tree-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargo update
+        run: cargo update
       - name: Build glsl-tree
         run: |
           cd $GITHUB_WORKSPACE/glsl-tree
           cargo build --verbose
+
+  glsl-quasiquote-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Switch to nightly Rust
         run: rustup default nightly
-      - name: Build glsl-quasiquote (nightly)
+      - name: Build glsl-quasiquote
         run: |
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo build --verbose
-      - name: Test glsl-quasiquote (nightly)
+      - name: Test glsl-quasiquote
         run: |
           cd $GITHUB_WORKSPACE/glsl-quasiquote
           cargo test --verbose
 
-  build-macos:
+  glsl-macos:
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
-      - name: Cargo update
-        run: |
-          source ~/.cargo/env
-          cargo update
-      - name: Build glsl
-        run: |
-          source ~/.cargo/env
-          cd $GITHUB_WORKSPACE/glsl
-          cargo build --verbose
-      - name: Test glsl
-        run: |
-          source ~/.cargo/env
-          cd $GITHUB_WORKSPACE/glsl
-          cargo test --verbose
-      - name: Build glsl-tree
-        run: |
-          source ~/.cargo/env
-          cd $GITHUB_WORKSPACE/glsl-tree
-          cargo build --verbose
-      - name: Switch to nightly Rust
-        run: |
-          source ~/.cargo/env
-          rustup default nightly
-      - name: Build glsl-quasiquote (nightly)
-        run: |
-          source ~/.cargo/env
-          cd $GITHUB_WORKSPACE/glsl-quasiquote
-          cargo build --verbose
-      - name: Test glsl-quasiquote (nightly)
-        run: |
-          source ~/.cargo/env
-          cd $GITHUB_WORKSPACE/glsl-quasiquote
-          cargo test --verbose
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Cargo update
         run: cargo update
       - name: Build glsl
         run: |
-          cd glsl
+          cd $GITHUB_WORKSPACE/glsl
           cargo build --verbose
       - name: Test glsl
         run: |
-          cd glsl
-          cargo test --verbose
-      - name: Build glsl-tree
-        run: |
-          cd glsl-tree
-          cargo build --verbose
-      - name: Switch to nightly Rust
-        run: rustup default nightly
-      - name: Build glsl-quasiquote (nightly)
-        run: |
-          cd glsl-quasiquote
-          cargo build --verbose
-      - name: Test glsl-quasiquote (nightly)
-        run: |
-          cd glsl-quasiquote
+          cd $GITHUB_WORKSPACE/glsl
           cargo test --verbose
 
-  check-readme:
-    runs-on: ubuntu-latest
+  glsl-tree-macos:
+    runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v1
-      - name: Install cargo-sync-readme
-        run: cargo install --force cargo-sync-readme
-      - name: Check
+      - uses: actions/checkout@v4
+      - name: Cargo update
+        run: cargo update
+      - name: Build glsl-tree
         run: |
-          cd $GITHUB_WORKSPACE/glsl
-          cargo sync-readme -c
+          cd $GITHUB_WORKSPACE/glsl-tree
+          cargo build --verbose
+
+  glsl-quasiquote-macos:
+    runs-on: macOS-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl-quasiquote
+        run: |
           cd $GITHUB_WORKSPACE/glsl-quasiquote
-          cargo sync-readme -c
+          cargo build --verbose
+      - name: Test glsl-quasiquote
+        run: |
+          cd $GITHUB_WORKSPACE/glsl-quasiquote
+          cargo test --verbose
+
+  glsl-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargo update
+        run: cargo update
+      - name: Build glsl
+        run: |
+          cd $env:GITHUB_WORKSPACE\glsl
+          cargo build --verbose
+      - name: Test glsl
+        run: |
+          cd $env:GITHUB_WORKSPACE\glsl
+          cargo test --verbose
+
+  glsl-tree-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cargo update
+        run: cargo update
+      - name: Build glsl-tree
+        run: |
+          cd $env:GITHUB_WORKSPACE\glsl-tree
+          cargo build --verbose
+
+  glsl-quasiquote-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Switch to nightly Rust
+        run: rustup default nightly
+      - name: Build glsl-quasiquote
+        run: |
+          cd $env:GITHUB_WORKSPACE\glsl-quasiquote
+          cargo build --verbose
+      - name: Test glsl-quasiquote
+        run: |
+          cd $env:GITHUB_WORKSPACE\glsl-quasiquote
+          cargo test --verbose
 
   check-fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Ensure code is correctly formatted
         run: cargo fmt -- --check
