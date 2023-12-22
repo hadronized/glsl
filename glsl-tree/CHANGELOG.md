@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3
+
+> Dec 23, 2023
+
+- Bump to replace the yanked `glsl-6.0.3` version.
+
 ## 0.2.1
 
 > Mar 23rd, 2023
