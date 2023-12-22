@@ -1,7 +1,14 @@
+# 7.0
+
+> Dec 23, 2023
+
+- Bump to replace the yanked `glsl-6.0.3` version.
+
 # 6.0.3
 
 > Dec 19, 2023
 
+- **Yanked, as this actually contains a breaking change**.
 - Fix missing `do-while` and `for` init expressions semicolons (7abee68).
 - Replace now-standard `#elseif` preprocessor directivy by `#elif` (2791414).
 - Some fixes for the GLSL transpiler:
