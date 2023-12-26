@@ -2845,3 +2845,9 @@ fn parse_nested_parens() {
   let elapsed = start.elapsed();
   assert!(elapsed.as_millis() < 100, "{} ms", elapsed.as_millis());
 }
+
+#[test]
+fn parse_dos_crlf() {
+  assert!(translation_unit("#version 460 core\r\nvoid main(){}\r\n").is_ok());
+  assert!(translation_unit("#version 460\\\r\ncore\r\nvoid main(){}\r\n").is_ok());
+}

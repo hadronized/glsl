@@ -9,7 +9,7 @@ mod nom_helpers;
 
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take_until, take_while1};
-use nom::character::complete::{anychar, char, digit1, space0, space1};
+use nom::character::complete::{anychar, char, digit1, line_ending, space0, space1};
 use nom::character::{is_hex_digit, is_oct_digit};
 use nom::combinator::{cut, map, not, opt, peek, recognize, value, verify};
 use nom::error::{ErrorKind, ParseError as _, VerboseError, VerboseErrorKind};
@@ -1631,7 +1631,7 @@ pub(crate) fn pp_version_profile(i: &str) -> ParserResult<syntax::PreprocessorVe
 ///
 /// This parser is needed to authorize breaking a line with the multiline annotation (\).
 pub(crate) fn pp_space0(i: &str) -> ParserResult<&str> {
-  recognize(many0_(alt((space1, tag("\\\n")))))(i)
+  recognize(many0_(alt((space1, preceded(tag("\\"), line_ending)))))(i)
 }
 
 /// Parse a preprocessor define.
